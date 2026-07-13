@@ -1,0 +1,167 @@
+{
+  "marca": {
+    "nome": "Ilha Tech",
+    "tagline": "A tecnologia que pilota o Grupo Ilha",
+    "dominio": "https://ilhatech.io",
+    "grupo": "Grupo Ilha",
+    "email_contato": "contato@ilhatech.io",
+    "_placeholder_email": "confirmar e-mail oficial da Ilha Tech (usei contato@ilhatech.io)"
+  },
+
+  "hero": {
+    "eyebrow": "Franquia de tecnologia · Grupo Ilha",
+    "titulo": "Construímos a Nave-Mãe — e pilotamos a operação por dentro.",
+    "sub": "A Ilha Tech é o braço de tecnologia do Grupo Ilha. Desenvolvemos a Nave-Mãe, o software de gestão de turismo 360°, e mantemos os sistemas digitais que fazem a Ilha Tour rodar todos os dias.",
+    "cta": "Conhecer a Nave-Mãe",
+    "cta_sec": "Como operamos",
+    "telemetria": [
+      { "nome": "Nave-Mãe", "estado": "núcleo" },
+      { "nome": "Sites & e-commerce", "estado": "online" },
+      { "nome": "Atendimento automatizado", "estado": "online" },
+      { "nome": "Dados & BI", "estado": "online" },
+      { "nome": "Integrações", "estado": "online" }
+    ]
+  },
+
+  "oque": {
+    "eyebrow": "Quem somos",
+    "titulo": "A Ilha Tech é a franquia de tecnologia do Grupo Ilha",
+    "texto": "Dentro do ecossistema do Grupo Ilha, cada franquia tem um papel. O da Ilha Tech é um só: tecnologia. Construímos e mantemos a Nave-Mãe e toda a camada digital que sustenta as operações do grupo — do site que recebe o viajante ao sistema que fecha o mês. Somos a infraestrutura invisível por trás da experiência.",
+    "pilares": [
+      {
+        "icone": "cpu",
+        "titulo": "Produto próprio",
+        "texto": "Desenvolvemos a Nave-Mãe, o software de gestão de turismo 360° do grupo — não terceirizamos o que é estratégico."
+      },
+      {
+        "icone": "layers",
+        "titulo": "Operação de verdade",
+        "texto": "Nossos sistemas não vivem no slide: rodam em produção, sustentando a operação real da Ilha Tour todos os dias."
+      },
+      {
+        "icone": "shield",
+        "titulo": "Registro é Rei",
+        "texto": "Dados confiáveis são a promessa. Cada decisão do grupo se apoia em número que a gente garante que é verdadeiro."
+      }
+    ]
+  },
+
+  "navemae": {
+    "eyebrow": "O produto",
+    "titulo": "Nave-Mãe",
+    "sub": "Software de gestão de turismo 360°",
+    "texto": "A Nave-Mãe é a plataforma que centraliza a gestão do negócio de turismo em um só lugar — dados, finanças e operação conversando entre si. É o coração da Ilha Tech e o que mantemos evoluindo.",
+    "modulos": [
+      {
+        "titulo": "Financeiro",
+        "texto": "DRE em cascata e leitura gerencial do resultado — o mês fechado com clareza, não com achismo.",
+        "estado": "em operação"
+      },
+      {
+        "titulo": "Dados & BI",
+        "texto": "Ingestão das fontes vivas do negócio para painéis que respondem perguntas de gestão.",
+        "estado": "em operação"
+      },
+      {
+        "titulo": "Operação",
+        "texto": "Módulo A DEFINIR — confirmar escopo no Playbook Tech.",
+        "estado": "roadmap",
+        "_placeholder": true
+      },
+      {
+        "titulo": "Multi-franquia",
+        "texto": "Módulo A DEFINIR — a Nave-Mãe nasce para atender todas as franquias do grupo.",
+        "estado": "roadmap",
+        "_placeholder": true
+      }
+    ]
+  },
+
+  "operamos": {
+    "eyebrow": "Como administramos a Ilha Tour",
+    "titulo": "Um stack inteiro rodando a operação",
+    "texto": "A Ilha Tour não é administrada no braço. Por trás dela existe uma camada de tecnologia que a Ilha Tech constrói e mantém — do primeiro clique do viajante ao relatório que chega à gestão.",
+    "areas": [
+      {
+        "icone": "globe",
+        "titulo": "Sites & e-commerce",
+        "texto": "Loja e sites do grupo em produção, multilíngue (PT/EN/ES/FR), com SEO técnico e performance cuidados desde o dia 1."
+      },
+      {
+        "icone": "chat",
+        "titulo": "Atendimento automatizado",
+        "texto": "Assistentes de atendimento e operação que respondem, qualificam e apoiam o time — sempre com a voz da marca."
+      },
+      {
+        "icone": "chart",
+        "titulo": "Dados & BI",
+        "texto": "Ingestão das fontes do negócio e painéis de gestão. O número que a diretoria olha é o número que a Nave-Mãe garante."
+      },
+      {
+        "icone": "search",
+        "titulo": "SEO & aquisição",
+        "texto": "Monitoramento de busca, relatórios recorrentes e melhoria contínua para o grupo aparecer onde o viajante procura."
+      },
+      {
+        "icone": "plug",
+        "titulo": "Integrações",
+        "texto": "As ferramentas do grupo conversando entre si — vendas, atendimento, dados e finanças conectados, sem retrabalho."
+      },
+      {
+        "icone": "refresh",
+        "titulo": "Melhoria contínua",
+        "texto": "Nada fica parado. Backlog vivo, ajustes constantes e um site que fica melhor a cada semana."
+      }
+    ]
+  },
+
+  "cultura": {
+    "eyebrow": "Cultura FamILHA",
+    "titulo": "Os valores que a gente carrega para dentro do código",
+    "texto": "A Ilha Tech faz parte do Grupo Ilha e compartilha a cultura do grupo. Estes são os valores que guiam como trabalhamos.",
+    "valores": [
+      { "emoji": "🏆", "nome": "Time de Campeões" },
+      { "emoji": "🤝", "nome": "Amigo do Viajante" },
+      { "emoji": "🚀", "nome": "Vai Lá e Faz" },
+      { "emoji": "💎", "nome": "Excelência que Encanta" },
+      { "emoji": "🛡️", "nome": "Segurança" },
+      { "emoji": "🌱", "nome": "Prosperidade & Transbordo" },
+      { "emoji": "🔥", "nome": "Coragem de Evoluir" },
+      { "emoji": "🎒", "nome": "Honestidade & Humildade" },
+      { "emoji": "📒", "nome": "Registro é Rei" },
+      { "emoji": "🏠", "nome": "Guardião do Negócio" }
+    ]
+  },
+
+  "numeros": {
+    "eyebrow": "Impacto",
+    "titulo": "A operação em números",
+    "sub": "Os valores abaixo marcados com ✱ são placeholders — aguardando os números reais do Playbook Tech.",
+    "stats": [
+      { "valor": "360°", "label": "Gestão de turismo na Nave-Mãe", "real": true },
+      { "valor": "4", "label": "Idiomas na operação (PT · EN · ES · FR)", "real": true },
+      { "valor": "24/7", "label": "Sistemas do grupo em produção", "real": true },
+      { "valor": "✱", "label": "Franquias atendidas — A DEFINIR", "real": false },
+      { "valor": "✱", "label": "Uptime dos sistemas — A DEFINIR", "real": false },
+      { "valor": "✱", "label": "Entregas / ano — A DEFINIR", "real": false }
+    ]
+  },
+
+  "contato": {
+    "eyebrow": "Fale com a Tech",
+    "titulo": "Tecnologia que faz o grupo andar mais rápido",
+    "texto": "Quer entender como a Ilha Tech pode organizar dados, automatizar atendimento e dar clareza à gestão? Fala com a gente.",
+    "cta": "Falar com a Ilha Tech"
+  },
+
+  "rodape": {
+    "sobre": "Ilha Tech — a franquia de tecnologia do Grupo Ilha. Construímos a Nave-Mãe e mantemos os sistemas digitais do ecossistema.",
+    "links": [
+      { "texto": "O que é", "href": "#oque" },
+      { "texto": "Nave-Mãe", "href": "#navemae" },
+      { "texto": "Como operamos", "href": "#operamos" },
+      { "texto": "Cultura", "href": "#cultura" },
+      { "texto": "Contato", "href": "#contato" }
+    ]
+  }
+}

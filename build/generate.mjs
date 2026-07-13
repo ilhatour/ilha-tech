@@ -1,0 +1,412 @@
+#!/usr/bin/env node
+/* ============================================================
+   ILHA TECH — gerador estático (sem dependências)
+   Lê data/site.json → escreve index.html, sitemap.xml, robots.txt, favicon.svg
+   Rode:  node build/generate.mjs
+   Design: "Centro de Controle" · Paleta oficial Velvet Lima · Poppins
+   ============================================================ */
+import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
+
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
+const read = (p) => readFileSync(join(ROOT, p), "utf8");
+const write = (p, c) => { mkdirSync(dirname(join(ROOT, p)), { recursive: true }); writeFileSync(join(ROOT, p), c); };
+
+const D = JSON.parse(read("data/site.json"));
+
+/* ---- Constantes da marca ---- */
+const SITE = D.marca.dominio;             // https://ilhatech.io
+const NOME = D.marca.nome;
+const EMAIL = D.marca.email_contato;
+const GA4 = ""; // preencher com G-XXXXXXX quando a propriedade GA4 da Ilha Tech existir
+const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+/* ============================================================
+   ÍCONES — traço geométrico (tech), currentColor
+   ============================================================ */
+const I = {
+  cpu: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="6" width="12" height="12" rx="1.5"/><rect x="9.5" y="9.5" width="5" height="5" rx=".5"/><path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3"/></svg>`,
+  layers: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 3 8l9 5 9-5-9-5Z"/><path d="m3 13 9 5 9-5"/></svg>`,
+  shield: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 4 6v6c0 5 3.4 7.7 8 9 4.6-1.3 8-4 8-9V6l-8-3Z"/><path d="m9 12 2 2 4-4"/></svg>`,
+  globe: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.5 3.8 5.7 3.8 9S14.5 18.5 12 21c-2.5-2.5-3.8-5.7-3.8-9S9.5 5.5 12 3Z"/></svg>`,
+  chat: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L3 21l1.9-6.4A8 8 0 1 1 21 12Z"/><path d="M8.5 12h.01M12 12h.01M15.5 12h.01"/></svg>`,
+  chart: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4v16h16"/><path d="m7 14 3-3 3 3 5-6"/></svg>`,
+  search: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>`,
+  plug: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2v6M15 2v6M7 8h10v3a5 5 0 0 1-10 0V8Z"/><path d="M12 16v6"/></svg>`,
+  refresh: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 3v5h-5"/></svg>`,
+  arrow: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>`,
+  menu: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>`,
+  close: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>`,
+};
+const icon = (k) => I[k] || "";
+
+/* logo provisório: marcador da Nave-Mãe (losango orbital) + wordmark */
+function logoMark() {
+  return `<svg class="brand__mark" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+    <circle cx="16" cy="16" r="14" stroke="var(--uva)" stroke-width="1.3" opacity=".55"/>
+    <circle cx="16" cy="16" r="9" stroke="var(--uva)" stroke-width="1" opacity=".35"/>
+    <path d="M16 8.5 22 16 16 23.5 10 16 16 8.5Z" fill="var(--uva)"/>
+    <circle cx="16" cy="16" r="2.3" fill="var(--velvet)"/>
+    <circle cx="30" cy="16" r="1.8" fill="var(--lima)"/>
+  </svg>`;
+}
+
+/* ============================================================
+   ASSINATURA — Console orbital da Nave-Mãe (hero)
+   Nave-Mãe no centro; sistemas reais orbitando com status Lima.
+   ============================================================ */
+function orbital() {
+  const sats = [
+    { r: 118, a: -32, label: "Sites" },
+    { r: 118, a: 74,  label: "Atendimento" },
+    { r: 170, a: 160, label: "Dados" },
+    { r: 170, a: 22,  label: "Integrações" },
+    { r: 220, a: 218, label: "SEO" },
+  ];
+  const cx = 240, cy = 240;
+  const node = ({ r, a, label }, i) => {
+    const rad = (a * Math.PI) / 180;
+    const x = cx + r * Math.cos(rad);
+    const y = cy + r * Math.sin(rad);
+    return `<g class="orb-sat" style="--d:${i * 0.4}s">
+      <line x1="${cx}" y1="${cy}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" stroke="var(--uva)" stroke-width="1" opacity=".22"/>
+      <circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="5.5" fill="var(--velvet-claro)" stroke="var(--uva)" stroke-width="1.4"/>
+      <circle class="orb-led" cx="${(x + 9).toFixed(1)}" cy="${(y - 9).toFixed(1)}" r="2.6" fill="var(--lima)"/>
+      <text x="${(x).toFixed(1)}" y="${(y + 22).toFixed(1)}" text-anchor="middle" class="orb-label">${label}</text>
+    </g>`;
+  };
+  return `<div class="orbital" aria-hidden="true">
+    <svg viewBox="0 0 480 480" fill="none">
+      <defs>
+        <linearGradient id="sweep" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" stop-color="var(--uva)" stop-opacity="0"/>
+          <stop offset="1" stop-color="var(--uva)" stop-opacity=".5"/>
+        </linearGradient>
+      </defs>
+      <g class="orb-rings">
+        <circle cx="${cx}" cy="${cy}" r="118" stroke="var(--uva)" stroke-width="1" opacity=".16"/>
+        <circle cx="${cx}" cy="${cy}" r="170" stroke="var(--uva)" stroke-width="1" opacity=".13"/>
+        <circle cx="${cx}" cy="${cy}" r="220" stroke="var(--uva)" stroke-width="1" opacity=".10" stroke-dasharray="3 7"/>
+      </g>
+      <line class="orb-sweep" x1="${cx}" y1="${cy}" x2="${cx + 220}" y2="${cy}" stroke="url(#sweep)" stroke-width="2.5"/>
+      <g class="orb-sats">${sats.map(node).join("")}</g>
+      <g class="orb-core">
+        <circle cx="${cx}" cy="${cy}" r="46" fill="var(--uva)" opacity=".14"/>
+        <path d="M240 202 L278 240 L240 278 L202 240 Z" fill="var(--uva)"/>
+        <path d="M240 214 L266 240 L240 266 L214 240 Z" fill="var(--velvet)"/>
+        <circle cx="${cx}" cy="${cy}" r="6" fill="var(--lima)"/>
+      </g>
+      <text x="${cx}" y="308" text-anchor="middle" class="orb-core-label">NAVE-MÃE</text>
+    </svg>
+  </div>`;
+}
+
+/* ============================================================
+   DIVISOR geométrico (overshoot p/ nunca deixar filete de 1px)
+   corta de prevColor para nextColor com um plano diagonal.
+   ============================================================ */
+function divider(prevColor, nextColor, flip = false) {
+  const path = flip
+    ? "M0,120 L1440,20 L1440,122 L0,122 Z"
+    : "M0,20 L1440,120 L1440,122 L0,122 Z";
+  return `<div class="divider" style="background:${prevColor}">
+    <svg viewBox="0 0 1440 122" preserveAspectRatio="none" aria-hidden="true">
+      <path fill="${nextColor}" d="${path}"></path>
+    </svg></div>`;
+}
+
+/* ============================================================
+   HEAD — SEO / OG / JSON-LD
+   ============================================================ */
+function head({ title, desc, canonical }) {
+  const ld = {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: NOME,
+    alternateName: "Ilha Tech · Grupo Ilha",
+    url: SITE,
+    email: EMAIL,
+    description: desc,
+    parentOrganization: { "@type": "Organization", name: D.marca.grupo },
+    makesOffer: {
+      "@type": "Offer",
+      itemOffered: {
+        "@type": "SoftwareApplication",
+        name: "Nave-Mãe",
+        applicationCategory: "BusinessApplication",
+        description: "Software de gestão de turismo 360°.",
+      },
+    },
+  };
+  return `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${esc(title)}</title>
+<meta name="description" content="${esc(desc)}">
+<link rel="canonical" href="${canonical}">
+<meta property="og:type" content="website">
+<meta property="og:title" content="${esc(title)}">
+<meta property="og:description" content="${esc(desc)}">
+<meta property="og:locale" content="pt_BR">
+<meta property="og:url" content="${canonical}">
+<meta property="og:image" content="${SITE}/assets/img/og-ilha-tech.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#14062F">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/css/styles.css">
+<script type="application/ld+json">${JSON.stringify(ld)}</script>${GA4 ? `
+<script async src="https://www.googletagmanager.com/gtag/js?id=${GA4}"></script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','${GA4}');</script>` : ""}
+</head>`;
+}
+
+/* ============================================================
+   COMPONENTES
+   ============================================================ */
+const eyebrow = (t) => `<p class="eyebrow"><span class="eyebrow__tick"></span>${esc(t)}</p>`;
+
+function nav() {
+  const links = D.rodape.links.map((l) => `<a href="${l.href}">${esc(l.texto)}</a>`).join("");
+  return `<header class="nav" id="top">
+    <div class="nav__inner">
+      <a class="brand" href="#top" aria-label="${NOME}">
+        ${logoMark()}
+        <span class="brand__word">Ilha<b>Tech</b></span>
+      </a>
+      <nav class="nav__links" aria-label="Navegação principal">${links}</nav>
+      <a class="btn btn--cta nav__cta" href="#contato">Fale com a Tech ${icon("arrow")}</a>
+      <button class="nav__toggle" aria-label="Abrir menu" aria-expanded="false">${icon("menu")}</button>
+    </div>
+    <div class="nav__mobile" hidden>
+      ${D.rodape.links.map((l) => `<a href="${l.href}">${esc(l.texto)}</a>`).join("")}
+      <a class="btn btn--cta" href="#contato">Fale com a Tech</a>
+    </div>
+  </header>`;
+}
+
+function hero() {
+  const h = D.hero;
+  const tele = h.telemetria.map((t) => {
+    const core = t.estado === "núcleo";
+    return `<li class="tele${core ? " tele--core" : ""}"><span class="tele__dot"></span>${esc(t.nome)}<span class="tele__state">${esc(t.estado)}</span></li>`;
+  }).join("");
+  return `<section class="hero">
+    <div class="hero__grid-bg" aria-hidden="true"></div>
+    <div class="hero__inner">
+      <div class="hero__copy">
+        ${eyebrow(h.eyebrow)}
+        <h1 class="hero__title">${esc(h.titulo)}</h1>
+        <p class="hero__sub">${esc(h.sub)}</p>
+        <div class="hero__cta">
+          <a class="btn btn--cta" href="#navemae">${esc(h.cta)} ${icon("arrow")}</a>
+          <a class="btn btn--ghost" href="#operamos">${esc(h.cta_sec)}</a>
+        </div>
+        <ul class="hero__tele">${tele}</ul>
+      </div>
+      <div class="hero__viz">${orbital()}</div>
+    </div>
+  </section>`;
+}
+
+function bloco_oque() {
+  const o = D.oque;
+  const pil = o.pilares.map((p) => `<article class="pill">
+      <span class="pill__ic">${icon(p.icone)}</span>
+      <h3>${esc(p.titulo)}</h3>
+      <p>${esc(p.texto)}</p>
+    </article>`).join("");
+  return `<section class="sec sec--light" id="oque">
+    <div class="wrap">
+      <div class="sec__head">
+        ${eyebrow(o.eyebrow)}
+        <h2>${esc(o.titulo)}</h2>
+        <p class="sec__lead">${esc(o.texto)}</p>
+      </div>
+      <div class="pill-grid">${pil}</div>
+    </div>
+  </section>`;
+}
+
+function bloco_navemae() {
+  const n = D.navemae;
+  const mods = n.modulos.map((m) => `<article class="mod${m._placeholder ? " mod--todo" : ""}">
+      <div class="mod__top">
+        <span class="mod__state">${esc(m.estado)}</span>
+      </div>
+      <h3>${esc(m.titulo)}</h3>
+      <p>${esc(m.texto)}</p>
+    </article>`).join("");
+  return `<section class="sec sec--dark" id="navemae">
+    <div class="wrap">
+      <div class="nm__head">
+        <div>
+          ${eyebrow(n.eyebrow)}
+          <h2 class="nm__title">${esc(n.titulo)}</h2>
+          <p class="nm__sub">${esc(n.sub)}</p>
+          <p class="nm__text">${esc(n.texto)}</p>
+        </div>
+        <div class="nm__badge" aria-hidden="true">
+          <span class="nm__badge-360">360°</span>
+          <span class="nm__badge-lbl">gestão de turismo</span>
+        </div>
+      </div>
+      <div class="mod-grid">${mods}</div>
+    </div>
+  </section>`;
+}
+
+function bloco_operamos() {
+  const o = D.operamos;
+  const cards = o.areas.map((a, i) => `<article class="area">
+      <span class="area__n">${String(i + 1).padStart(2, "0")}</span>
+      <span class="area__ic">${icon(a.icone)}</span>
+      <h3>${esc(a.titulo)}</h3>
+      <p>${esc(a.texto)}</p>
+    </article>`).join("");
+  return `<section class="sec sec--light" id="operamos">
+    <div class="wrap">
+      <div class="sec__head">
+        ${eyebrow(o.eyebrow)}
+        <h2>${esc(o.titulo)}</h2>
+        <p class="sec__lead">${esc(o.texto)}</p>
+      </div>
+      <div class="area-grid">${cards}</div>
+    </div>
+  </section>`;
+}
+
+function bloco_cultura() {
+  const c = D.cultura;
+  const vals = c.valores.map((v) => `<li class="val"><span class="val__emoji">${v.emoji}</span>${esc(v.nome)}</li>`).join("");
+  return `<section class="sec sec--mist" id="cultura">
+    <div class="wrap">
+      <div class="sec__head">
+        ${eyebrow(c.eyebrow)}
+        <h2>${esc(c.titulo)}</h2>
+        <p class="sec__lead">${esc(c.texto)}</p>
+      </div>
+      <ul class="val-grid">${vals}</ul>
+    </div>
+  </section>`;
+}
+
+function bloco_numeros() {
+  const n = D.numeros;
+  const st = n.stats.map((s) => `<div class="stat${s.real ? "" : " stat--todo"}">
+      <span class="stat__v">${esc(s.valor)}</span>
+      <span class="stat__l">${esc(s.label)}</span>
+    </div>`).join("");
+  return `<section class="sec sec--dark sec--stats" id="numeros">
+    <div class="wrap">
+      <div class="sec__head sec__head--center">
+        ${eyebrow(n.eyebrow)}
+        <h2>${esc(n.titulo)}</h2>
+      </div>
+      <div class="stat-grid">${st}</div>
+      <p class="stats__note">${esc(n.sub)}</p>
+    </div>
+  </section>`;
+}
+
+function bloco_contato() {
+  const c = D.contato;
+  return `<section class="sec sec--dark sec--contato" id="contato">
+    <div class="wrap contato">
+      ${eyebrow(c.eyebrow)}
+      <h2>${esc(c.titulo)}</h2>
+      <p class="contato__lead">${esc(c.texto)}</p>
+      <a class="btn btn--cta btn--lg" href="mailto:${EMAIL}">${esc(c.cta)} ${icon("arrow")}</a>
+      <p class="contato__mail">${esc(EMAIL)}</p>
+    </div>
+  </section>`;
+}
+
+function footer() {
+  const r = D.rodape;
+  const links = r.links.map((l) => `<a href="${l.href}">${esc(l.texto)}</a>`).join("");
+  const year = "2026";
+  return `<footer class="foot">
+    <div class="wrap foot__grid">
+      <div class="foot__brand">
+        <a class="brand" href="#top">${logoMark()}<span class="brand__word">Ilha<b>Tech</b></span></a>
+        <p>${esc(r.sobre)}</p>
+      </div>
+      <nav class="foot__links" aria-label="Rodapé">${links}</nav>
+    </div>
+    <div class="wrap foot__base">
+      <span>© ${year} ${esc(NOME)} · ${esc(D.marca.grupo)}</span>
+      <span class="foot__tag">${esc(D.marca.tagline)}</span>
+    </div>
+  </footer>`;
+}
+
+/* ============================================================
+   PÁGINA
+   ============================================================ */
+function page() {
+  return `${head({
+    title: "Ilha Tech — a tecnologia que pilota o Grupo Ilha",
+    desc: "Ilha Tech é a franquia de tecnologia do Grupo Ilha. Desenvolvemos a Nave-Mãe, software de gestão de turismo 360°, e mantemos os sistemas digitais que administram a Ilha Tour.",
+    canonical: SITE + "/",
+  })}
+<body>
+${nav()}
+<main>
+${hero()}
+${divider("var(--velvet)", "var(--branco)")}
+${bloco_oque()}
+${divider("var(--branco)", "var(--velvet)")}
+${bloco_navemae()}
+${divider("var(--velvet)", "var(--branco)", true)}
+${bloco_operamos()}
+${bloco_cultura()}
+${divider("var(--lilas)", "var(--velvet)")}
+${bloco_numeros()}
+${bloco_contato()}
+</main>
+${footer()}
+<script src="/assets/js/main.js" defer></script>
+</body>
+</html>`;
+}
+
+/* ============================================================
+   ARTEFATOS AUXILIARES
+   ============================================================ */
+function faviconSVG() {
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="7" fill="#14062F"/>
+  <circle cx="16" cy="16" r="10.5" fill="none" stroke="#9333EA" stroke-width="1.2" opacity=".55"/>
+  <path d="M16 8 23 16 16 24 9 16 16 8Z" fill="#9333EA"/>
+  <path d="M16 12 20 16 16 20 12 16 16 12Z" fill="#14062F"/>
+  <circle cx="16" cy="16" r="2.2" fill="#4ADE80"/>
+</svg>`;
+}
+
+function sitemap() {
+  const today = "2026-07-13";
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>${SITE}/</loc><lastmod>${today}</lastmod><changefreq>monthly</changefreq><priority>1.0</priority></url>
+</urlset>`;
+}
+
+function robots() {
+  return `User-agent: *\nAllow: /\nSitemap: ${SITE}/sitemap.xml\n`;
+}
+
+/* ============================================================
+   BUILD
+   ============================================================ */
+write("index.html", page());
+write("favicon.svg", faviconSVG());
+write("sitemap.xml", sitemap());
+write("robots.txt", robots());
+
+console.log("✅ Ilha Tech gerado: index.html · favicon.svg · sitemap.xml · robots.txt");
