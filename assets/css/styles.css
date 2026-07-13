@@ -118,8 +118,8 @@ h1, h2, h3 { line-height: 1.12; letter-spacing: -.02em; font-weight: 800; }
   max-width: var(--maxw); margin: 0 auto; padding-inline: var(--gutter);
   height: var(--header-h); display: flex; align-items: center; gap: 1.5rem;
 }
-.brand { display: inline-flex; align-items: center; gap: .6rem; color: #fff; }
-.brand__mark { width: 30px; height: 30px; }
+.brand { display: inline-flex; align-items: center; gap: .55rem; color: #fff; }
+.brand__mark { width: 42px; height: 42px; border-radius: 50%; }
 .brand__word { font-weight: 700; font-size: 1.22rem; letter-spacing: -.02em; }
 .brand__word b { font-weight: 800; color: var(--uva); }
 .sec--dark .brand__word b, .nav .brand__word b, .foot .brand__word b { color: #b57cff; }
@@ -308,8 +308,8 @@ h1, h2, h3 { line-height: 1.12; letter-spacing: -.02em; font-weight: 800; }
 .contato { max-width: 40rem; margin-inline: auto; }
 .contato .eyebrow { justify-content: center; }
 .contato h2 { font-size: var(--t-h2); }
-.contato__lead { color: var(--branco-72); font-size: var(--t-lead); margin: 1.1rem 0 2rem; }
-.contato__mail { margin-top: 1.2rem; color: var(--branco-58); font-size: .95rem; letter-spacing: .02em; }
+.contato__lead { color: var(--branco-72); font-size: var(--t-lead); margin: 1.1rem 0 0; }
+.contato__emblem { width: clamp(96px, 14vw, 128px); height: auto; margin: 2.4rem auto 0; border-radius: 50%; opacity: .96; }
 
 /* ============================================================
    RODAPÉ

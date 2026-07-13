@@ -3,9 +3,7 @@
     "nome": "Ilha Tech",
     "tagline": "A tecnologia que pilota o Grupo Ilha",
     "dominio": "https://ilhatech.io",
-    "grupo": "Grupo Ilha",
-    "email_contato": "contato@ilhatech.io",
-    "_placeholder_email": "confirmar e-mail oficial da Ilha Tech (usei contato@ilhatech.io)"
+    "grupo": "Grupo Ilha"
   },
 
   "hero": {
@@ -136,22 +134,18 @@
   "numeros": {
     "eyebrow": "Impacto",
     "titulo": "A operação em números",
-    "sub": "Os valores abaixo marcados com ✱ são placeholders — aguardando os números reais do Playbook Tech.",
+    "sub": "",
     "stats": [
       { "valor": "360°", "label": "Gestão de turismo na Nave-Mãe", "real": true },
       { "valor": "4", "label": "Idiomas na operação (PT · EN · ES · FR)", "real": true },
-      { "valor": "24/7", "label": "Sistemas do grupo em produção", "real": true },
-      { "valor": "✱", "label": "Franquias atendidas — A DEFINIR", "real": false },
-      { "valor": "✱", "label": "Uptime dos sistemas — A DEFINIR", "real": false },
-      { "valor": "✱", "label": "Entregas / ano — A DEFINIR", "real": false }
+      { "valor": "24/7", "label": "Sistemas do grupo em produção", "real": true }
     ]
   },
 
   "contato": {
-    "eyebrow": "Fale com a Tech",
+    "eyebrow": "Grupo Ilha",
     "titulo": "Tecnologia que faz o grupo andar mais rápido",
-    "texto": "Quer entender como a Ilha Tech pode organizar dados, automatizar atendimento e dar clareza à gestão? Fala com a gente.",
-    "cta": "Falar com a Ilha Tech"
+    "texto": "Da Nave-Mãe aos sistemas que rodam a operação todos os dias — a Ilha Tech é a camada de tecnologia por trás da experiência do Grupo Ilha."
   },
 
   "rodape": {
@@ -160,8 +154,7 @@
       { "texto": "O que é", "href": "#oque" },
       { "texto": "Nave-Mãe", "href": "#navemae" },
       { "texto": "Como operamos", "href": "#operamos" },
-      { "texto": "Cultura", "href": "#cultura" },
-      { "texto": "Contato", "href": "#contato" }
+      { "texto": "Cultura", "href": "#cultura" }
     ]
   }
 }

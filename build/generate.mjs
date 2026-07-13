@@ -18,7 +18,6 @@ const D = JSON.parse(read("data/site.json"));
 /* ---- Constantes da marca ---- */
 const SITE = D.marca.dominio;             // https://ilhatech.io
 const NOME = D.marca.nome;
-const EMAIL = D.marca.email_contato;
 const GA4 = ""; // preencher com G-XXXXXXX quando a propriedade GA4 da Ilha Tech existir
 const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
@@ -41,15 +40,9 @@ const I = {
 };
 const icon = (k) => I[k] || "";
 
-/* logo provisório: marcador da Nave-Mãe (losango orbital) + wordmark */
+/* logo oficial (emblema circular 500x500) */
 function logoMark() {
-  return `<svg class="brand__mark" viewBox="0 0 32 32" fill="none" aria-hidden="true">
-    <circle cx="16" cy="16" r="14" stroke="var(--uva)" stroke-width="1.3" opacity=".55"/>
-    <circle cx="16" cy="16" r="9" stroke="var(--uva)" stroke-width="1" opacity=".35"/>
-    <path d="M16 8.5 22 16 16 23.5 10 16 16 8.5Z" fill="var(--uva)"/>
-    <circle cx="16" cy="16" r="2.3" fill="var(--velvet)"/>
-    <circle cx="30" cy="16" r="1.8" fill="var(--lima)"/>
-  </svg>`;
+  return `<img class="brand__mark" src="/assets/img/logo-ilha-tech.png" width="500" height="500" alt="${NOME}" decoding="async">`;
 }
 
 /* ============================================================
@@ -126,7 +119,7 @@ function head({ title, desc, canonical }) {
     name: NOME,
     alternateName: "Ilha Tech · Grupo Ilha",
     url: SITE,
-    email: EMAIL,
+    logo: SITE + "/assets/img/logo-ilha-tech.png",
     description: desc,
     parentOrganization: { "@type": "Organization", name: D.marca.grupo },
     makesOffer: {
@@ -180,12 +173,10 @@ function nav() {
         <span class="brand__word">Ilha<b>Tech</b></span>
       </a>
       <nav class="nav__links" aria-label="Navegação principal">${links}</nav>
-      <a class="btn btn--cta nav__cta" href="#contato">Fale com a Tech ${icon("arrow")}</a>
       <button class="nav__toggle" aria-label="Abrir menu" aria-expanded="false">${icon("menu")}</button>
     </div>
     <div class="nav__mobile" hidden>
       ${D.rodape.links.map((l) => `<a href="${l.href}">${esc(l.texto)}</a>`).join("")}
-      <a class="btn btn--cta" href="#contato">Fale com a Tech</a>
     </div>
   </header>`;
 }
@@ -321,8 +312,7 @@ function bloco_contato() {
       ${eyebrow(c.eyebrow)}
       <h2>${esc(c.titulo)}</h2>
       <p class="contato__lead">${esc(c.texto)}</p>
-      <a class="btn btn--cta btn--lg" href="mailto:${EMAIL}">${esc(c.cta)} ${icon("arrow")}</a>
-      <p class="contato__mail">${esc(EMAIL)}</p>
+      <img class="contato__emblem" src="/assets/img/logo-ilha-tech.png" width="500" height="500" alt="" decoding="async">
     </div>
   </section>`;
 }
