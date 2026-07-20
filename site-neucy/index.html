@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Site Neucy · Paletas · Neucy Arenas Terapeuta Holística</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Nunito+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Nunito Sans', system-ui, sans-serif; background: #1C1512; }
+
+  /* ---------- LOGIN GATE ---------- */
+  #gate {
+    position: fixed; inset: 0; z-index: 9999;
+    background: linear-gradient(160deg, #2B1E17 0%, #47251C 60%, #5C2E22 100%);
+    display: flex; align-items: center; justify-content: center; flex-direction: column;
+    font-family: 'Nunito Sans', sans-serif;
+  }
+  .gate-card {
+    background: rgba(255,255,255,0.06); backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.12); border-radius: 22px;
+    padding: 44px 40px; width: 340px; text-align: center;
+    box-shadow: 0 30px 80px rgba(0,0,0,0.4);
+  }
+  .gate-logo { font-family: 'Fraunces', serif; font-size: 26px; font-weight: 600; color: #F4E9DF; letter-spacing: 0.5px; }
+  .gate-sub { font-size: 12px; color: rgba(244,233,223,0.55); margin-top: 6px; letter-spacing: 2px; text-transform: uppercase; }
+  .gate-card input {
+    width: 100%; margin-top: 14px; padding: 13px 16px; border-radius: 11px;
+    border: 1px solid rgba(255,255,255,0.15); background: rgba(0,0,0,0.2);
+    color: #F4E9DF; font-size: 14px; outline: none; font-family: inherit;
+  }
+  .gate-card input::placeholder { color: rgba(244,233,223,0.4); }
+  .gate-card input:focus { border-color: #D98460; }
+  .gate-btn {
+    width: 100%; margin-top: 18px; padding: 13px; border-radius: 11px; border: none;
+    background: #C56B4A; color: #fff; font-weight: 700; font-size: 14px; cursor: pointer;
+    font-family: inherit; transition: background 0.2s;
+  }
+  .gate-btn:hover { background: #D98460; }
+  .gate-err { color: #F0A88C; font-size: 12px; margin-top: 12px; min-height: 16px; }
+
+  #site { display: none; }
+
+  /* ---------- NAV ---------- */
+  #topbar {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    background: rgba(28,21,18,0.96); backdrop-filter: blur(12px);
+    padding: 10px 20px; display: flex; gap: 6px; flex-wrap: wrap; align-items: center;
+    border-bottom: 1px solid rgba(255,255,255,0.07);
+  }
+  .brand-tag { font-size: 10px; font-weight: 800; letter-spacing: 3px; text-transform: uppercase; color: rgba(244,233,223,0.35); margin-right: 8px; white-space: nowrap; }
+  .pill { padding: 5px 11px; border-radius: 20px; font-size: 10px; font-weight: 700; cursor: pointer; border: 1px solid rgba(255,255,255,0.12); color: rgba(244,233,223,0.45); background: transparent; transition: all 0.2s; text-decoration: none; white-space: nowrap; }
+  .pill:hover { color: #fff; border-color: rgba(255,255,255,0.35); }
+  .pill.active { background: #C56B4A; border-color: #C56B4A; color: #fff; }
+  .divider { height: 54px; background: #1C1512; }
+  .group-divider { padding: 46px 48px 0; font-size: 10px; font-weight: 800; letter-spacing: 4px; text-transform: uppercase; color: rgba(244,233,223,0.2); border-top: 1px solid rgba(255,255,255,0.05); margin-top: 22px; }
+
+  .palette-meta { padding: 24px 48px 8px; }
+  .palette-num { font-size: 10px; font-weight: 800; letter-spacing: 3px; color: rgba(244,233,223,0.28); }
+  .palette-title { font-family: 'Fraunces', serif; font-size: 26px; font-weight: 600; color: #F4E9DF; letter-spacing: -0.3px; margin-top: 4px; }
+  .palette-desc { font-size: 13px; color: rgba(244,233,223,0.4); margin-top: 4px; }
+  .swatches { display: flex; gap: 8px; padding: 14px 48px 10px; }
+  .swatch { height: 24px; border-radius: 6px; flex: 1; }
+  .hex-row { display: flex; gap: 8px; padding: 0 48px 24px; flex-wrap: wrap; }
+  .hex-tag { font-size: 9px; font-weight: 700; color: rgba(244,233,223,0.3); letter-spacing: 0.5px; }
+
+  .mock-nav { padding: 0 48px; height: 66px; display: flex; align-items: center; justify-content: space-between; }
+  .nav-logo { font-family: 'Fraunces', serif; font-size: 19px; font-weight: 600; letter-spacing: -0.2px; }
+  .nav-links { display: flex; gap: 24px; font-size: 14px; }
+  .nav-cta { padding: 9px 18px; border-radius: 24px; font-size: 13px; font-weight: 700; border: none; cursor: pointer; }
+
+  .mock-hero { padding: 60px 48px 72px; display: grid; grid-template-columns: 1.05fr 0.95fr; gap: 48px; align-items: center; }
+  .hero-eyebrow { font-size: 11px; font-weight: 800; letter-spacing: 2.5px; text-transform: uppercase; margin-bottom: 18px; }
+  .hero-h1 { font-family: 'Fraunces', serif; font-size: 46px; font-weight: 600; line-height: 1.08; letter-spacing: -1px; margin-bottom: 20px; }
+  .hero-sub { font-size: 16px; line-height: 1.7; margin-bottom: 32px; }
+  .hero-btns { display: flex; gap: 12px; align-items: center; }
+  .btn-p { padding: 14px 26px; border-radius: 28px; font-size: 14px; font-weight: 700; border: none; cursor: pointer; }
+  .btn-g { padding: 14px 20px; border-radius: 28px; font-size: 14px; font-weight: 600; cursor: pointer; background: transparent; }
+  .hero-card { border-radius: 22px; padding: 30px 32px; }
+  .card-label { font-size: 10px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 18px; }
+  .quote { font-family: 'Fraunces', serif; font-size: 21px; font-weight: 500; line-height: 1.4; font-style: italic; }
+  .quote-author { font-size: 13px; margin-top: 16px; font-weight: 700; }
+
+  .features-section { padding: 58px 48px 40px; }
+  .section-eyebrow { font-size: 11px; font-weight: 800; letter-spacing: 2.5px; text-transform: uppercase; margin-bottom: 12px; }
+  .section-h2 { font-family: 'Fraunces', serif; font-size: 32px; font-weight: 600; letter-spacing: -0.5px; margin-bottom: 8px; }
+  .section-sub { font-size: 15px; margin-bottom: 42px; }
+  .cards-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+  .feat-card { border-radius: 18px; padding: 28px; }
+  .feat-icon { width: 46px; height: 46px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; margin-bottom: 16px; }
+  .feat-title { font-family: 'Fraunces', serif; font-size: 17px; font-weight: 600; margin-bottom: 6px; }
+  .feat-body { font-size: 13px; line-height: 1.6; }
+
+  .cta-strip { margin: 40px 24px 32px; border-radius: 26px; padding: 62px 48px; text-align: center; }
+  .cta-h2 { font-family: 'Fraunces', serif; font-size: 34px; font-weight: 600; letter-spacing: -0.5px; margin-bottom: 14px; }
+  .cta-sub { font-size: 16px; margin-bottom: 30px; }
+  .cta-btn { padding: 15px 36px; border-radius: 30px; font-size: 15px; font-weight: 700; border: none; cursor: pointer; }
+</style>
+</head>
+<body>
+
+<!-- ================= LOGIN GATE ================= -->
+<div id="gate">
+  <div class="gate-card">
+    <div class="gate-logo">Neucy Arenas</div>
+    <div class="gate-sub">Terapia Holística</div>
+    <input id="u" type="text" placeholder="Usuário" autocomplete="off">
+    <input id="p" type="password" placeholder="Senha">
+    <button class="gate-btn" onclick="tryLogin()">Entrar</button>
+    <div class="gate-err" id="err"></div>
+  </div>
+</div>
+
+<!-- ================= SITE ================= -->
+<div id="site">
+  <div id="topbar">
+    <span class="brand-tag">SITE NEUCY · 15 PALETAS</span>
+  </div>
+  <div style="height:52px"></div>
+  <div id="palettes-root"></div>
+</div>
+
+<script>
+function tryLogin(){
+  const u = document.getElementById('u').value.trim().toLowerCase();
+  const p = document.getElementById('p').value;
+  if(u === 'neucy' && p === 'migueleluz'){
+    document.getElementById('gate').style.display = 'none';
+    document.getElementById('site').style.display = 'block';
+    buildSite();
+  } else {
+    document.getElementById('err').textContent = 'Usuário ou senha incorretos.';
+  }
+}
+document.getElementById('p').addEventListener('keydown', e => { if(e.key==='Enter') tryLogin(); });
+document.getElementById('u').addEventListener('keydown', e => { if(e.key==='Enter') document.getElementById('p').focus(); });
+
+// ---------- helpers ----------
+const lum = h => {
+  const r=parseInt(h.slice(1,3),16)/255,g=parseInt(h.slice(3,5),16)/255,b=parseInt(h.slice(5,7),16)/255;
+  return .2126*r+.7152*g+.0722*b;
+};
+const textOn  = h => lum(h)>.42?'#2B211C':'#FBF3EA';
+const mutedOn = h => lum(h)>.42?'rgba(43,33,28,0.62)':'rgba(251,243,234,0.68)';
+const alpha = (h,a) => {
+  const r=parseInt(h.slice(1,3),16),g=parseInt(h.slice(3,5),16),b=parseInt(h.slice(5,7),16);
+  return `rgba(${r},${g},${b},${a})`;
+};
+
+// ---------- 15 palettes ----------
+const palettes = [
+  // GRUPO A — Terracota & Sálvia
+  { id:'01', name:'Terracota Sálvia', group:'A · Terracota & Sálvia — barro quente + verde folha',
+    fundo:'#FBF6F0', secao:'#F1E8DD', carater:'#7C3A28', superficie:'#93513C', acento:'#C56B4A', acao:'#6B7F5B',
+    desc:'Terracota como alma da marca, sálvia como toque de natureza e cura' },
+  { id:'02', name:'Argila Suave', group:'A · Terracota & Sálvia — barro quente + verde folha',
+    fundo:'#FAF4EE', secao:'#EFE4D8', carater:'#8A4432', superficie:'#A15642', acento:'#D98460', acao:'#7A8C64',
+    desc:'Argila mais clara e acolhedora, verde-oliva suave — leveza e conforto' },
+  { id:'03', name:'Barro & Musgo', group:'A · Terracota & Sálvia — barro quente + verde folha',
+    fundo:'#F8F3EC', secao:'#ECE1D3', carater:'#6E3B2A', superficie:'#874B37', acento:'#B86445', acao:'#5E7050',
+    desc:'Barro profundo com musgo verde — enraizamento e terra' },
+
+  // GRUPO B — Vinho & Folha
+  { id:'04', name:'Vinho & Folha', group:'B · Vinho & Folha — bordô profundo + verde vivo',
+    fundo:'#FAF5F3', secao:'#EFE0DD', carater:'#5C1F2E', superficie:'#7A2C3D', acento:'#9E3B50', acao:'#6E8259',
+    desc:'Vinho profundo e feminino, verde folha como contraponto natural' },
+  { id:'05', name:'Bordô Natureza', group:'B · Vinho & Folha — bordô profundo + verde vivo',
+    fundo:'#F9F3F1', secao:'#EDDDD9', carater:'#6B1F2A', superficie:'#862834', acento:'#A8465A', acao:'#7C8A5A',
+    desc:'Bordô intenso, sálvia clara — sofisticação com raiz na natureza' },
+  { id:'06', name:'Marsala', group:'B · Vinho & Folha — bordô profundo + verde vivo',
+    fundo:'#FBF6F2', secao:'#F0E3DB', carater:'#6D2B32', superficie:'#8A3A40', acento:'#B05A54', acao:'#808B5E',
+    desc:'Marsala aterrado e quente, verde-oliva — maturidade e equilíbrio' },
+
+  // GRUPO C — Âmbar & Terra
+  { id:'07', name:'Âmbar & Terra', group:'C · Âmbar & Terra — laranja quente + marrom terra',
+    fundo:'#FCF7EF', secao:'#F3E9D7', carater:'#7A4A1E', superficie:'#9A6329', acento:'#D89331', acao:'#6F7D4E',
+    desc:'Âmbar dourado sobre terra, verde discreto — energia e vitalidade' },
+  { id:'08', name:'Pôr do Sol', group:'C · Âmbar & Terra — laranja quente + marrom terra',
+    fundo:'#FDF6EE', secao:'#F6E8D5', carater:'#8A3E1B', superficie:'#A85A2C', acento:'#E08A3C', acao:'#728059',
+    desc:'Laranja de fim de tarde, quente e viva — acolhimento e movimento' },
+  { id:'09', name:'Canela', group:'C · Âmbar & Terra — laranja quente + marrom terra',
+    fundo:'#FBF5EC', secao:'#F1E6D4', carater:'#7E4423', superficie:'#9C5C33', acento:'#C67B3E', acao:'#6C7A4F',
+    desc:'Canela e especiaria, tom quente e sereno — aconchego terapêutico' },
+
+  // GRUPO D — Natureza & Terra Viva
+  { id:'10', name:'Floresta & Cobre', group:'D · Natureza & Terra Viva — verde como alma',
+    fundo:'#F7F4EC', secao:'#E9E5D5', carater:'#33452F', superficie:'#46583E', acento:'#B5633C', acao:'#C98A3E',
+    desc:'Verde floresta como âncora, cobre e âmbar de destaque — natureza forte' },
+  { id:'11', name:'Sálvia & Vinho', group:'D · Natureza & Terra Viva — verde como alma',
+    fundo:'#F8F5EF', secao:'#EAE6D8', carater:'#4A5A3E', superficie:'#5E6E4E', acento:'#8C3A48', acao:'#C77A3C',
+    desc:'Sálvia profunda com acento vinho — calma com toque de força' },
+  { id:'12', name:'Terra Viva', group:'D · Natureza & Terra Viva — verde como alma',
+    fundo:'#FBF6EF', secao:'#F0E7D8', carater:'#5A3A2A', superficie:'#744C36', acento:'#C56B45', acao:'#7E8C55',
+    desc:'Marrom terra vivo, terracota e verde — o mais orgânico e enraizado' },
+  { id:'13', name:'Oliva Dourada', group:'D · Natureza & Terra Viva — verde como alma',
+    fundo:'#FAF6EC', secao:'#EFE8D2', carater:'#4E4A2A', superficie:'#66603A', acento:'#C98A34', acao:'#8A6A3C',
+    desc:'Oliva escura e ouro — natureza sofisticada, quase mediterrânea' },
+  { id:'14', name:'Cobre & Sálvia', group:'D · Natureza & Terra Viva — verde como alma',
+    fundo:'#FAF5EF', secao:'#EEE6D8', carater:'#6E3B26', superficie:'#895033', acento:'#BE6A44', acao:'#74855E',
+    desc:'Cobre quente com sálvia serena — corpo e mente em harmonia' },
+  { id:'15', name:'Rosa Terroso', group:'D · Natureza & Terra Viva — verde como alma',
+    fundo:'#FBF4F0', secao:'#F1E2DB', carater:'#7A3C3A', superficie:'#96514C', acento:'#C57A63', acao:'#7C8A63',
+    desc:'Rosa-terra suave e feminino, verde folha — delicadeza com raiz' },
+];
+
+const services = [
+  {icon:'🌿', title:'Terapia Holística',     body:'Cuidado integral que enxerga corpo, mente e emoções como um só sistema em busca de equilíbrio.'},
+  {icon:'🤲', title:'Reiki & Energia',       body:'Harmonização dos centros energéticos para aliviar tensões e restaurar o fluxo natural do corpo.'},
+  {icon:'🕯️', title:'Aromaterapia',          body:'Óleos essenciais escolhidos para acalmar, energizar e reconectar você com o momento presente.'},
+  {icon:'🍃', title:'Florais',                body:'Essências florais que apoiam o reequilíbrio emocional de forma suave e natural.'},
+  {icon:'🧘', title:'Meditação Guiada',      body:'Práticas de respiração e presença para reduzir a ansiedade e cultivar clareza interior.'},
+  {icon:'🌱', title:'Escuta Terapêutica',    body:'Um espaço seguro e acolhedor para você se ouvir, se entender e caminhar no seu tempo.'},
+];
+
+function buildSite(){
+  const root = document.getElementById('palettes-root');
+  const topbar = document.getElementById('topbar');
+
+  // pills
+  palettes.forEach(p => {
+    const a = document.createElement('a');
+    a.className = 'pill'; a.href = '#p'+p.id; a.id = 'pill-'+p.id;
+    a.textContent = p.id+' · '+p.name;
+    topbar.appendChild(a);
+  });
+
+  let lastGroup = '';
+  palettes.forEach(p => {
+    if (p.group !== lastGroup) {
+      const gl = document.createElement('div');
+      gl.className = 'group-divider';
+      gl.textContent = '── ' + p.group;
+      root.appendChild(gl);
+      lastGroup = p.group;
+    }
+    const divider = document.createElement('div');
+    divider.className = 'divider';
+    root.appendChild(divider);
+
+    const t = textOn, m = mutedOn;
+    const sec = document.createElement('section');
+    sec.id = 'p'+p.id;
+
+    sec.innerHTML = `
+      <div class="palette-meta">
+        <div class="palette-num">${p.id} · SITE NEUCY · v1.0.0</div>
+        <div class="palette-title">${p.name}</div>
+        <div class="palette-desc">${p.desc}</div>
+      </div>
+      <div class="swatches">
+        <div class="swatch" style="background:${p.fundo}; border:1px solid rgba(255,255,255,0.1);"></div>
+        <div class="swatch" style="background:${p.secao};"></div>
+        <div class="swatch" style="background:${p.carater};"></div>
+        <div class="swatch" style="background:${p.superficie};"></div>
+        <div class="swatch" style="background:${p.acento};"></div>
+        <div class="swatch" style="background:${p.acao};"></div>
+      </div>
+      <div class="hex-row">
+        <span class="hex-tag">Fundo ${p.fundo}</span><span class="hex-tag">·</span>
+        <span class="hex-tag">Seção ${p.secao}</span><span class="hex-tag">·</span>
+        <span class="hex-tag">Caráter ${p.carater}</span><span class="hex-tag">·</span>
+        <span class="hex-tag">Superfície ${p.superficie}</span><span class="hex-tag">·</span>
+        <span class="hex-tag">Acento ${p.acento}</span><span class="hex-tag">·</span>
+        <span class="hex-tag">Ação ${p.acao}</span>
+      </div>
+
+      <!-- NAVBAR -->
+      <div style="background:${p.carater}">
+        <div class="mock-nav">
+          <div class="nav-logo" style="color:${t(p.carater)}">Neucy Arenas</div>
+          <div class="nav-links" style="color:${m(p.carater)}">
+            <span>Sobre</span><span>Terapias</span><span>Depoimentos</span><span>Contato</span>
+          </div>
+          <button class="nav-cta" style="background:${p.acao}; color:${t(p.acao)}">Agendar sessão</button>
+        </div>
+      </div>
+
+      <!-- HERO -->
+      <div style="background:${p.carater}">
+        <div class="mock-hero">
+          <div>
+            <div class="hero-eyebrow" style="color:${p.acento}">TERAPIA HOLÍSTICA · NATUREZA · EQUILÍBRIO</div>
+            <div class="hero-h1" style="color:${t(p.carater)}">Equilíbrio entre corpo, mente e natureza.</div>
+            <div class="hero-sub" style="color:${m(p.carater)}">Um espaço de cuidado e reconexão. Terapias que respeitam o seu tempo e devolvem a leveza ao seu dia a dia.</div>
+            <div class="hero-btns">
+              <button class="btn-p" style="background:${p.acao}; color:${t(p.acao)}">Agende sua sessão</button>
+              <button class="btn-g" style="color:${m(p.carater)}; border:1px solid ${alpha(t(p.carater),0.22)}">Conheça meu trabalho →</button>
+            </div>
+          </div>
+          <div class="hero-card" style="background:${p.superficie}">
+            <div class="card-label" style="color:${p.acento}">SOBRE NEUCY</div>
+            <div class="quote" style="color:${t(p.superficie)}">"Cuidar é reconectar a pessoa com a sua própria natureza."</div>
+            <div class="quote-author" style="color:${p.acento}">Neucy Arenas · Terapeuta Holística</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SERVICES -->
+      <div class="features-section" style="background:${p.fundo}">
+        <div class="section-eyebrow" style="color:${p.acento}">COMO POSSO TE AJUDAR</div>
+        <div class="section-h2" style="color:${t(p.fundo)}">Terapias para o seu bem-estar</div>
+        <div class="section-sub" style="color:${m(p.fundo)}">Cada prática é um convite para você desacelerar e se reencontrar.</div>
+        <div class="cards-grid">
+          ${services.map(f => `
+            <div class="feat-card" style="background:${p.secao}">
+              <div class="feat-icon" style="background:${alpha(p.acento,0.18)}; color:${p.acento}">${f.icon}</div>
+              <div class="feat-title" style="color:${t(p.secao)}">${f.title}</div>
+              <div class="feat-body" style="color:${m(p.secao)}">${f.body}</div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+
+      <!-- CTA -->
+      <div class="cta-strip" style="background:${p.superficie}">
+        <div class="cta-h2" style="color:${t(p.superficie)}">Pronta para cuidar de você?</div>
+        <div class="cta-sub" style="color:${m(p.superficie)}">Dê o primeiro passo. Agende uma conversa e comece a sua jornada de equilíbrio.</div>
+        <button class="cta-btn" style="background:${p.acao}; color:${t(p.acao)}">Agendar minha sessão</button>
+      </div>
+    `;
+    root.appendChild(sec);
+  });
+
+  const obs = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        const id = e.target.id.replace('p','');
+        document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
+        const pill = document.getElementById('pill-'+id);
+        if (pill) pill.classList.add('active');
+      }
+    });
+  }, { threshold: 0.15 });
+  document.querySelectorAll('#palettes-root section').forEach(s => obs.observe(s));
+}
+</script>
+</body>
+</html>
