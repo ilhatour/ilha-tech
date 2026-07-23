@@ -146,9 +146,17 @@ function head({ title, desc, canonical }) {
 <meta property="og:locale" content="pt_BR">
 <meta property="og:url" content="${canonical}">
 <meta property="og:image" content="${SITE}/assets/img/og-ilha-tech.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:site_name" content="${NOME}">
 <meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="${SITE}/assets/img/og-ilha-tech.png">
 <meta name="theme-color" content="#14062F">
+<link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/img/favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/assets/img/favicon-16.png">
+<link rel="apple-touch-icon" href="/assets/img/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -268,6 +276,7 @@ function bloco_operamos() {
         <p class="sec__lead">${esc(o.texto)}</p>
       </div>
       <div class="area-grid">${cards}</div>
+      <p class="operamos__proof">Tudo isso no ar hoje — veja a operação em <a href="https://ilhatour.com" target="_blank" rel="noopener">ilhatour.com ${icon("arrow")}</a></p>
     </div>
   </section>`;
 }
@@ -312,6 +321,7 @@ function bloco_contato() {
       ${eyebrow(c.eyebrow)}
       <h2>${esc(c.titulo)}</h2>
       <p class="contato__lead">${esc(c.texto)}</p>
+      <a class="btn btn--cta btn--lg" href="https://ilhatour.com" target="_blank" rel="noopener">Conheça a Ilha Tour ${icon("arrow")}</a>
       <img class="contato__emblem" src="/assets/img/logo-ilha-tech.png" width="500" height="500" alt="" decoding="async">
     </div>
   </section>`;
@@ -334,6 +344,29 @@ function footer() {
       <span class="foot__tag">${esc(D.marca.tagline)}</span>
     </div>
   </footer>`;
+}
+
+/* ============================================================
+   PÁGINA 404
+   ============================================================ */
+function page404() {
+  return `${head({
+    title: "Página não encontrada — Ilha Tech",
+    desc: "A página que você procura não existe ou foi movida.",
+    canonical: SITE + "/404.html",
+  })}
+<body>
+<main class="err">
+  <div class="err__inner">
+    <img class="err__logo" src="/assets/img/logo-ilha-tech.png" width="500" height="500" alt="${NOME}" decoding="async">
+    <p class="err__code">404</p>
+    <h1 class="err__title">Rota fora do radar</h1>
+    <p class="err__lead">A página que você procura não existe ou saiu de órbita. Vamos te levar de volta ao centro de controle.</p>
+    <a class="btn btn--cta btn--lg" href="/">Voltar ao início ${icon("arrow")}</a>
+  </div>
+</main>
+</body>
+</html>`;
 }
 
 /* ============================================================
@@ -395,6 +428,7 @@ function robots() {
    BUILD
    ============================================================ */
 write("index.html", page());
+write("404.html", page404());
 write("favicon.svg", faviconSVG());
 write("sitemap.xml", sitemap());
 write("robots.txt", robots());

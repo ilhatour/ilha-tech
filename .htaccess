@@ -11,3 +11,6 @@
   ExpiresByType application/javascript "access plus 0 seconds"
   ExpiresByType image/svg+xml "access plus 0 seconds"
 </IfModule>
+
+# Página de erro branded
+ErrorDocument 404 /404.html
