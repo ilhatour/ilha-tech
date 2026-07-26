@@ -239,8 +239,8 @@ h1, h2, h3 { line-height: 1.12; letter-spacing: -.02em; font-weight: 800; }
 .hist__quote { font-size: 1.32rem; font-weight: 600; line-height: 1.4; letter-spacing: -.01em; margin-top: 1rem; }
 .hist__sign { display: flex; align-items: center; gap: .85rem; margin-top: 1.8rem; padding-top: 1.4rem; border-top: 1px solid var(--branco-14); }
 .hist__avatar {
-  display: grid; place-items: center; width: 48px; height: 48px; border-radius: 50%;
-  background: var(--uva); color: #fff; font-weight: 800; font-size: 1.05rem; letter-spacing: .02em; flex-shrink: 0;
+  width: 56px; height: 56px; border-radius: 50%; object-fit: cover; flex-shrink: 0;
+  border: 2px solid var(--uva);
 }
 .hist__who { display: flex; flex-direction: column; font-size: .9rem; color: var(--branco-72); line-height: 1.35; }
 .hist__who b { color: #fff; font-weight: 700; font-size: 1rem; }

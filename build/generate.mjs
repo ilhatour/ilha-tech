@@ -258,7 +258,7 @@ function bloco_historia() {
         <span class="hist__quote-mark" aria-hidden="true">&ldquo;</span>
         <p class="hist__quote">${esc(h.quote)}</p>
         <div class="hist__sign">
-          <span class="hist__avatar" aria-hidden="true">${esc(h.monograma)}</span>
+          <img class="hist__avatar" src="/assets/img/miguel-ceo.png" width="400" height="400" alt="${esc(h.assinatura_nome)}" decoding="async">
           <span class="hist__who"><b>${esc(h.assinatura_nome)}</b>${esc(h.assinatura_cargo)}</span>
         </div>
       </aside>

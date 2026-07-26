@@ -101,8 +101,8 @@
       { "nome": "Nave Mãe", "resolve": "O centro de controle da operação: dados, finanças e gestão de turismo 360° em um só lugar.", "tag": "em desenvolvimento" },
       { "nome": "Nave Pay", "resolve": "Os pagamentos do turismo em um fluxo só, do recebimento ao repasse.", "tag": "em desenvolvimento" },
       { "nome": "Nave Beds", "resolve": "Gestão de hospedagem: reservas, disponibilidade e ocupação sem retrabalho.", "tag": "em desenvolvimento" },
-      { "nome": "Nave Bank", "resolve": "A vida financeira do negócio de turismo, organizada e sob controle.", "tag": "em desenvolvimento" },
-      { "nome": "Nave Fleet", "resolve": "Gestão de frota e disponibilidade: cada serviço vendido só com vaga real.", "tag": "em desenvolvimento" }
+      { "nome": "Nave Bank", "resolve": "O banco do turismo.", "tag": "em desenvolvimento" },
+      { "nome": "Nave Fleet", "resolve": "Gestão de frotas e operações: cada serviço vendido só com vaga real.", "tag": "em desenvolvimento" }
     ]
   },
 
