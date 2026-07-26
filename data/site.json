@@ -106,6 +106,17 @@
     ]
   },
 
+  "mercado": {
+    "eyebrow": "O mercado",
+    "titulo": "Turismo é gigante. E ainda roda no improviso.",
+    "texto": "Quem opera turismo ainda vive de planilha, WhatsApp solto e sistema genérico que não entende o negócio. A tecnologia que existe foi feita por quem nunca operou uma viagem: resolve o que foi pedido, não o que a operação precisa. A Ilha Tech nasce do outro lado.",
+    "pontos": [
+      { "titulo": "Feito de dentro da operação", "texto": "A gente viveu a dor antes de escrever a primeira linha de código. Cada solução resolve um problema que sentimos na pele." },
+      { "titulo": "O turismo está digitalizando", "texto": "O mercado está migrando para a tecnologia. Quem entende a operação de verdade larga na frente dessa corrida." },
+      { "titulo": "Uma dor que se repete", "texto": "A mesma dor da nossa operação existe em milhares de negócios de turismo. O que resolvemos aqui resolve lá fora." }
+    ]
+  },
+
   "operamos": {
     "eyebrow": "Como administramos a Ilha Tour",
     "titulo": "Um stack inteiro rodando a operação",

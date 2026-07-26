@@ -52,9 +52,9 @@ function naveMark() {
 }
 const icon = (k) => I[k] || "";
 
-/* logo oficial (emblema circular 500x500) */
+/* marca interina = emoji oficial 👾 (logo definitivo a refazer) */
 function logoMark() {
-  return `<img class="brand__mark" src="/assets/img/logo-ilha-tech.png" width="500" height="500" alt="${NOME}" decoding="async">`;
+  return `<span class="brand__mark" role="img" aria-label="${NOME}">👾</span>`;
 }
 
 /* ============================================================
@@ -131,7 +131,7 @@ function head({ title, desc, canonical }) {
     name: NOME,
     alternateName: "Ilha Tech · Grupo Ilha",
     url: SITE,
-    logo: SITE + "/assets/img/logo-ilha-tech.png",
+    logo: SITE + "/apple-touch-icon.png",
     description: desc,
     parentOrganization: { "@type": "Organization", name: D.marca.grupo },
     makesOffer: {
@@ -313,6 +313,24 @@ function bloco_produtos() {
   </section>`;
 }
 
+function bloco_mercado() {
+  const m = D.mercado;
+  const pts = m.pontos.map((p) => `<article class="mkt">
+      <h3>${esc(p.titulo)}</h3>
+      <p>${esc(p.texto)}</p>
+    </article>`).join("");
+  return `<section class="sec sec--dark mkt-sec" id="mercado">
+    <div class="wrap">
+      <div class="sec__head">
+        ${eyebrow(m.eyebrow)}
+        <h2>${esc(m.titulo)}</h2>
+        <p class="sec__lead">${esc(m.texto)}</p>
+      </div>
+      <div class="mkt-grid">${pts}</div>
+    </div>
+  </section>`;
+}
+
 function bloco_operamos() {
   const o = D.operamos;
   const cards = o.areas.map((a, i) => `<article class="area">
@@ -376,7 +394,7 @@ function bloco_contato() {
       <p class="contato__lead">${esc(c.texto)}</p>
       <a class="btn btn--cta btn--lg" href="${waLink(c.wa_msg)}" target="_blank" rel="noopener">${icon("whatsapp")} ${esc(c.cta)}</a>
       <p class="contato__mail">${esc(D.marca.telefone_exibicao)} · WhatsApp</p>
-      <img class="contato__emblem" src="/assets/img/logo-ilha-tech.png" width="500" height="500" alt="" decoding="async">
+      <span class="contato__emblem" aria-hidden="true">👾</span>
     </div>
   </section>`;
 }
@@ -412,7 +430,7 @@ function page404() {
 <body>
 <main class="err">
   <div class="err__inner">
-    <img class="err__logo" src="/assets/img/logo-ilha-tech.png" width="500" height="500" alt="${NOME}" decoding="async">
+    <span class="err__logo" role="img" aria-label="${NOME}">👾</span>
     <p class="err__code">404</p>
     <h1 class="err__title">Rota fora do radar</h1>
     <p class="err__lead">A página que você procura não existe ou saiu de órbita. Vamos te levar de volta ao centro de controle.</p>
@@ -444,7 +462,9 @@ ${divider("var(--lilas)", "var(--velvet)")}
 ${bloco_navemae()}
 ${divider("var(--velvet)", "var(--lilas)")}
 ${bloco_produtos()}
-${divider("var(--lilas)", "var(--branco)", true)}
+${divider("var(--lilas)", "var(--velvet)")}
+${bloco_mercado()}
+${divider("var(--velvet)", "var(--branco)", true)}
 ${bloco_operamos()}
 ${bloco_cultura()}
 ${divider("var(--lilas)", "var(--velvet)")}
@@ -461,13 +481,8 @@ ${footer()}
    ARTEFATOS AUXILIARES
    ============================================================ */
 function faviconSVG() {
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <rect width="32" height="32" rx="7" fill="#14062F"/>
-  <circle cx="16" cy="16" r="10.5" fill="none" stroke="#9333EA" stroke-width="1.2" opacity=".55"/>
-  <path d="M16 8 23 16 16 24 9 16 16 8Z" fill="#9333EA"/>
-  <path d="M16 12 20 16 16 20 12 16 16 12Z" fill="#14062F"/>
-  <circle cx="16" cy="16" r="2.2" fill="#4ADE80"/>
-</svg>`;
+  // marca oficial = emoji 👾 (color emoji renderizado pelos navegadores modernos)
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><text x="16" y="17" font-size="28" text-anchor="middle" dominant-baseline="central">👾</text></svg>`;
 }
 
 function sitemap() {
