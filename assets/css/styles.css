@@ -223,6 +223,29 @@ h1, h2, h3 { line-height: 1.12; letter-spacing: -.02em; font-weight: 800; }
 .pill p { color: var(--tinta-64); font-size: .98rem; }
 
 /* ============================================================
+   HISTÓRIA / A ORIGEM (fala do CEO)
+   ============================================================ */
+.hist__grid { display: grid; grid-template-columns: 1.35fr .85fr; gap: clamp(2rem, 4vw, 4rem); align-items: start; }
+.hist__body h2 { font-size: var(--t-h2); max-width: 18ch; }
+.hist__text { margin-top: 1.6rem; display: flex; flex-direction: column; gap: 1.1rem; }
+.hist__text p { color: var(--tinta-64); font-size: var(--t-lead); }
+.hist__text p:first-child { color: var(--tinta); font-weight: 500; }
+.hist__card {
+  position: sticky; top: calc(var(--header-h) + 1.5rem);
+  background: var(--velvet); color: #fff; border-radius: var(--radius-lg);
+  padding: clamp(1.8rem, 3vw, 2.4rem); box-shadow: var(--shadow-soft); overflow: hidden;
+}
+.hist__quote-mark { display: block; font-family: Georgia, serif; font-size: 4.5rem; line-height: .5; color: var(--uva); height: 2rem; }
+.hist__quote { font-size: 1.32rem; font-weight: 600; line-height: 1.4; letter-spacing: -.01em; margin-top: 1rem; }
+.hist__sign { display: flex; align-items: center; gap: .85rem; margin-top: 1.8rem; padding-top: 1.4rem; border-top: 1px solid var(--branco-14); }
+.hist__avatar {
+  display: grid; place-items: center; width: 48px; height: 48px; border-radius: 50%;
+  background: var(--uva); color: #fff; font-weight: 800; font-size: 1.05rem; letter-spacing: .02em; flex-shrink: 0;
+}
+.hist__who { display: flex; flex-direction: column; font-size: .9rem; color: var(--branco-72); line-height: 1.35; }
+.hist__who b { color: #fff; font-weight: 700; font-size: 1rem; }
+
+/* ============================================================
    NAVE-MÃE (dark)
    ============================================================ */
 .nm__head {
@@ -357,6 +380,8 @@ h1, h2, h3 { line-height: 1.12; letter-spacing: -.02em; font-weight: 800; }
   .nm__badge { display: none; }
   .pill-grid, .area-grid { grid-template-columns: repeat(2, 1fr); }
   .mod-grid { grid-template-columns: repeat(2, 1fr); }
+  .hist__grid { grid-template-columns: 1fr; }
+  .hist__card { position: static; }
   .val-grid { grid-template-columns: repeat(3, 1fr); }
   .sec--stats .stat-grid { grid-template-columns: repeat(3, 1fr); }
 }

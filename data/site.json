@@ -44,6 +44,22 @@
     ]
   },
 
+  "historia": {
+    "eyebrow": "A origem",
+    "titulo": "Nasceu de um buraco que eu vivia na pele.",
+    "paragrafos": [
+      "A Ilha Tech é um projeto muito especial pra mim. Ela é o que transformou sonhos em realidade.",
+      "Com o tempo, percebi que os meus objetivos estavam sempre distantes, e que existia um buraco tecnológico no caminho até eles. Ficou claro que eu precisava investir em conhecimento e em tecnologia de verdade.",
+      "Só que tecnologia é cara. Você paga e, na maioria das vezes, se frustra, porque quem constrói não entende da operação. A pessoa executa exatamente o que você pede. O problema é que muitas vezes você não sabe pedir, porque também não entende de tecnologia.",
+      "Foi aí que entendi o que faltava: unir a experiência prática de quem vive o mercado com o conhecimento de quem constrói a tecnologia. Juntar os dois e devolver pro mundo soluções que resolvem de verdade o meu mercado, que hoje é o turismo.",
+      "A Ilha Tech nasceu com esse propósito: trazer soluções inovadoras para o turismo."
+    ],
+    "quote": "Unir quem vive o mercado com quem constrói a tecnologia.",
+    "assinatura_nome": "Miguel Arenas",
+    "assinatura_cargo": "Fundador e CEO da Ilha Tech",
+    "monograma": "MA"
+  },
+
   "navemae": {
     "eyebrow": "O produto",
     "titulo": "Nave-Mãe",
@@ -152,6 +168,7 @@
     "sobre": "Ilha Tech — a franquia de tecnologia do Grupo Ilha. Construímos a Nave-Mãe e mantemos os sistemas digitais do ecossistema.",
     "links": [
       { "texto": "O que é", "href": "#oque" },
+      { "texto": "História", "href": "#historia" },
       { "texto": "Nave-Mãe", "href": "#navemae" },
       { "texto": "Como operamos", "href": "#operamos" },
       { "texto": "Cultura", "href": "#cultura" }

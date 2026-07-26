@@ -232,6 +232,28 @@ function bloco_oque() {
   </section>`;
 }
 
+function bloco_historia() {
+  const h = D.historia;
+  const paras = h.paragrafos.map((p) => `<p>${esc(p)}</p>`).join("");
+  return `<section class="sec sec--mist hist" id="historia">
+    <div class="wrap hist__grid">
+      <div class="hist__body">
+        ${eyebrow(h.eyebrow)}
+        <h2>${esc(h.titulo)}</h2>
+        <div class="hist__text">${paras}</div>
+      </div>
+      <aside class="hist__card">
+        <span class="hist__quote-mark" aria-hidden="true">&ldquo;</span>
+        <p class="hist__quote">${esc(h.quote)}</p>
+        <div class="hist__sign">
+          <span class="hist__avatar" aria-hidden="true">${esc(h.monograma)}</span>
+          <span class="hist__who"><b>${esc(h.assinatura_nome)}</b>${esc(h.assinatura_cargo)}</span>
+        </div>
+      </aside>
+    </div>
+  </section>`;
+}
+
 function bloco_navemae() {
   const n = D.navemae;
   const mods = n.modulos.map((m) => `<article class="mod${m._placeholder ? " mod--todo" : ""}">
@@ -384,7 +406,9 @@ ${nav()}
 ${hero()}
 ${divider("var(--velvet)", "var(--branco)")}
 ${bloco_oque()}
-${divider("var(--branco)", "var(--velvet)")}
+${divider("var(--branco)", "var(--lilas)")}
+${bloco_historia()}
+${divider("var(--lilas)", "var(--velvet)")}
 ${bloco_navemae()}
 ${divider("var(--velvet)", "var(--branco)", true)}
 ${bloco_operamos()}
