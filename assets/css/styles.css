@@ -279,6 +279,30 @@ h1, h2, h3 { line-height: 1.12; letter-spacing: -.02em; font-weight: 800; }
 .mod--todo { border-style: dashed; border-color: var(--uva-40); opacity: .92; }
 
 /* ============================================================
+   PRODUTOS — As Naves
+   ============================================================ */
+.nave-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: clamp(1rem, 2vw, 1.5rem); }
+.nave {
+  background: #fff; border: 1px solid var(--tinta-08); border-radius: var(--radius-lg);
+  padding: clamp(1.5rem, 2.5vw, 2rem); transition: transform .3s var(--ease), border-color .3s var(--ease);
+}
+.nave:hover { transform: translateY(-4px); border-color: var(--uva-40); }
+.nave__head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.1rem; }
+.nave__mark { width: 44px; height: 44px; }
+.nave__tag {
+  font-size: var(--t-mono); font-weight: 600; text-transform: uppercase; letter-spacing: .1em;
+  color: var(--uva); background: var(--uva-14); padding: .3rem .6rem; border-radius: 999px; white-space: nowrap;
+}
+.nave h3 { font-size: var(--t-h3); margin-bottom: .5rem; }
+.nave p { color: var(--tinta-64); font-size: .96rem; }
+/* flagship: Nave Mãe destacada */
+.nave--flag { background: var(--velvet); color: #fff; border-color: transparent; }
+.nave--flag h3 { color: #fff; }
+.nave--flag p { color: var(--branco-72); }
+.nave--flag .nave__tag { color: var(--lima); background: rgba(74,222,128,.12); }
+.nave--flag .nave__mark path:nth-of-type(1) { fill: #b57cff; }
+
+/* ============================================================
    COMO OPERAMOS — áreas
    ============================================================ */
 .area-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: clamp(1rem, 2vw, 1.5rem); }
@@ -378,7 +402,7 @@ h1, h2, h3 { line-height: 1.12; letter-spacing: -.02em; font-weight: 800; }
   .hero__title { max-width: none; }
   .nm__head { grid-template-columns: 1fr; }
   .nm__badge { display: none; }
-  .pill-grid, .area-grid { grid-template-columns: repeat(2, 1fr); }
+  .pill-grid, .area-grid, .nave-grid { grid-template-columns: repeat(2, 1fr); }
   .mod-grid { grid-template-columns: repeat(2, 1fr); }
   .hist__grid { grid-template-columns: 1fr; }
   .hist__card { position: static; }
@@ -394,7 +418,7 @@ h1, h2, h3 { line-height: 1.12; letter-spacing: -.02em; font-weight: 800; }
   .nav__mobile .btn { margin-top: .6rem; justify-content: center; }
 }
 @media (max-width: 560px) {
-  .pill-grid, .area-grid, .mod-grid { grid-template-columns: 1fr; }
+  .pill-grid, .area-grid, .mod-grid, .nave-grid { grid-template-columns: 1fr; }
   .val-grid { grid-template-columns: repeat(2, 1fr); }
   .sec--stats .stat-grid { grid-template-columns: 1fr; }
   .foot__grid { grid-template-columns: 1fr; }

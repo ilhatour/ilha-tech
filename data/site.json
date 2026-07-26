@@ -3,7 +3,9 @@
     "nome": "Ilha Tech",
     "tagline": "A tecnologia que pilota o Grupo Ilha",
     "dominio": "https://ilhatech.io",
-    "grupo": "Grupo Ilha"
+    "grupo": "Grupo Ilha",
+    "whatsapp": "5521965166262",
+    "telefone_exibicao": "(21) 96516-6262"
   },
 
   "hero": {
@@ -91,6 +93,19 @@
     ]
   },
 
+  "produtos": {
+    "eyebrow": "Nossas soluções",
+    "titulo": "As Naves",
+    "texto": "Cada solução da Ilha Tech é uma Nave: um sistema que resolve uma dor real de quem opera turismo. A Nave-Mãe é o centro; as outras orbitam em volta dela. Todas em desenvolvimento, evoluindo a cada semana.",
+    "itens": [
+      { "nome": "Nave Mãe", "resolve": "O centro de controle da operação: dados, finanças e gestão de turismo 360° em um só lugar.", "tag": "em desenvolvimento" },
+      { "nome": "Nave Pay", "resolve": "Os pagamentos do turismo em um fluxo só, do recebimento ao repasse.", "tag": "em desenvolvimento" },
+      { "nome": "Nave Beds", "resolve": "Gestão de hospedagem: reservas, disponibilidade e ocupação sem retrabalho.", "tag": "em desenvolvimento" },
+      { "nome": "Nave Bank", "resolve": "A vida financeira do negócio de turismo, organizada e sob controle.", "tag": "em desenvolvimento" },
+      { "nome": "Nave Fleet", "resolve": "Gestão de frota e disponibilidade: cada serviço vendido só com vaga real.", "tag": "em desenvolvimento" }
+    ]
+  },
+
   "operamos": {
     "eyebrow": "Como administramos a Ilha Tour",
     "titulo": "Um stack inteiro rodando a operação",
@@ -148,20 +163,22 @@
   },
 
   "numeros": {
-    "eyebrow": "Impacto",
-    "titulo": "A operação em números",
-    "sub": "",
+    "eyebrow": "Por que a Ilha Tech",
+    "titulo": "Não começamos pela tecnologia",
+    "sub": "Começamos por nove anos vivendo o turismo, entendendo o mercado e cada necessidade nos mínimos detalhes. A tecnologia veio depois, para resolver o que a gente já sentia na pele.",
     "stats": [
-      { "valor": "360°", "label": "Gestão de turismo na Nave-Mãe", "real": true },
-      { "valor": "4", "label": "Idiomas na operação (PT · EN · ES · FR)", "real": true },
-      { "valor": "24/7", "label": "Sistemas do grupo em produção", "real": true }
+      { "valor": "9 anos", "label": "de operação real em turismo por trás de cada solução", "real": true },
+      { "valor": "5", "label": "Naves em desenvolvimento", "real": true },
+      { "valor": "360°", "label": "de gestão de turismo na Nave-Mãe", "real": true }
     ]
   },
 
   "contato": {
-    "eyebrow": "Grupo Ilha",
-    "titulo": "Tecnologia que faz o grupo andar mais rápido",
-    "texto": "Da Nave-Mãe aos sistemas que rodam a operação todos os dias — a Ilha Tech é a camada de tecnologia por trás da experiência do Grupo Ilha."
+    "eyebrow": "Investidores & parceiros",
+    "titulo": "A Ilha Tech vai revolucionar o turismo",
+    "texto": "Nossos projetos ainda estão em desenvolvimento e estamos abertos para conversar com possíveis investidores e clientes. A gente acredita que a Ilha Tech vai transformar o turismo com as suas soluções. Se você quer fazer parte enquanto ainda estamos no começo, fale com a gente.",
+    "cta": "Falar com a Ilha Tech",
+    "wa_msg": "Olá! Vi o site da Ilha Tech e quero saber mais sobre as soluções e como fazer parte."
   },
 
   "rodape": {
@@ -169,7 +186,7 @@
     "links": [
       { "texto": "O que é", "href": "#oque" },
       { "texto": "História", "href": "#historia" },
-      { "texto": "Nave-Mãe", "href": "#navemae" },
+      { "texto": "Produtos", "href": "#produtos" },
       { "texto": "Como operamos", "href": "#operamos" },
       { "texto": "Cultura", "href": "#cultura" }
     ]

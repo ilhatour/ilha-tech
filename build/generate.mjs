@@ -18,6 +18,8 @@ const D = JSON.parse(read("data/site.json"));
 /* ---- Constantes da marca ---- */
 const SITE = D.marca.dominio;             // https://ilhatech.io
 const NOME = D.marca.nome;
+const WA = D.marca.whatsapp;              // 5521965166262
+const waLink = (msg) => `https://wa.me/${WA}${msg ? "?text=" + encodeURIComponent(msg) : ""}`;
 const GA4 = ""; // preencher com G-XXXXXXX quando a propriedade GA4 da Ilha Tech existir
 const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
@@ -37,7 +39,17 @@ const I = {
   arrow: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>`,
   menu: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>`,
   close: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>`,
+  whatsapp: `<svg viewBox="0 0 24 24" fill="currentColor" fill-rule="evenodd" clip-rule="evenodd" aria-hidden="true"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.149-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.885-9.885 9.885M20.52 3.449C18.24 1.245 15.24 0 12.045 0 5.463 0 .104 5.334.101 11.892c0 2.096.549 4.14 1.595 5.945L0 24l6.335-1.652a12.062 12.062 0 005.71 1.447h.006c6.585 0 11.946-5.336 11.949-11.896 0-3.176-1.24-6.165-3.495-8.411z"/></svg>`,
 };
+/* mark da "Nave" (losango orbital) p/ cards de produto */
+function naveMark() {
+  return `<svg class="nave__mark" viewBox="0 0 40 40" fill="none" aria-hidden="true">
+    <circle cx="20" cy="20" r="17" stroke="var(--uva)" stroke-width="1" opacity=".35"/>
+    <path d="M20 8 L30 20 L20 32 L10 20 Z" fill="var(--uva)"/>
+    <path d="M20 13 L25 20 L20 27 L15 20 Z" fill="var(--lilas)"/>
+    <circle cx="20" cy="20" r="2.4" fill="var(--velvet)"/>
+  </svg>`;
+}
 const icon = (k) => I[k] || "";
 
 /* logo oficial (emblema circular 500x500) */
@@ -282,6 +294,25 @@ function bloco_navemae() {
   </section>`;
 }
 
+function bloco_produtos() {
+  const p = D.produtos;
+  const cards = p.itens.map((it, i) => `<article class="nave${i === 0 ? " nave--flag" : ""}">
+      <div class="nave__head">${naveMark()}<span class="nave__tag">${esc(it.tag)}</span></div>
+      <h3>${esc(it.nome)}</h3>
+      <p>${esc(it.resolve)}</p>
+    </article>`).join("");
+  return `<section class="sec sec--mist" id="produtos">
+    <div class="wrap">
+      <div class="sec__head">
+        ${eyebrow(p.eyebrow)}
+        <h2>${esc(p.titulo)}</h2>
+        <p class="sec__lead">${esc(p.texto)}</p>
+      </div>
+      <div class="nave-grid">${cards}</div>
+    </div>
+  </section>`;
+}
+
 function bloco_operamos() {
   const o = D.operamos;
   const cards = o.areas.map((a, i) => `<article class="area">
@@ -329,9 +360,9 @@ function bloco_numeros() {
       <div class="sec__head sec__head--center">
         ${eyebrow(n.eyebrow)}
         <h2>${esc(n.titulo)}</h2>
+        ${n.sub ? `<p class="sec__lead">${esc(n.sub)}</p>` : ""}
       </div>
       <div class="stat-grid">${st}</div>
-      <p class="stats__note">${esc(n.sub)}</p>
     </div>
   </section>`;
 }
@@ -343,7 +374,8 @@ function bloco_contato() {
       ${eyebrow(c.eyebrow)}
       <h2>${esc(c.titulo)}</h2>
       <p class="contato__lead">${esc(c.texto)}</p>
-      <a class="btn btn--cta btn--lg" href="https://ilhatour.com" target="_blank" rel="noopener">Conheça a Ilha Tour ${icon("arrow")}</a>
+      <a class="btn btn--cta btn--lg" href="${waLink(c.wa_msg)}" target="_blank" rel="noopener">${icon("whatsapp")} ${esc(c.cta)}</a>
+      <p class="contato__mail">${esc(D.marca.telefone_exibicao)} · WhatsApp</p>
       <img class="contato__emblem" src="/assets/img/logo-ilha-tech.png" width="500" height="500" alt="" decoding="async">
     </div>
   </section>`;
@@ -410,7 +442,9 @@ ${divider("var(--branco)", "var(--lilas)")}
 ${bloco_historia()}
 ${divider("var(--lilas)", "var(--velvet)")}
 ${bloco_navemae()}
-${divider("var(--velvet)", "var(--branco)", true)}
+${divider("var(--velvet)", "var(--lilas)")}
+${bloco_produtos()}
+${divider("var(--lilas)", "var(--branco)", true)}
 ${bloco_operamos()}
 ${bloco_cultura()}
 ${divider("var(--lilas)", "var(--velvet)")}
