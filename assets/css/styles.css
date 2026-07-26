@@ -120,8 +120,8 @@ h1, h2, h3 { line-height: 1.12; letter-spacing: -.02em; font-weight: 800; }
 }
 .brand { display: inline-flex; align-items: center; gap: .5rem; color: #fff; }
 .brand__mark { font-size: 1.7rem; line-height: 1; }
-.brand__word { font-weight: 700; font-size: 1.22rem; letter-spacing: -.02em; }
-.brand__word b { font-weight: 800; color: var(--uva); }
+.brand__word { font-family: "Gugi", var(--font); font-weight: 400; font-size: 1.16rem; letter-spacing: .01em; }
+.brand__word b { font-weight: 400; color: var(--uva); }
 .sec--dark .brand__word b, .nav .brand__word b, .foot .brand__word b { color: #b57cff; }
 .nav__links { margin-left: auto; display: flex; gap: 1.6rem; }
 .nav__links a { color: var(--branco-72); font-size: .95rem; font-weight: 500; transition: color .2s; }

@@ -31,6 +31,19 @@
     });
   }
 
+  /* Conversão: clique no WhatsApp (dispara no GA4 quando a tag existir) */
+  document.querySelectorAll('a[href*="wa.me"], a[href*="api.whatsapp"]').forEach(function (a) {
+    a.addEventListener("click", function () {
+      if (typeof window.gtag === "function") {
+        window.gtag("event", "whatsapp_click", {
+          link_url: a.href,
+          cta_text: (a.textContent || "").trim().slice(0, 80),
+          page_path: location.pathname,
+        });
+      }
+    });
+  });
+
   /* Scroll reveal — marca alvos e observa */
   var targets = document.querySelectorAll(
     ".sec__head, .pill, .mod, .area, .val, .stat, .contato, .nm__head"
