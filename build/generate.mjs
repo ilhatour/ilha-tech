@@ -20,7 +20,7 @@ const SITE = D.marca.dominio;             // https://ilhatech.io
 const NOME = D.marca.nome;
 const WA = D.marca.whatsapp;              // 5521965166262
 const waLink = (msg) => `https://wa.me/${WA}${msg ? "?text=" + encodeURIComponent(msg) : ""}`;
-const GA4 = ""; // preencher com G-XXXXXXX quando a propriedade GA4 da Ilha Tech existir
+const GA4 = "G-VTDV3DTT6C"; // GA4 "Ilha Tech" (conta Ilha Tour a150469498), fluxo web ilhatech.io
 const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
 /* ============================================================
