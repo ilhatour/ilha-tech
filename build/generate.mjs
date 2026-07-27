@@ -389,15 +389,30 @@ function bloco_numeros() {
   </section>`;
 }
 
+/* Fechamento = ASSINATURA DO FUNDADOR: a página abre com a história do
+   Miguel em 1ª pessoa ("A origem") e fecha com ele chamando. Reaproveita a
+   mesma foto e a mesma assinatura da seção de origem, então o nome e o cargo
+   têm uma fonte só no JSON. */
 function bloco_contato() {
   const c = D.contato;
+  const h = D.historia;
   return `<section class="sec sec--dark sec--contato" id="contato">
     <div class="wrap contato">
-      ${eyebrow(c.eyebrow)}
-      <h2>${esc(c.titulo)}</h2>
-      <p class="contato__lead">${esc(c.texto)}</p>
-      <a class="btn btn--cta btn--lg" href="${waLink(c.wa_msg)}" target="_blank" rel="noopener">${icon("whatsapp")} ${esc(c.cta)}</a>
-      <p class="contato__mail">${esc(D.marca.telefone_exibicao)} · WhatsApp</p>
+      <div class="contato__grid">
+        <div class="contato__retrato">
+          <img src="/assets/img/miguel-ceo.png" width="168" height="168" alt="${esc(h.assinatura_nome)}" decoding="async" loading="lazy">
+          <span class="contato__quem"><b>${esc(h.assinatura_nome)}</b>${esc(h.assinatura_cargo)}</span>
+        </div>
+        <div class="contato__corpo">
+          ${eyebrow(c.eyebrow)}
+          <h2>${esc(c.titulo)}</h2>
+          <p class="contato__lead">${esc(c.texto)}</p>
+          <div class="contato__acao">
+            <a class="btn btn--cta btn--lg" href="${waLink(c.wa_msg)}" target="_blank" rel="noopener">${icon("whatsapp")} ${esc(c.cta)}</a>
+            <span class="contato__mail">${esc(D.marca.telefone_exibicao)} · WhatsApp</span>
+          </div>
+        </div>
+      </div>
       <span class="contato__emblem" aria-hidden="true">👾</span>
     </div>
   </section>`;
