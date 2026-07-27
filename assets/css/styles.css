@@ -191,8 +191,24 @@ h1, h2, h3 { line-height: 1.12; letter-spacing: -.02em; font-weight: 800; }
 /* ============================================================
    DIVISOR geométrico
    ============================================================ */
-.divider { line-height: 0; }
-.divider svg { width: 100%; height: clamp(46px, 6vw, 96px); display: block; }
+/* VARREDURA — gesto único, só na entrada da Nave-Mãe.
+   A faixa é Velvet, a mesma cor da seção logo abaixo: não existe junta de
+   cores diferentes, então não existe filete. A linha de radar ecoa o
+   console orbital do hero. */
+.varredura {
+  height: 44px; background: var(--velvet);
+  position: relative; overflow: hidden;
+}
+.varredura::before {
+  content: ""; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+  background: var(--branco-14);
+}
+.varredura::after {
+  content: ""; position: absolute; top: 0; left: -40%; width: 40%; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--lima), transparent);
+  animation: varre 4.5s cubic-bezier(.4, 0, .6, 1) infinite;
+}
+@keyframes varre { 0% { left: -40%; } 100% { left: 100%; } }
 
 /* ============================================================
    SEÇÕES base
@@ -450,5 +466,6 @@ h1, h2, h3 { line-height: 1.12; letter-spacing: -.02em; font-weight: 800; }
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; scroll-behavior: auto !important; }
   [data-reveal] { opacity: 1; transform: none; transition: none; }
-  .orb-spin { animation: none; }
+  /* sem animação a varredura pararia fora da tela: estaciona ela visível */
+  .varredura::after { left: 30%; }
 }

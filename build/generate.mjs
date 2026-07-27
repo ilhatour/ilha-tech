@@ -111,14 +111,16 @@ function orbital() {
    DIVISOR geométrico (overshoot p/ nunca deixar filete de 1px)
    corta de prevColor para nextColor com um plano diagonal.
    ============================================================ */
-function divider(prevColor, nextColor, flip = false) {
-  const path = flip
-    ? "M0,120 L1440,20 L1440,122 L0,122 Z"
-    : "M0,20 L1440,120 L1440,122 L0,122 Z";
-  return `<div class="divider" style="background:${prevColor}">
-    <svg viewBox="0 0 1440 122" preserveAspectRatio="none" aria-hidden="true">
-      <path fill="${nextColor}" d="${path}"></path>
-    </svg></div>`;
+/* Transição padrão = CORTE SECO: as seções encostam direto, sem elemento
+   entre elas. Era o divisor diagonal (SVG esticado, preenchido com a cor da
+   seção seguinte) que produzia o filete de 1px, porque duas superfícies de
+   cores diferentes precisavam encostar com precisão subpixel.
+
+   Gesto único = VARREDURA, aplicada só na entrada da Nave-Mãe: faixa Velvet
+   com a linha de radar do hero atravessando. A cor da faixa é a mesma da
+   seção seguinte, então não há junta de cores para desencontrar. */
+function varredura() {
+  return `<div class="varredura" aria-hidden="true"></div>`;
 }
 
 /* ============================================================
@@ -456,20 +458,14 @@ function page() {
 ${nav()}
 <main>
 ${hero()}
-${divider("var(--velvet)", "var(--branco)")}
 ${bloco_oque()}
-${divider("var(--branco)", "var(--lilas)")}
 ${bloco_historia()}
-${divider("var(--lilas)", "var(--velvet)")}
+${varredura()}
 ${bloco_navemae()}
-${divider("var(--velvet)", "var(--lilas)")}
 ${bloco_produtos()}
-${divider("var(--lilas)", "var(--velvet)")}
 ${bloco_mercado()}
-${divider("var(--velvet)", "var(--branco)", true)}
 ${bloco_operamos()}
 ${bloco_cultura()}
-${divider("var(--lilas)", "var(--velvet)")}
 ${bloco_numeros()}
 ${bloco_contato()}
 </main>
