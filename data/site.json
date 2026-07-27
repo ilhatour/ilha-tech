@@ -1,7 +1,7 @@
 {
   "marca": {
     "nome": "Ilha Tech",
-    "tagline": "A tecnologia que pilota o Grupo Ilha",
+    "tagline": "Os sistemas que o turismo usa para trabalhar",
     "dominio": "https://ilhatech.io",
     "grupo": "Grupo Ilha",
     "whatsapp": "5521965166262",
@@ -39,13 +39,13 @@
   },
   "oque": {
     "eyebrow": "Quem somos",
-    "titulo": "A Ilha Tech é a franquia de tecnologia do Grupo Ilha",
-    "texto": "Dentro do ecossistema do Grupo Ilha, cada franquia tem um papel. O da Ilha Tech é um só: tecnologia. Construímos e mantemos a Nave-Mãe e toda a camada digital que sustenta as operações do grupo — do site que recebe o viajante ao sistema que fecha o mês. Somos a infraestrutura invisível por trás da experiência.",
+    "titulo": "Uma empresa de tecnologia que nasceu dentro da operação",
+    "texto": "A Ilha Tech constrói as Naves: sistemas que resolvem reserva, frota, hospedagem, pagamento e o resultado do mês de quem vive de turismo. Não viemos de um escritório de software, viemos de nove anos operando, e é por isso que cada Nave começa por um problema que a gente já teve. Hoje a operação da Ilha Tour roda nesses sistemas todos os dias.",
     "pilares": [
       {
         "icone": "cpu",
         "titulo": "Produto próprio",
-        "texto": "Desenvolvemos a Nave-Mãe, o software de gestão de turismo 360° do grupo — não terceirizamos o que é estratégico."
+        "texto": "Construímos as cinco Naves dentro de casa. O que é estratégico não se terceiriza, e software de operação é estratégico."
       },
       {
         "icone": "layers",
@@ -55,7 +55,7 @@
       {
         "icone": "shield",
         "titulo": "Registro é Rei",
-        "texto": "Dados confiáveis são a promessa. Cada decisão do grupo se apoia em número que a gente garante que é verdadeiro."
+        "texto": "Dados confiáveis são a promessa. Quem usa as Naves decide com número que o sistema garante que é verdadeiro."
       }
     ]
   },
@@ -273,7 +273,7 @@
     "wa_msg": "Olá! Vi o site da Ilha Tech e quero saber mais sobre as soluções e como fazer parte."
   },
   "rodape": {
-    "sobre": "Ilha Tech — a franquia de tecnologia do Grupo Ilha. Construímos a Nave-Mãe e mantemos os sistemas digitais do ecossistema.",
+    "sobre": "Ilha Tech — empresa de tecnologia para turismo. Construímos as Naves, os sistemas que resolvem a operação de quem vive de turismo. Parte do Grupo Ilha.",
     "links": [
       {
         "texto": "O que é",

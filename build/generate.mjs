@@ -271,24 +271,29 @@ function bloco_oque() {
   </section>`;
 }
 
+/* "A origem" é texto em 1ª pessoa e comprido. O layout antigo era duas
+   colunas com um card sticky ao lado: como a coluna de texto é muito mais
+   alta que o card, sobrava um vazio enorme e o card ficava boiando.
+   Agora é UMA coluna de leitura, e a citação fecha o texto como carta,
+   com a foto grande e a assinatura. Sem caixa flutuante. */
 function bloco_historia() {
   const h = D.historia;
   const paras = h.paragrafos.map((p) => `<p>${esc(p)}</p>`).join("");
   return `<section class="sec sec--mist hist" id="historia">
-    <div class="wrap hist__grid">
-      <div class="hist__body">
+    <div class="wrap">
+      <div class="hist__col">
         ${eyebrow(h.eyebrow)}
         <h2>${esc(h.titulo)}</h2>
         <div class="hist__text">${paras}</div>
+        <figure class="hist__fecho">
+          <span class="hist__aspas" aria-hidden="true">&ldquo;</span>
+          <blockquote class="hist__quote">${esc(h.quote)}</blockquote>
+          <figcaption class="hist__sign">
+            <img class="hist__avatar" src="/assets/img/miguel-ceo.png" width="336" height="336" alt="${esc(h.assinatura_nome)}" decoding="async" loading="lazy">
+            <span class="hist__who"><b>${esc(h.assinatura_nome)}</b>${esc(h.assinatura_cargo)}</span>
+          </figcaption>
+        </figure>
       </div>
-      <aside class="hist__card">
-        <span class="hist__quote-mark" aria-hidden="true">&ldquo;</span>
-        <p class="hist__quote">${esc(h.quote)}</p>
-        <div class="hist__sign">
-          <img class="hist__avatar" src="/assets/img/miguel-ceo.png" width="168" height="168" alt="${esc(h.assinatura_nome)}" decoding="async" loading="lazy">
-          <span class="hist__who"><b>${esc(h.assinatura_nome)}</b>${esc(h.assinatura_cargo)}</span>
-        </div>
-      </aside>
     </div>
   </section>`;
 }
@@ -423,7 +428,7 @@ function bloco_contato() {
     <div class="wrap contato">
       <div class="contato__grid">
         <div class="contato__retrato">
-          <img src="/assets/img/miguel-ceo.png" width="168" height="168" alt="${esc(h.assinatura_nome)}" decoding="async" loading="lazy">
+          <img src="/assets/img/miguel-ceo.png" width="336" height="336" alt="${esc(h.assinatura_nome)}" decoding="async" loading="lazy">
           <span class="contato__quem"><b>${esc(h.assinatura_nome)}</b>${esc(h.assinatura_cargo)}</span>
         </div>
         <div class="contato__corpo">
@@ -488,8 +493,8 @@ function page404() {
    ============================================================ */
 function page() {
   return `${head({
-    title: "Ilha Tech — a tecnologia que pilota o Grupo Ilha",
-    desc: "Ilha Tech é a franquia de tecnologia do Grupo Ilha. Desenvolvemos a Nave-Mãe, software de gestão de turismo 360°, e mantemos os sistemas digitais que administram a Ilha Tour.",
+    title: "Ilha Tech — sistemas para quem opera turismo",
+    desc: "A Ilha Tech constrói as Naves: sistemas de gestão para turismo que resolvem reserva, frota, hospedagem, pagamento e o resultado do mês. Nove anos de operação e mais de 21 mil viagens gerenciadas por trás de cada solução.",
     canonical: SITE + "/",
   })}
 <body>
