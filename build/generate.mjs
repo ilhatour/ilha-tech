@@ -58,53 +58,79 @@ function logoMark() {
 }
 
 /* ============================================================
-   ASSINATURA — Console orbital da Nave-Mãe (hero)
-   Nave-Mãe no centro; sistemas reais orbitando com status Lima.
+   ASSINATURA — Rede da Nave-Mãe (hero)
+   Centro = a nave. Anel de dentro = os MÓDULOS que resolvemos
+   (nome que o cliente usa), em dois raios alternados para caber
+   sem colidir. Anel de fora = as NAVES, que são produtos inteiros,
+   não módulos: por isso pastilha mais forte e ponto em Lima.
    ============================================================ */
-function orbital() {
-  const sats = [
-    { r: 118, a: -32, label: "Sites" },
-    { r: 118, a: 74,  label: "Atendimento" },
-    { r: 170, a: 160, label: "Dados" },
-    { r: 170, a: 22,  label: "Integrações" },
-    { r: 220, a: 218, label: "SEO" },
-  ];
-  const cx = 240, cy = 240;
-  const node = ({ r, a, label }, i) => {
-    const rad = (a * Math.PI) / 180;
-    const x = cx + r * Math.cos(rad);
-    const y = cy + r * Math.sin(rad);
-    return `<g class="orb-sat" style="--d:${i * 0.4}s">
-      <line x1="${cx}" y1="${cy}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" stroke="var(--uva)" stroke-width="1" opacity=".22"/>
-      <circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="5.5" fill="var(--velvet-claro)" stroke="var(--uva)" stroke-width="1.4"/>
-      <circle class="orb-led" cx="${(x + 9).toFixed(1)}" cy="${(y - 9).toFixed(1)}" r="2.6" fill="var(--lima)"/>
-      <text x="${(x).toFixed(1)}" y="${(y + 22).toFixed(1)}" text-anchor="middle" class="orb-label">${label}</text>
-    </g>`;
-  };
-  return `<div class="orbital" aria-hidden="true">
-    <svg viewBox="0 0 480 480" fill="none">
-      <defs>
-        <linearGradient id="sweep" x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0" stop-color="var(--uva)" stop-opacity="0"/>
-          <stop offset="1" stop-color="var(--uva)" stop-opacity=".5"/>
-        </linearGradient>
-      </defs>
-      <g class="orb-rings">
-        <circle cx="${cx}" cy="${cy}" r="118" stroke="var(--uva)" stroke-width="1" opacity=".16"/>
-        <circle cx="${cx}" cy="${cy}" r="170" stroke="var(--uva)" stroke-width="1" opacity=".13"/>
-        <circle cx="${cx}" cy="${cy}" r="220" stroke="var(--uva)" stroke-width="1" opacity=".10" stroke-dasharray="3 7"/>
+const CX = 330, CY = 300;
+
+/* Navezinha "Cruzador" (opção A, escolhida pelo Miguel 27/07):
+   casco central, dois pods e cabine acesa, vista de cima. */
+function navezinha(k) {
+  return `<g transform="translate(${CX},${CY - 8}) scale(${k})">
+    <path d="M0 -40 L13 -8 L13 20 L0 34 L-13 20 L-13 -8 Z" fill="var(--uva)"/>
+    <path d="M-13 -4 L-38 16 L-35 25 L-13 14 Z" fill="var(--uva)" opacity=".72"/>
+    <path d="M13 -4 L38 16 L35 25 L13 14 Z" fill="var(--uva)" opacity=".72"/>
+    <circle cx="0" cy="-10" r="8" fill="var(--velvet)"/>
+    <circle cx="0" cy="-10" r="4" fill="var(--lima)"/>
+    <rect x="-8" y="32" width="5" height="10" rx="2" fill="var(--lima)" opacity=".85"/>
+    <rect x="3" y="32" width="5" height="10" rx="2" fill="var(--lima)" opacity=".85"/>
+  </g>`;
+}
+
+/* pastilha: largura estimada pelo nº de caracteres (SVG não quebra texto) */
+function pastilha(x, y, texto, forte) {
+  const larg = texto.length * 6.15 + (forte ? 32 : 22), alt = 23;
+  const rx = x - larg / 2, ry = y - alt / 2;
+  return `<g><rect x="${rx.toFixed(1)}" y="${ry.toFixed(1)}" width="${larg.toFixed(1)}" height="${alt}" rx="11.5"
+    fill="${forte ? "#2b1a5e" : "#1e0f42"}" stroke="${forte ? "var(--uva)" : "var(--uva-40)"}" stroke-width="1"/>
+    ${forte ? `<circle cx="${(rx + 12).toFixed(1)}" cy="${y.toFixed(1)}" r="3.2" fill="var(--lima)"/>` : ""}
+    <text x="${(forte ? x + 6 : x).toFixed(1)}" y="${(y + 4).toFixed(1)}" text-anchor="middle"
+      class="${forte ? "rede__nave" : "rede__mod"}">${esc(texto)}</text></g>`;
+}
+
+function rede() {
+  const h = D.hero;
+  const mods = h.modulos, naves = h.naves_orbita;
+  const R_INT = 118, R_EXT = 178, R_NAVE = 252;
+  let linhas = "", pastilhas = "";
+
+  mods.forEach((m, i) => {
+    const r = i % 2 === 0 ? R_INT : R_EXT;
+    const a = (-90 + i * (360 / mods.length)) * Math.PI / 180;
+    const x = CX + r * Math.cos(a), y = CY + r * Math.sin(a);
+    linhas += `<line x1="${CX}" y1="${CY}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" stroke="var(--uva)" stroke-width="1" opacity=".18"/>`;
+    pastilhas += pastilha(x, y, m, false);
+  });
+  naves.forEach((n, i) => {
+    const a = (-45 + i * 90) * Math.PI / 180;
+    const x = CX + R_NAVE * Math.cos(a), y = CY + R_NAVE * Math.sin(a);
+    linhas += `<line x1="${CX}" y1="${CY}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" stroke="var(--uva)" stroke-width="1" opacity=".12"/>`;
+    pastilhas += pastilha(x, y, n, true);
+  });
+
+  return `<figure class="rede">
+    <svg viewBox="0 0 660 620" fill="none" aria-hidden="true">
+      <defs><linearGradient id="varredor" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0" stop-color="var(--uva)" stop-opacity="0"/>
+        <stop offset="1" stop-color="var(--uva)" stop-opacity=".55"/></linearGradient></defs>
+      <g class="rede__aneis">
+        <circle cx="${CX}" cy="${CY}" r="${R_INT}" stroke="var(--uva)" stroke-width="1" opacity=".2"/>
+        <circle cx="${CX}" cy="${CY}" r="${R_EXT}" stroke="var(--uva)" stroke-width="1" opacity=".16"/>
+        <circle cx="${CX}" cy="${CY}" r="${R_NAVE}" stroke="var(--uva)" stroke-width="1" opacity=".13" stroke-dasharray="3 8"/>
       </g>
-      <line class="orb-sweep" x1="${cx}" y1="${cy}" x2="${cx + 220}" y2="${cy}" stroke="url(#sweep)" stroke-width="2.5"/>
-      <g class="orb-sats">${sats.map(node).join("")}</g>
-      <g class="orb-core">
-        <circle cx="${cx}" cy="${cy}" r="46" fill="var(--uva)" opacity=".14"/>
-        <path d="M240 202 L278 240 L240 278 L202 240 Z" fill="var(--uva)"/>
-        <path d="M240 214 L266 240 L240 266 L214 240 Z" fill="var(--velvet)"/>
-        <circle cx="${cx}" cy="${cy}" r="6" fill="var(--lima)"/>
-      </g>
-      <text x="${cx}" y="308" text-anchor="middle" class="orb-core-label">NAVE-MÃE</text>
+      <line class="rede__varre" x1="${CX}" y1="${CY}" x2="${CX + R_NAVE}" y2="${CY}" stroke="url(#varredor)" stroke-width="2.5"/>
+      ${linhas}
+      <circle cx="${CX}" cy="${CY - 8}" r="58" fill="var(--uva)" opacity=".14"/>
+      ${navezinha(0.92)}
+      <text x="${CX}" y="${CY + 62}" text-anchor="middle" class="rede__nucleo">${esc(h.nucleo.nome)}</text>
+      <text x="${CX}" y="${CY + 78}" text-anchor="middle" class="rede__nucleo-sub">${esc(h.nucleo.sub)}</text>
+      ${pastilhas}
     </svg>
-  </div>`;
+    <figcaption>${esc(h.viz_legenda)}</figcaption>
+  </figure>`;
 }
 
 /* ============================================================
@@ -207,24 +233,21 @@ function nav() {
 
 function hero() {
   const h = D.hero;
-  const tele = h.telemetria.map((t) => {
-    const core = t.estado === "núcleo";
-    return `<li class="tele${core ? " tele--core" : ""}"><span class="tele__dot"></span>${esc(t.nome)}<span class="tele__state">${esc(t.estado)}</span></li>`;
-  }).join("");
+  const regua = D.numeros.stats.map((n) => `<div><b>${esc(n.valor)}</b><span>${esc(n.curto)}</span></div>`).join("");
   return `<section class="hero">
     <div class="hero__grid-bg" aria-hidden="true"></div>
     <div class="hero__inner">
       <div class="hero__copy">
         ${eyebrow(h.eyebrow)}
-        <h1 class="hero__title">${esc(h.titulo).replace(/Nave-Mãe/g, '<span class="nb">Nave-Mãe</span>')}</h1>
+        <h1 class="hero__title">${esc(h.titulo)}</h1>
         <p class="hero__sub">${esc(h.sub)}</p>
         <div class="hero__cta">
-          <a class="btn btn--cta" href="#navemae">${esc(h.cta)} ${icon("arrow")}</a>
-          <a class="btn btn--ghost" href="#operamos">${esc(h.cta_sec)}</a>
+          <a class="btn btn--cta" href="${waLink(D.contato.wa_msg)}" target="_blank" rel="noopener">${icon("whatsapp")} ${esc(h.cta)}</a>
+          <a class="btn btn--ghost" href="#produtos">${esc(h.cta_sec)}</a>
         </div>
-        <ul class="hero__tele">${tele}</ul>
+        <div class="hero__regua">${regua}</div>
       </div>
-      <div class="hero__viz">${orbital()}</div>
+      <div class="hero__viz">${rede()}</div>
     </div>
   </section>`;
 }

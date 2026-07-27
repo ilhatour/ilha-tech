@@ -7,22 +7,36 @@
     "whatsapp": "5521965166262",
     "telefone_exibicao": "(21) 96516-6262"
   },
-
   "hero": {
-    "eyebrow": "Franquia de tecnologia · Grupo Ilha",
-    "titulo": "Construímos a Nave-Mãe e pilotamos a operação por dentro.",
-    "sub": "A Ilha Tech é o braço de tecnologia do Grupo Ilha. Desenvolvemos a Nave-Mãe, o software de gestão de turismo 360°, e mantemos os sistemas digitais que fazem a Ilha Tour rodar todos os dias.",
-    "cta": "Conhecer a Nave-Mãe",
-    "cta_sec": "Como operamos",
-    "telemetria": [
-      { "nome": "Nave-Mãe", "estado": "núcleo" },
-      { "nome": "Sites & e-commerce", "estado": "online" },
-      { "nome": "Atendimento automatizado", "estado": "online" },
-      { "nome": "Dados & BI", "estado": "online" },
-      { "nome": "Integrações", "estado": "online" }
-    ]
+    "eyebrow": "Tecnologia para o turismo",
+    "titulo": "A Ilha Tech veio para revolucionar o turismo.",
+    "sub": "Construímos os sistemas que o turismo usa para trabalhar. Nove anos operando e mais de 21 mil viagens gerenciadas viraram cinco Naves.",
+    "cta": "Falar com a gente",
+    "cta_sec": "Conhecer as Naves",
+    "modulos": [
+      "Finanças",
+      "Gestão",
+      "Operação",
+      "Comercial",
+      "CRM",
+      "Suporte",
+      "Acessos",
+      "Pós-venda",
+      "Oportunidades",
+      "Performance"
+    ],
+    "naves_orbita": [
+      "Nave Pay",
+      "Nave Beds",
+      "Nave Fleet",
+      "Nave Bank"
+    ],
+    "nucleo": {
+      "nome": "Nave-Mãe",
+      "sub": "o centro de controle"
+    },
+    "viz_legenda": "O que a Ilha Tech já construiu"
   },
-
   "oque": {
     "eyebrow": "Quem somos",
     "titulo": "A Ilha Tech é a franquia de tecnologia do Grupo Ilha",
@@ -45,7 +59,6 @@
       }
     ]
   },
-
   "historia": {
     "eyebrow": "A origem",
     "titulo": "Nasceu de um buraco que eu vivia na pele.",
@@ -61,7 +74,6 @@
     "assinatura_cargo": "Fundador e CEO da Ilha Tech",
     "monograma": "MA"
   },
-
   "navemae": {
     "eyebrow": "O produto",
     "titulo": "Nave-Mãe",
@@ -92,31 +104,57 @@
       }
     ]
   },
-
   "produtos": {
     "eyebrow": "Nossas soluções",
     "titulo": "As Naves",
     "texto": "Cada solução da Ilha Tech é uma Nave: um sistema que resolve uma dor real de quem opera turismo. A Nave-Mãe é o centro; as outras orbitam em volta dela. Todas em desenvolvimento, evoluindo a cada semana.",
     "itens": [
-      { "nome": "Nave Mãe", "resolve": "O centro de controle da operação: dados, finanças e gestão de turismo 360° em um só lugar.", "tag": "em desenvolvimento" },
-      { "nome": "Nave Pay", "resolve": "Os pagamentos do turismo em um fluxo só, do recebimento ao repasse.", "tag": "em desenvolvimento" },
-      { "nome": "Nave Beds", "resolve": "Gestão de hospedagem: reservas, disponibilidade e ocupação sem retrabalho.", "tag": "em desenvolvimento" },
-      { "nome": "Nave Bank", "resolve": "O banco do turismo.", "tag": "em desenvolvimento" },
-      { "nome": "Nave Fleet", "resolve": "Gestão de frotas e operações: cada serviço vendido só com vaga real.", "tag": "em desenvolvimento" }
+      {
+        "nome": "Nave Mãe",
+        "resolve": "O centro de controle da operação: dados, finanças e gestão de turismo 360° em um só lugar.",
+        "tag": "em desenvolvimento"
+      },
+      {
+        "nome": "Nave Pay",
+        "resolve": "Os pagamentos do turismo em um fluxo só, do recebimento ao repasse.",
+        "tag": "em desenvolvimento"
+      },
+      {
+        "nome": "Nave Beds",
+        "resolve": "Gestão de hospedagem: reservas, disponibilidade e ocupação sem retrabalho.",
+        "tag": "em desenvolvimento"
+      },
+      {
+        "nome": "Nave Bank",
+        "resolve": "O banco do turismo.",
+        "tag": "em desenvolvimento"
+      },
+      {
+        "nome": "Nave Fleet",
+        "resolve": "Gestão de frotas e operações: cada serviço vendido só com vaga real.",
+        "tag": "em desenvolvimento"
+      }
     ]
   },
-
   "mercado": {
     "eyebrow": "O mercado",
     "titulo": "Turismo é gigante. E ainda roda no improviso.",
     "texto": "Quem opera turismo ainda vive de planilha, WhatsApp solto e sistema genérico que não entende o negócio. A tecnologia que existe foi feita por quem nunca operou uma viagem: resolve o que foi pedido, não o que a operação precisa. A Ilha Tech nasce do outro lado.",
     "pontos": [
-      { "titulo": "Feito de dentro da operação", "texto": "A gente viveu a dor antes de escrever a primeira linha de código. Cada solução resolve um problema que sentimos na pele." },
-      { "titulo": "O turismo está digitalizando", "texto": "O mercado está migrando para a tecnologia. Quem entende a operação de verdade larga na frente dessa corrida." },
-      { "titulo": "Uma dor que se repete", "texto": "A mesma dor da nossa operação existe em milhares de negócios de turismo. O que resolvemos aqui resolve lá fora." }
+      {
+        "titulo": "Feito de dentro da operação",
+        "texto": "A gente viveu a dor antes de escrever a primeira linha de código. Cada solução resolve um problema que sentimos na pele."
+      },
+      {
+        "titulo": "O turismo está digitalizando",
+        "texto": "O mercado está migrando para a tecnologia. Quem entende a operação de verdade larga na frente dessa corrida."
+      },
+      {
+        "titulo": "Uma dor que se repete",
+        "texto": "A mesma dor da nossa operação existe em milhares de negócios de turismo. O que resolvemos aqui resolve lá fora."
+      }
     ]
   },
-
   "operamos": {
     "eyebrow": "Como administramos a Ilha Tour",
     "titulo": "Um stack inteiro rodando a operação",
@@ -154,36 +192,78 @@
       }
     ]
   },
-
   "cultura": {
     "eyebrow": "Cultura FamILHA",
     "titulo": "Os valores que a gente carrega para dentro do código",
     "texto": "A Ilha Tech faz parte do Grupo Ilha e compartilha a cultura do grupo. Estes são os valores que guiam como trabalhamos.",
     "valores": [
-      { "emoji": "🏆", "nome": "Time de Campeões" },
-      { "emoji": "🤝", "nome": "Amigo do Viajante" },
-      { "emoji": "🚀", "nome": "Vai Lá e Faz" },
-      { "emoji": "💎", "nome": "Excelência que Encanta" },
-      { "emoji": "🛡️", "nome": "Segurança" },
-      { "emoji": "🌱", "nome": "Prosperidade & Transbordo" },
-      { "emoji": "🔥", "nome": "Coragem de Evoluir" },
-      { "emoji": "🎒", "nome": "Honestidade & Humildade" },
-      { "emoji": "📒", "nome": "Registro é Rei" },
-      { "emoji": "🏠", "nome": "Guardião do Negócio" }
+      {
+        "emoji": "🏆",
+        "nome": "Time de Campeões"
+      },
+      {
+        "emoji": "🤝",
+        "nome": "Amigo do Viajante"
+      },
+      {
+        "emoji": "🚀",
+        "nome": "Vai Lá e Faz"
+      },
+      {
+        "emoji": "💎",
+        "nome": "Excelência que Encanta"
+      },
+      {
+        "emoji": "🛡️",
+        "nome": "Segurança"
+      },
+      {
+        "emoji": "🌱",
+        "nome": "Prosperidade & Transbordo"
+      },
+      {
+        "emoji": "🔥",
+        "nome": "Coragem de Evoluir"
+      },
+      {
+        "emoji": "🎒",
+        "nome": "Honestidade & Humildade"
+      },
+      {
+        "emoji": "📒",
+        "nome": "Registro é Rei"
+      },
+      {
+        "emoji": "🏠",
+        "nome": "Guardião do Negócio"
+      }
     ]
   },
-
   "numeros": {
     "eyebrow": "Por que a Ilha Tech",
     "titulo": "Não começamos pela tecnologia",
     "sub": "Começamos por nove anos vivendo o turismo, entendendo o mercado e cada necessidade nos mínimos detalhes. A tecnologia veio depois, para resolver o que a gente já sentia na pele.",
     "stats": [
-      { "valor": "9 anos", "label": "de operação real em turismo por trás de cada solução", "real": true },
-      { "valor": "+21 mil", "label": "viagens gerenciadas até chegar no modelo de sistema ideal", "real": true },
-      { "valor": "5", "label": "Naves em desenvolvimento", "real": true }
+      {
+        "valor": "9 anos",
+        "label": "de operação real em turismo por trás de cada solução",
+        "real": true,
+        "curto": "de operação real"
+      },
+      {
+        "valor": "+21 mil",
+        "label": "viagens gerenciadas até chegar no modelo de sistema ideal",
+        "real": true,
+        "curto": "viagens gerenciadas"
+      },
+      {
+        "valor": "5",
+        "label": "Naves em desenvolvimento",
+        "real": true,
+        "curto": "Naves"
+      }
     ]
   },
-
   "contato": {
     "eyebrow": "Investidores & parceiros",
     "titulo": "Se você enxerga o mesmo tamanho nisso, fale comigo.",
@@ -192,16 +272,33 @@
     "cta_header": "Falar com a gente",
     "wa_msg": "Olá! Vi o site da Ilha Tech e quero saber mais sobre as soluções e como fazer parte."
   },
-
   "rodape": {
     "sobre": "Ilha Tech — a franquia de tecnologia do Grupo Ilha. Construímos a Nave-Mãe e mantemos os sistemas digitais do ecossistema.",
     "links": [
-      { "texto": "O que é", "href": "#oque" },
-      { "texto": "História", "href": "#historia" },
-      { "texto": "Produtos", "href": "#produtos" },
-      { "texto": "Como operamos", "href": "#operamos" },
-      { "texto": "Cultura", "href": "#cultura" },
-      { "texto": "Investidores", "href": "#contato" }
+      {
+        "texto": "O que é",
+        "href": "#oque"
+      },
+      {
+        "texto": "História",
+        "href": "#historia"
+      },
+      {
+        "texto": "Produtos",
+        "href": "#produtos"
+      },
+      {
+        "texto": "Como operamos",
+        "href": "#operamos"
+      },
+      {
+        "texto": "Cultura",
+        "href": "#cultura"
+      },
+      {
+        "texto": "Investidores",
+        "href": "#contato"
+      }
     ]
   }
 }
