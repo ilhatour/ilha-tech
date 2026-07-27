@@ -20,6 +20,10 @@ const SITE = D.marca.dominio;             // https://ilhatech.io
 const NOME = D.marca.nome;
 const WA = D.marca.whatsapp;              // 5521965166262
 const waLink = (msg) => `https://wa.me/${WA}${msg ? "?text=" + encodeURIComponent(msg) : ""}`;
+/* Versão dos ícones. Navegador guarda favicon num cache PRÓPRIO, que ignora
+   Cache-Control: como a URL /favicon.ico nunca mudava, o ícone antigo ficava
+   preso por tempo indeterminado. Bump aqui força todo mundo a rebuscar. */
+const ICON_V = "2";
 const GA4 = "G-VTDV3DTT6C"; // GA4 "Ilha Tech" (conta Ilha Tour a150469498), fluxo web ilhatech.io
 const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
@@ -192,11 +196,11 @@ function head({ title, desc, canonical }) {
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="${SITE}/assets/img/og-ilha-tech.png">
 <meta name="theme-color" content="#14062F">
-<link rel="icon" href="/favicon.ico" sizes="any">
-<link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="icon" type="image/png" sizes="32x32" href="/assets/img/favicon-32.png">
-<link rel="icon" type="image/png" sizes="16x16" href="/assets/img/favicon-16.png">
-<link rel="apple-touch-icon" href="/assets/img/apple-touch-icon.png">
+<link rel="icon" href="/favicon.ico?v=${ICON_V}" sizes="any">
+<link rel="icon" href="/favicon.svg?v=${ICON_V}" type="image/svg+xml">
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/img/favicon-32.png?v=${ICON_V}">
+<link rel="icon" type="image/png" sizes="16x16" href="/assets/img/favicon-16.png?v=${ICON_V}">
+<link rel="apple-touch-icon" href="/assets/img/apple-touch-icon.png?v=${ICON_V}">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gugi&family=Poppins:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
