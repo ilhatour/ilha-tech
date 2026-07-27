@@ -10,7 +10,7 @@
 
   "hero": {
     "eyebrow": "Franquia de tecnologia · Grupo Ilha",
-    "titulo": "Construímos a Nave-Mãe — e pilotamos a operação por dentro.",
+    "titulo": "Construímos a Nave-Mãe e pilotamos a operação por dentro.",
     "sub": "A Ilha Tech é o braço de tecnologia do Grupo Ilha. Desenvolvemos a Nave-Mãe, o software de gestão de turismo 360°, e mantemos os sistemas digitais que fazem a Ilha Tour rodar todos os dias.",
     "cta": "Conhecer a Nave-Mãe",
     "cta_sec": "Como operamos",
@@ -189,6 +189,7 @@
     "titulo": "A Ilha Tech vai revolucionar o turismo",
     "texto": "Nossos projetos ainda estão em desenvolvimento e estamos abertos para conversar com possíveis investidores e clientes. A gente acredita que a Ilha Tech vai transformar o turismo com as suas soluções. Se você quer fazer parte enquanto ainda estamos no começo, fale com a gente.",
     "cta": "Falar com a Ilha Tech",
+    "cta_header": "Falar com a gente",
     "wa_msg": "Olá! Vi o site da Ilha Tech e quero saber mais sobre as soluções e como fazer parte."
   },
 
@@ -199,7 +200,8 @@
       { "texto": "História", "href": "#historia" },
       { "texto": "Produtos", "href": "#produtos" },
       { "texto": "Como operamos", "href": "#operamos" },
-      { "texto": "Cultura", "href": "#cultura" }
+      { "texto": "Cultura", "href": "#cultura" },
+      { "texto": "Investidores", "href": "#contato" }
     ]
   }
 }

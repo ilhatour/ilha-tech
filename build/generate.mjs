@@ -193,10 +193,12 @@ function nav() {
         <span class="brand__word">Ilha<b>Tech</b></span>
       </a>
       <nav class="nav__links" aria-label="Navegação principal">${links}</nav>
+      <a class="btn btn--cta nav__cta" href="${waLink(D.contato.wa_msg)}" target="_blank" rel="noopener">${icon("whatsapp")} ${esc(D.contato.cta_header)}</a>
       <button class="nav__toggle" aria-label="Abrir menu" aria-expanded="false">${icon("menu")}</button>
     </div>
     <div class="nav__mobile" hidden>
       ${D.rodape.links.map((l) => `<a href="${l.href}">${esc(l.texto)}</a>`).join("")}
+      <a class="btn btn--cta" href="${waLink(D.contato.wa_msg)}" target="_blank" rel="noopener">${icon("whatsapp")} ${esc(D.contato.cta_header)}</a>
     </div>
   </header>`;
 }
@@ -212,7 +214,7 @@ function hero() {
     <div class="hero__inner">
       <div class="hero__copy">
         ${eyebrow(h.eyebrow)}
-        <h1 class="hero__title">${esc(h.titulo)}</h1>
+        <h1 class="hero__title">${esc(h.titulo).replace(/Nave-Mãe/g, '<span class="nb">Nave-Mãe</span>')}</h1>
         <p class="hero__sub">${esc(h.sub)}</p>
         <div class="hero__cta">
           <a class="btn btn--cta" href="#navemae">${esc(h.cta)} ${icon("arrow")}</a>
@@ -258,7 +260,7 @@ function bloco_historia() {
         <span class="hist__quote-mark" aria-hidden="true">&ldquo;</span>
         <p class="hist__quote">${esc(h.quote)}</p>
         <div class="hist__sign">
-          <img class="hist__avatar" src="/assets/img/miguel-ceo.png" width="400" height="400" alt="${esc(h.assinatura_nome)}" decoding="async">
+          <img class="hist__avatar" src="/assets/img/miguel-ceo.png" width="168" height="168" alt="${esc(h.assinatura_nome)}" decoding="async" loading="lazy">
           <span class="hist__who"><b>${esc(h.assinatura_nome)}</b>${esc(h.assinatura_cargo)}</span>
         </div>
       </aside>
@@ -486,7 +488,7 @@ function faviconSVG() {
 }
 
 function sitemap() {
-  const today = "2026-07-13";
+  const today = new Date().toISOString().slice(0, 10);
   return `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>${SITE}/</loc><lastmod>${today}</lastmod><changefreq>monthly</changefreq><priority>1.0</priority></url>

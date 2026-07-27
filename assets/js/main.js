@@ -46,7 +46,7 @@
 
   /* Scroll reveal — marca alvos e observa */
   var targets = document.querySelectorAll(
-    ".sec__head, .pill, .mod, .area, .val, .stat, .contato, .nm__head"
+    ".sec__head, .pill, .mod, .nave, .mkt, .area, .val, .stat, .contato, .nm__head"
   );
   targets.forEach(function (el, i) {
     el.setAttribute("data-reveal", "");

@@ -31,13 +31,13 @@
   --font: "Poppins", system-ui, -apple-system, "Segoe UI", sans-serif;
 
   /* Escala de tipo (fluida, corpo ≥16px) */
-  --t-hero:  clamp(2.4rem, 5.2vw, 4.3rem);
+  --t-hero:  clamp(2.3rem, 4.2vw, 3.6rem);
   --t-h2:    clamp(1.75rem, 3.4vw, 2.75rem);
   --t-h3:    clamp(1.12rem, 1.6vw, 1.32rem);
   --t-body:  clamp(1rem, 1.05vw, 1.125rem);
   --t-lead:  clamp(1.06rem, 1.3vw, 1.28rem);
   --t-small: .82rem;
-  --t-mono:  .74rem;
+  --t-mono:  .79rem;
 
   /* Espaço & forma */
   --maxw: 1160px;
@@ -123,10 +123,11 @@ h1, h2, h3 { line-height: 1.12; letter-spacing: -.02em; font-weight: 800; }
 .brand__word { font-family: "Gugi", var(--font); font-weight: 400; font-size: 1.16rem; letter-spacing: .01em; }
 .brand__word b { font-weight: 400; color: var(--uva); }
 .sec--dark .brand__word b, .nav .brand__word b, .foot .brand__word b { color: #b57cff; }
-.nav__links { margin-left: auto; display: flex; gap: 1.6rem; }
-.nav__links a { color: var(--branco-72); font-size: .95rem; font-weight: 500; transition: color .2s; }
+.nav__links { margin-left: auto; display: flex; gap: clamp(.7rem, 1.4vw, 1.35rem); }
+.nav__links a { color: var(--branco-72); font-size: .92rem; font-weight: 500; white-space: nowrap; transition: color .2s; }
 .nav__links a:hover { color: #fff; }
-.nav__cta { margin-left: .4rem; }
+.nav__cta { margin-left: .6rem; flex-shrink: 0; padding: .62rem 1.05rem; font-size: .9rem; }
+.nav__cta svg { width: 16px; height: 16px; }
 .nav__toggle { display: none; color: #fff; padding: .3rem; }
 .nav__toggle svg { width: 26px; height: 26px; }
 .nav__mobile { display: none; }
@@ -136,7 +137,7 @@ h1, h2, h3 { line-height: 1.12; letter-spacing: -.02em; font-weight: 800; }
    ============================================================ */
 .hero {
   position: relative; background: var(--velvet); color: #fff;
-  padding: clamp(3rem, 7vw, 5.5rem) 0 clamp(4rem, 8vw, 6rem);
+  padding: clamp(2.5rem, 5vw, 4.25rem) 0 clamp(3.5rem, 7vw, 5.5rem);
   overflow: hidden;
 }
 .hero__grid-bg {
@@ -152,14 +153,16 @@ h1, h2, h3 { line-height: 1.12; letter-spacing: -.02em; font-weight: 800; }
 .hero__inner {
   position: relative; z-index: 1;
   max-width: var(--maxw); margin: 0 auto; padding-inline: var(--gutter);
-  display: grid; grid-template-columns: 1.05fr .95fr; align-items: center; gap: clamp(1.5rem, 4vw, 3rem);
+  display: grid; grid-template-columns: 1.2fr .8fr; align-items: center; gap: clamp(1.5rem, 4vw, 3rem);
 }
 .hero__title { font-size: var(--t-hero); font-weight: 900; letter-spacing: -.03em; }
-.hero__title { max-width: 15ch; }
+.hero__title { max-width: 22ch; text-wrap: balance; }
+/* o hífen de "Nave-Mãe" não pode quebrar linha (parte o nome do produto) */
+.nb { white-space: nowrap; }
 .hero__sub { color: var(--branco-72); font-size: var(--t-lead); margin-top: 1.3rem; max-width: 46ch; }
 .hero__cta { display: flex; flex-wrap: wrap; gap: .8rem; margin-top: 2rem; }
 .hero__tele {
-  display: flex; flex-wrap: wrap; gap: .5rem; margin-top: 2.4rem;
+  display: flex; flex-wrap: wrap; gap: .5rem; margin-top: 1.8rem;
 }
 .tele {
   display: inline-flex; align-items: center; gap: .5rem;
@@ -214,9 +217,10 @@ h1, h2, h3 { line-height: 1.12; letter-spacing: -.02em; font-weight: 800; }
   transition: transform .3s var(--ease), border-color .3s var(--ease);
 }
 .pill:hover { transform: translateY(-4px); border-color: var(--uva-40); }
+/* fundo branco (não uva-14): regra anti-roxo-sobre-roxo da Identidade Visual */
 .pill__ic {
   display: grid; place-items: center; width: 48px; height: 48px; border-radius: 13px;
-  background: var(--uva-14); color: var(--uva); margin-bottom: 1.1rem;
+  background: var(--velvet); color: #fff; margin-bottom: 1.1rem; box-shadow: var(--shadow-card);
 }
 .pill__ic svg { width: 24px; height: 24px; }
 .pill h3 { font-size: var(--t-h3); margin-bottom: .5rem; }
@@ -291,7 +295,8 @@ h1, h2, h3 { line-height: 1.12; letter-spacing: -.02em; font-weight: 800; }
 .nave__mark { width: 44px; height: 44px; }
 .nave__tag {
   font-size: var(--t-mono); font-weight: 600; text-transform: uppercase; letter-spacing: .1em;
-  color: var(--uva); background: var(--uva-14); padding: .3rem .6rem; border-radius: 999px; white-space: nowrap;
+  color: var(--uva); background: #fff; border: 1px solid var(--uva-40);
+  padding: .3rem .6rem; border-radius: 999px; white-space: nowrap;
 }
 .nave h3 { font-size: var(--t-h3); margin-bottom: .5rem; }
 .nave p { color: var(--tinta-64); font-size: .96rem; }
@@ -368,6 +373,7 @@ h1, h2, h3 { line-height: 1.12; letter-spacing: -.02em; font-weight: 800; }
 .contato .eyebrow { justify-content: center; }
 .contato h2 { font-size: var(--t-h2); }
 .contato__lead { color: var(--branco-72); font-size: var(--t-lead); margin: 1.1rem 0 0; }
+.contato__mail { margin-top: 1.1rem; color: var(--branco-58); font-size: var(--t-small); }
 .contato__emblem { display: block; font-size: clamp(3rem, 6vw, 4.2rem); line-height: 1; margin: 2.4rem auto 0; }
 
 /* ============================================================
@@ -378,7 +384,7 @@ h1, h2, h3 { line-height: 1.12; letter-spacing: -.02em; font-weight: 800; }
 .foot__brand p { margin-top: 1rem; max-width: 40ch; font-size: .94rem; }
 .foot__brand .brand { color: #fff; margin-bottom: .3rem; }
 .foot__links { display: flex; flex-direction: column; gap: .7rem; align-content: start; }
-.foot__links a { font-size: .95rem; transition: color .2s; }
+.foot__links a { font-size: .95rem; padding: .35rem 0; transition: color .2s; }
 .foot__links a:hover { color: var(--lima); }
 .foot__base { display: flex; justify-content: space-between; align-items: center; gap: 1rem; padding-top: 1.5rem; font-size: var(--t-small); color: var(--branco-58); flex-wrap: wrap; }
 .foot__tag { color: var(--uva); font-weight: 500; }
@@ -410,7 +416,8 @@ h1, h2, h3 { line-height: 1.12; letter-spacing: -.02em; font-weight: 800; }
    ============================================================ */
 @media (max-width: 960px) {
   .hero__inner { grid-template-columns: 1fr; }
-  .hero__viz { order: -1; max-width: 380px; margin-inline: auto; }
+  /* copy antes do gráfico: no mobile a frase e o CTA vêm primeiro */
+  .hero__viz { order: 1; max-width: 320px; margin-inline: auto; }
   .hero__title { max-width: none; }
   .nm__head { grid-template-columns: 1fr; }
   .nm__badge { display: none; }
@@ -427,7 +434,8 @@ h1, h2, h3 { line-height: 1.12; letter-spacing: -.02em; font-weight: 800; }
   .nav__mobile[hidden] { display: none; }
   .nav__mobile { display: flex; flex-direction: column; gap: .3rem; padding: .5rem var(--gutter) 1.2rem; background: var(--velvet); border-top: 1px solid var(--branco-08); }
   .nav__mobile a { color: var(--branco-72); padding: .7rem 0; font-weight: 500; }
-  .nav__mobile .btn { margin-top: .6rem; justify-content: center; }
+  /* especificidade: precisa vencer ".nav__mobile a" (cor e padding) */
+  .nav__mobile .btn { margin-top: .8rem; justify-content: center; padding: .85rem 1.3rem; color: var(--tinta); }
 }
 @media (max-width: 560px) {
   .pill-grid, .area-grid, .mod-grid, .nave-grid, .mkt-grid { grid-template-columns: 1fr; }
