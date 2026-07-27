@@ -499,9 +499,51 @@ ${footer()}
 /* ============================================================
    ARTEFATOS AUXILIARES
    ============================================================ */
+/* Grade do 👾, a mesma de build/favicon.py (que gera .ico e os PNG).
+   '#' = corpo, '.' = vazado. Se mudar aqui, mude lá. */
+const BUG_GRADE = [
+  "....######..######....",
+  "...#######..#######...",
+  "..##################..",
+  "..##################..",
+  "#####.##########.#####",
+  "######################",
+  "######################",
+  "#######..####..#######",
+  "#######..####..#######",
+  "#######..####..#######",
+  ".####################.",
+  "..##################..",
+  "..##################..",
+  ".....#####..#####.....",
+  "....######..######....",
+  "....######..######....",
+  "....###........###....",
+  "....###........###....",
+];
+
+/* O favicon anterior era <text>👾</text>: só aparecia em dispositivo com
+   fonte de emoji colorido instalada, e o SVG é justamente o formato que
+   Chrome e Firefox preferem. Agora é vetor puro, independente de fonte.
+   Runs horizontais viram um <rect> só, então o arquivo fica pequeno. */
 function faviconSVG() {
-  // marca oficial = emoji 👾 (color emoji renderizado pelos navegadores modernos)
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><text x="16" y="17" font-size="28" text-anchor="middle" dominant-baseline="central">👾</text></svg>`;
+  const CAIXA = 24;
+  const gw = BUG_GRADE[0].length, gh = BUG_GRADE.length;
+  const ox = Math.floor((CAIXA - gw) / 2), oy = Math.floor((CAIXA - gh) / 2);
+  const rects = [];
+  BUG_GRADE.forEach((linha, y) => {
+    let x = 0;
+    while (x < gw) {
+      if (linha[x] === "#") {
+        let fim = x;
+        while (fim + 1 < gw && linha[fim + 1] === "#") fim++;
+        rects.push(`<rect x="${ox + x}" y="${oy + y}" width="${fim - x + 1}" height="1"/>`);
+        x = fim;
+      }
+      x++;
+    }
+  });
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${CAIXA} ${CAIXA}" fill="#9333EA" shape-rendering="crispEdges">${rects.join("")}</svg>`;
 }
 
 function sitemap() {
