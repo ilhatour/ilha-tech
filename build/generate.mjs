@@ -472,16 +472,22 @@ function page() {
 <body>
 ${nav()}
 <main>
+<!-- Ordem narrativa de investidor: promessa → quem somos → o problema e o
+     mercado → a origem (a dor vivida) → a solução → os produtos → a prova
+     que já roda → a tração → cultura → o pedido.
+     A cor alterna claro↔escuro em toda junta, menos produtos→operamos, que
+     é o único encontro de dois blocos claros (lilás→branco). Isso é
+     estrutural: são 5 seções claras para 4 posições de separação escura. -->
 ${hero()}
 ${bloco_oque()}
+${bloco_mercado()}
 ${bloco_historia()}
 ${varredura()}
 ${bloco_navemae()}
 ${bloco_produtos()}
-${bloco_mercado()}
 ${bloco_operamos()}
-${bloco_cultura()}
 ${bloco_numeros()}
+${bloco_cultura()}
 ${bloco_contato()}
 </main>
 ${footer()}

@@ -218,6 +218,17 @@ h1, h2, h3 { line-height: 1.12; letter-spacing: -.02em; font-weight: 800; }
 .sec--mist  { background: var(--lilas); color: var(--tinta); }
 .sec--dark  { background: var(--velvet); color: #fff; }
 
+/* Dois blocos claros encostando: a Identidade Visual pede separação
+   ("nunca usar após um bloco também claro sem separação"). Branco e Lilás
+   Bruma são próximos demais para a junta se ler sozinha. Hairline de 1px na
+   cor do texto a 8%, o mesmo vocabulário da borda dos cards. Hoje isso
+   acontece em uma junta só (produtos → como operamos): são 5 seções claras
+   para 4 posições de separação escura. */
+.sec--light + .sec--light,
+.sec--light + .sec--mist,
+.sec--mist  + .sec--light,
+.sec--mist  + .sec--mist { border-top: 1px solid var(--tinta-08); }
+
 .sec__head { max-width: 42rem; margin-bottom: clamp(2.5rem, 5vw, 3.5rem); }
 .sec__head--center { margin-inline: auto; text-align: center; }
 .sec__head--center .eyebrow { justify-content: center; }
