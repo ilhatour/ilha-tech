@@ -1,4 +1,4 @@
-// ALFY · Mapa de Rotas · Ilha Tech · v2.10.0 · 04/11/2026 · Painel de Ferro · login com usuário e senha
+// ALFY · Mapa de Rotas · Ilha Tech · v2.10.1 · 04/11/2026 · Painel de Ferro · Passagem com ações juntas e última atualização
 // Tudo passa pelas funções alfy_* do banco, sempre com a chave pessoal de quem está usando.
 // O banco decide o que cada pessoa vê; a tela só desenha o que voltou.
 // A IA e os comandos são pedidos numa fila (alfy.pedido) que o robô do Mac atende.
@@ -241,8 +241,9 @@ function acoesLinha(r) {
 function caixaLinha(r, forcar) {
   if (!forcar && !s.linhasAbertas?.[r.rt]) return "";
   const resp = s.respLinha?.[r.rt], rod = s.esperando["rota:" + r.rt];
-  return `<div class="caixa-linha"><form class="cl-form" data-clform="${r.rt}"><textarea class="busca" id="cl-${r.rt.replace(/\W/g, "")}" rows="2" placeholder="${comando() ? "Comente o que aconteceu ou o próximo passo (o ALFY atualiza a rota), ou peça: muda o dono para a Karol · P1 até sexta · faz a mensagem cobrando" : "Conte como está ou o próximo passo. O ALFY atualiza a rota."}">${esc(s.rascunhoLinha?.[r.rt] || "")}</textarea>
-    <span class="cl-bot"><button class="btn peq" type="submit" data-clmodo="comentar">💬 Comentar</button>${comando() ? '<button class="btn turq peq" type="submit" data-clmodo="alfy">🐙 Pedir ao ALFY</button>' : ""}</span></form>
+  const fid = "clf-" + r.rt.replace(/\W/g, "");
+  return `<div class="caixa-linha"><form class="cl-form ${forcar ? "so-campo" : ""}" id="${fid}" data-clform="${r.rt}"><textarea class="busca" id="cl-${r.rt.replace(/\W/g, "")}" rows="2" placeholder="${comando() ? "Comente o que aconteceu ou o próximo passo (o ALFY atualiza a rota), ou peça: muda o dono para a Karol · P1 até sexta · faz a mensagem cobrando" : "Conte como está ou o próximo passo. O ALFY atualiza a rota."}">${esc(s.rascunhoLinha?.[r.rt] || "")}</textarea>
+    ${forcar ? "" : `<span class="cl-bot"><button class="btn peq" type="submit" data-clmodo="comentar">💬 Comentar</button>${comando() ? '<button class="btn turq peq" type="submit" data-clmodo="alfy">🐙 Pedir ao ALFY</button>' : ""}</span>`}</form>
     ${rod ? `<div class="ia-saida pensando">${s.rastreando?.[r.rt] ? "📡 rastreando WhatsApp e e-mail desta rota… (até 1 minuto)" : "🐙 o ALFY está lendo e atualizando a rota… (uns 10 segundos)"}</div>` : ""}
     ${resp ? `<div class="ia-saida">${esc(resp)}<div class="usar">${s.sugLinha?.[r.rt] ? `<button class="mini ia" type="button" data-aplicarsug="${r.rt}">🐙 Aplicar a sugestão</button>` : ""}<button class="mini" type="button" data-copiartxt="${r.rt}">Copiar</button><button class="mini" type="button" data-rt="${r.rt}">Abrir a rota</button></div></div>` : ""}</div>`;
 }
@@ -327,11 +328,11 @@ function rrNovo() { return { ordem: "franquia", formato: "lista", novFirst: true
 s.rr = rrNovo();
 function rrSalvar() { const r = s.rr; try { localStorage.setItem(RR_GUARDA, JSON.stringify({ ordem: r.ordem, formato: r.formato, novFirst: r.novFirst, lote: r.lote, rts: r.rts, feitas: r.feitas, depois: r.depois })); } catch (_) { /* privado */ } }
 function rrLer() { try { Object.assign(s.rr, JSON.parse(localStorage.getItem(RR_GUARDA) || "{}")); } catch (_) { /* privado */ } }
-const rrRodando = () => !!s.rr.lote && (!s.rr.ped || s.rr.ped.status === "fila" || s.rr.ped.status === "rodando");
+const rrRodando = () => !!s.rr.lote && !!s.rr.ped && (s.rr.ped.status === "fila" || s.rr.ped.status === "rodando");
 async function rrCarregar() {
   if (!s.rr.lote) return;
   const x = await chamar("alfy_rastreios", { p_lote: s.rr.lote }).catch(() => null);
-  if (x) { s.rr.itens = x.itens || {}; s.rr.ped = x.pedido; }
+  if (x) { s.rr.itens = x.itens || {}; s.rr.ped = x.pedido; if (!x.pedido) { s.rr.lote = null; rrSalvar(); } }   // passada que sumiu do banco: começa do zero
 }
 const rrTem = (rt) => { const i = s.rr.itens[rt]; return !!i && !!(i.sugestao || (i.novidades && !/^(nada relevante|nada novo)/i.test(i.novidades))); };
 // as rotas abertas (com os filtros do topo), na ordem escolhida, já em grupos
@@ -372,20 +373,27 @@ function rrTirar(rt, onde) {
 function rrNovidade(r) {
   const i = s.rr.itens[r.rt];
   if (!r.rt.startsWith("RT-")) return `<div class="rr-novo vazio">Ideia sem número: o rastreio só olha rotas numeradas.</div>`;
-  if (!i) return rrRodando() && s.rr.rts.includes(r.rt) ? `<div class="rr-novo lendo">📡 lendo WhatsApp, e-mail, Drive e ALFY…</div>` : `<div class="rr-novo vazio">Ainda não rastreada nesta passada.</div>`;
+  if (!i) return rrRodando() && s.rr.rts.includes(r.rt) ? `<div class="rr-novo lendo">📡 lendo WhatsApp, e-mail, Drive e ALFY…</div>` : "";
   const f = i.fontes || {}, fontes = [["💬", "WhatsApp", f.whatsapp], ["✉️", "e-mail", f.email], ["📁", "Drive", f.drive], ["🐙", "ALFY", f.alfy]].filter((x) => x[2]).map(([ic, n, c]) => `<span>${ic} ${c} ${n}</span>`).join("");
   return `<div class="rr-novo ${rrTem(r.rt) ? "tem" : "vazio"}"><p>${esc(i.novidades)}</p>${fontes ? `<div class="rr-fontes">${fontes}</div>` : ""}
     ${i.sugestao ? `<div class="rr-sug"><span>💡 ${esc(i.sugestao)}</span><button class="mini ia" type="button" data-rraplicar="${r.rt}">🐙 Fazer isso</button></div>` : ""}
     ${i.concluida ? `<div class="rr-sug fim"><span>🏁 Pelo que li, esta rota parece concluída.</span><button class="mini" type="button" data-rapido="concluida" data-rrt="${r.rt}">✓ Concluir</button></div>` : ""}</div>`;
 }
+// o pé em que a rota está: Como está agora + a última coisa que alguém escreveu nela
+function rrSituacao(r) {
+  const u = r.ult_txt;
+  if (!r.como_esta && !u) return `<div class="rr-sit vazio">Sem atualização ainda. Comente o que está acontecendo.</div>`;
+  return `<div class="rr-sit">${r.como_esta ? `<p><small>📍 Como está agora</small>${esc(r.como_esta)}</p>` : ""}${u ? `<p class="ult-c"><small>🕘 Última atualização · ${quandoFoi(u.em)} · ${esc(curto(u.quem))}</small>${esc(u.texto)}</p>` : ""}</div>`;
+}
 function rrItem(r, foco) {
   return `<article class="rr-item ${foco ? "foco" : ""}" id="rr-${r.rt.replace(/\W/g, "")}">
     <div class="rr-cab" role="button" tabindex="0" data-rrfoco="${r.rt}">${tag(r)}<span class="tt"><b>${esc(r.titulo)}</b>${foco && r.assist && r.assist !== r.titulo ? `<span class="res">${esc(r.assist)}</span>` : ""}${metaLinha(r)}</span></div>
+    ${foco || !s.rr.itens[r.rt] ? rrSituacao(r) : ""}
     ${rrNovidade(r)}
     ${foco ? caixaLinha(r, true) : ""}
     ${s.rrAg === r.rt ? `<div class="rr-agenda"><label>Dia<input type="date" id="ag-dia" value="${r.inicio ? dia(r.inicio) : hojeDia()}"></label><label>Das<input type="time" id="ag-ini" value="${r.inicio ? hhmm(r.inicio) : "09:00"}"></label><label>Até<input type="time" id="ag-fim" value="${r.fim ? hhmm(r.fim) : ""}"></label>
       <span class="rr-acoes"><button class="btn turq peq" type="button" data-agpor="${r.rt}">📅 Pôr na agenda</button><button class="btn peq" type="button" data-agprazo="${r.rt}">Só mudar o prazo</button></span></div>` : ""}
-    <div class="rr-acoes">${foco ? `<button class="btn turq peq" type="button" data-rrfeita="${r.rt}">Vista · próxima →</button>` : `<button class="ac" type="button" data-rrfeita="${r.rt}">✓<span>Vista</span></button>`}<button class="ac" type="button" data-rrdepois="${r.rt}">⏭<span>Deixar para depois</span></button><button class="ac ${s.rrAg === r.rt ? "on" : ""}" type="button" data-rragendar="${r.rt}">📅<span>Agendar</span></button>${r.status !== "andamento" ? `<button class="ac" type="button" data-rapido="andamento" data-rrt="${r.rt}">▶<span>Em andamento</span></button>` : ""}<button class="ac ok" type="button" data-rapido="concluida" data-rrt="${r.rt}">✓<span>Concluir</span></button><button class="ac" type="button" data-rt="${r.rt}">↗<span>Abrir</span></button></div>
+    <div class="rr-acoes">${foco ? `<button class="ac" type="submit" form="clf-${r.rt.replace(/\W/g, "")}" data-clmodo="comentar">💬<span>Comentar</span></button>${comando() ? `<button class="ac ia" type="submit" form="clf-${r.rt.replace(/\W/g, "")}" data-clmodo="alfy">🐙<span>Pedir ao ALFY</span></button>` : ""}` : ""}${comando() && r.rt.startsWith("RT-") ? `<button class="ac" type="button" data-rastrear="${r.rt}">📡<span>Rastrear</span></button>` : ""}${foco ? `<button class="btn turq peq" type="button" data-rrfeita="${r.rt}">Vista · próxima →</button>` : `<button class="ac" type="button" data-rrfeita="${r.rt}">✓<span>Vista</span></button>`}<button class="ac" type="button" data-rrdepois="${r.rt}">⏭<span>Deixar para depois</span></button><button class="ac ${s.rrAg === r.rt ? "on" : ""}" type="button" data-rragendar="${r.rt}">📅<span>Agendar</span></button>${r.status !== "andamento" ? `<button class="ac" type="button" data-rapido="andamento" data-rrt="${r.rt}">▶<span>Em andamento</span></button>` : ""}<button class="ac ok" type="button" data-rapido="concluida" data-rrt="${r.rt}">✓<span>Concluir</span></button><button class="ac" type="button" data-rt="${r.rt}">↗<span>Abrir</span></button></div>
   </article>`;
 }
 function rrCartao(r) {
@@ -606,10 +614,11 @@ const CMDS = [
   { g: "Mandar", k: "bomdia", n: "Bom dia do Miguel", faz: "O seu dia numa tela: reuniões, o que vence hoje, o que venceu e quem respondeu.", quando: "na hora", onde: "nuvem" },
   { g: "Organizar", k: "ronda", n: "Fazer a ronda agora", faz: "Dá prazo para rota com prioridade e sem data, lê o WhatsApp das últimas 24 h e os e-mails novos.", quando: "8h, 11h, 14h, 17h e 20h", onde: "mac" },
   { g: "Organizar", k: "diario", n: "Relatórios do ALFY", faz: "O Bom dia, o Relatório do dia e o 📡 Grupos hoje que as rotinas do ALFY escrevem.", quando: "8h (Bom dia) e de hora em hora", onde: "mac" },
+  { g: "Pensar", k: "aprendi", n: "🧠 O que o ALFY aprendeu", faz: "Como você fala, instrui e decide, e como cada rota concluída foi resolvida. O ALFY usa isso em toda resposta. Apague o que estiver errado.", quando: "de 30 em 30 minutos", onde: "mac" },
   { g: "Pensar", k: "perguntar", n: "Perguntar ao ALFY", faz: "Pergunte qualquer coisa sobre as rotas e as pautas. O ALFY responde com os dados do painel.", quando: "quando você pedir", onde: "mac" },
 ];
 const filaRodando = (tipo, escopo) => (M.fila || []).find((q) => q.tipo === tipo && (escopo === undefined || q.escopo === escopo) && (q.status === "fila" || q.status === "rodando"));
-const ROTULO_FILA = { ia: "Pergunta ao ALFY", despejo: "Despejo", whatsapp: "Leitura do WhatsApp", ronda: "Ronda", virada: "Virada da semana", ata: "Ata da reunião" };
+const ROTULO_FILA = { ia: "Pergunta ao ALFY", despejo: "Despejo", whatsapp: "Leitura do WhatsApp", ronda: "Ronda", virada: "Virada da semana", ata: "Ata da reunião", entender: "Leu um comentário", aprender: "Aprendeu com o uso", rastrear: "Rastreio de rota", rastrear_lote: "Passagem de Rotas", email: "E-mail" };
 function filaHTML() {
   const f = M.fila || [];
   return `<div class="bloco"><h3>Fila do robô <span class="ct">${f.filter((q) => q.status === "fila" || q.status === "rodando").length}</span></h3><div class="fila">${f.slice(0, 7).map((q) => `<div class="it"><i style="background:${q.status === "feito" ? "var(--foam)" : q.status === "erro" ? "var(--verm)" : "var(--amber)"}"></i><span>${ROTULO_FILA[q.tipo] || q.tipo}${q.resumo ? ` · ${esc(q.resumo)}` : ""}${q.status === "erro" ? " · deu erro" : ""}</span><small>${q.status === "feito" || q.status === "erro" ? quandoFoi(q.feito_em) : q.status === "rodando" ? "rodando" : "na fila"}</small></div>`).join("") || '<div class="vazio">Nada na fila</div>'}</div>
@@ -783,6 +792,13 @@ function detCmd(c) {
   }
   if (c.k === "email") return emailHTML(h);
   if (c.k === "diario") return diarioHTML(h);
+  if (c.k === "aprendi") {
+    const ap = s.aprendi;
+    if (!ap) return `<div class="bloco">${h}<div class="carregando">Carregando…</div></div>`;
+    return `<div class="bloco">${h}<p class="rotulo">O jeito do Miguel${ap.jeito ? ` · atualizado ${quandoFoi(ap.jeito.em)}` : ""}</p>${ap.jeito ? `<div class="ia-saida">${esc(rotaTxt(ap.jeito.texto.replace(/\*\*/g, "")))}</div>` : '<p class="nota">Ainda não aprendeu. Sai na próxima rodada.</p>'}
+      <p class="rotulo" style="margin-top:14px">Casos resolvidos · ${ap.casos.length}</p>${ap.casos.map((x) => `<div class="sugestao"><div class="tx"><b>${esc(x.rt ? nomeRota(x.rt) : "Rota")}</b><small style="white-space:normal">${esc(rotaTxt(x.texto))}</small></div><button class="mini" type="button" data-tiraraprendi="${x.id}" title="Esquecer este caso">✕</button></div>`).join("") || '<p class="nota">Nenhum ainda.</p>'}
+      <p class="nota">O ALFY aprende sozinho de 30 em 30 minutos com as rotas concluídas e, uma vez por dia, relê o que você escreveu (pedidos, comentários, orientações) para ajustar o seu jeito.</p></div>`;
+  }
   if (c.k === "equipe") return equipeHTML(h);
   if (c.k === "mapa" || c.k === "cobrar") {
     const pessoasAlvo = (M.pessoas || []).filter((p) => p.papel !== "comando" && p.nome !== "ALFY" && (M.rotas || []).some((r) => r.responsavel_id === p.id && mapeavel(r)));
@@ -1341,7 +1357,8 @@ document.addEventListener("click", async (e) => {
     if (d.copiartxt) { copiar(s.respLinha[d.copiartxt]); return; }
     if (d.convite) { const p = s.equipe.find((x) => x.id === d.convite); copiar(convite(p)); return; }
     if (d.acessode) { await gerarAcesso(d.acessode); return; }
-    if (d.cmd) { s.cmd = d.cmd; if (d.cmd === "equipe") s.equipe = await chamar("alfy_equipe"); if (d.cmd === "diario") s.diario = await chamar("alfy_diario", { p_dias: 3 }); if (d.cmd === "perguntar" && !s.chatGeral) s.chatGeral = await chamar("alfy_ia_conversa", { p_escopo: "geral" }); if (d.cmd === "bomdia") FEED = await chamar("alfy_feed", { p_limite: 150 }); render(); if (matchMedia("(max-width:900px)").matches) setTimeout(() => $("#det-cmd")?.scrollIntoView({ behavior: "smooth" }), 30); return; }
+    if (d.tiraraprendi) { s.aprendi = await chamar("alfy_aprendizado_tirar", { p_id: +d.tiraraprendi }); render(); aviso("Esquecido"); return; }
+    if (d.cmd) { s.cmd = d.cmd; if (d.cmd === "aprendi") s.aprendi = await chamar("alfy_aprendizado"); if (d.cmd === "equipe") s.equipe = await chamar("alfy_equipe"); if (d.cmd === "diario") s.diario = await chamar("alfy_diario", { p_dias: 3 }); if (d.cmd === "perguntar" && !s.chatGeral) s.chatGeral = await chamar("alfy_ia_conversa", { p_escopo: "geral" }); if (d.cmd === "bomdia") FEED = await chamar("alfy_feed", { p_limite: 150 }); render(); if (matchMedia("(max-width:900px)").matches) setTimeout(() => $("#det-cmd")?.scrollIntoView({ behavior: "smooth" }), 30); return; }
     if (d.alvo) { s.alvo = d.alvo; render(); return; }
     if (d.mapamodo) { s.mapaModo = d.mapamodo; render(); return; }
     if (d.grupo) { s.grupo = s.grupo || []; s.grupo = s.grupo.includes(d.grupo) ? s.grupo.filter((x) => x !== d.grupo) : [...s.grupo, d.grupo]; render(); return; }

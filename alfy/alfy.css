@@ -642,3 +642,13 @@ body{touch-action:manipulation}
 .rr-agenda label{display:flex;flex-direction:column;gap:4px;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--aco);font-weight:700}
 .rr-agenda input{background:var(--ferro-2);border:1px solid var(--linha);border-radius:8px;padding:7px 9px;font-size:16px;color:var(--texto)}
 .rr-acoes .ac.on{border-color:var(--turq);color:var(--turq)}
+/* 2.10.1 · Passagem: situação da rota e ações juntas */
+.rr-sit{display:flex;flex-direction:column;gap:6px;background:var(--ferro-1);border:1px solid var(--linha);border-radius:9px;padding:9px 12px;font-size:15px}
+.rr-sit p{margin:0;color:var(--aco-2)}
+.rr-sit small{display:block;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--aco);font-weight:700;margin-bottom:1px}
+.rr-sit .ult-c{color:var(--texto)}
+.rr-sit.vazio{color:var(--aco);font-size:14px;border-style:dashed}
+.rr-item:not(.foco) .rr-sit p{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.cl-form.so-campo{grid-template-columns:1fr}
+.cl-form.so-campo textarea{width:100%}
+.ac.ia{color:var(--turq);border-color:#2B5753;background:#1B2F2D}
