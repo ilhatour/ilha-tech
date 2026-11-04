@@ -1,4 +1,4 @@
-// ALFY · Mapa de Rotas · Ilha Tech · v2.10.5 · 04/11/2026 · Painel de Ferro · Miguel na lista de acesso
+// ALFY · Mapa de Rotas · Ilha Tech · v2.10.6 · 04/11/2026 · Painel de Ferro · Nave ID por busca, no fim da Equipe
 // Tudo passa pelas funções alfy_* do banco, sempre com a chave pessoal de quem está usando.
 // O banco decide o que cada pessoa vê; a tela só desenha o que voltou.
 // A IA e os comandos são pedidos numa fila (alfy.pedido) que o robô do Mac atende.
@@ -734,10 +734,10 @@ const NIVEIS_NAVE = [["operacional", "Operacional"], ["tatico", "Tático"], ["ge
 // pessoas vêm da Nave ID (fonte da verdade): buscar e trazer, ligar quem está sem par, ou cadastrar quem não está lá
 function naveHTML() {
   const semNave = (M.pessoas || []).filter((p) => !p.na_nave && p.nome !== "ALFY");
-  const ligando = s.naveLigar ? pessoa(s.naveLigar) : null, res = s.naveRes;
+  const ligando = s.naveLigar ? pessoa(s.naveLigar) : null, res = (s.naveBusca || "").trim() || ligando ? s.naveRes : null;   // a lista só aparece com busca
   const frs = opc(FRENTES.filter((x) => x !== "🧍 Pessoal").map((x) => [x, frenteCurta(x)]), "", "Nenhuma");
   const papeis = opc([["colaborador", "Colaborador (vê as rotas dele)"], ["gerente", "Gerente (vê a frente)"]], "colaborador");
-  return `<div class="bloco"><h3>Pessoas da Nave ID</h3><p class="nota" style="margin:0 0 10px">A Nave ID é a fonte das pessoas: nome completo, WhatsApp e crachá vêm de lá. Busque quem já trabalha com a gente e traga para o ALFY.</p>
+  return `<div class="bloco"><h3>Pessoas da Nave ID</h3><p class="nota" style="margin:0 0 8px">Busque pelo nome quem já está na Nave ID e traga para o ALFY.</p>
     ${semNave.length ? `<p class="rotulo">No ALFY, mas sem cadastro na Nave ID · ${semNave.length}</p><div class="alvos" style="margin:0 0 12px">${semNave.map((p) => `<button class="chip" type="button" data-naveligar="${p.id}" aria-pressed="${s.naveLigar === p.id}">${esc(p.nome)}</button>`).join("")}</div>` : ""}
     ${ligando ? `<div class="ia-painel" style="margin-bottom:10px"><div class="t">Ligando ${esc(ligando.nome)}: ache a pessoa na lista abaixo e toque em <b>É esta</b>. Se ela não estiver na Nave ID, <button class="mini ia" type="button" data-acao="nave-novo">cadastre aqui</button>.</div></div>` : ""}
     <input class="busca" style="width:100%" id="nave-busca" placeholder="Buscar na Nave ID por nome ou função" value="${esc(s.naveBusca || "")}" autocomplete="off">
@@ -762,7 +762,6 @@ function vistaEquipe() {
     <div class="bloco"><h3>Ficha de entrada (link fixo e aberto)</h3><p style="margin:0 0 10px;color:var(--aco-2)">Mande este link para toda pessoa que entrar no grupo. Ela preenche nome, WhatsApp, CPF, nascimento e função. A ficha chega aqui para aprovar, e a aprovação cadastra a pessoa na Nave ID e no ALFY ao mesmo tempo.</p>
       <div class="zap"><div class="msg" style="max-width:none">${zap(MSG_FICHA)}</div></div>
       <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><button class="btn turq" type="button" data-acao="copiar-ficha">Copiar mensagem com o link</button><a class="btn" href="${LINK_FICHA}" target="_blank" rel="noopener" style="text-decoration:none">Ver a ficha</a></div></div>
-    ${naveHTML()}
     <div class="bloco"><h3>Fichas para aprovar <span class="ct">${pend.length}</span></h3>${!f ? '<div class="carregando">Carregando…</div>' : pend.map((x) => `<div class="campo" style="margin-bottom:10px"><div class="cab-campo"><b>${esc(x.nome_completo)}</b><span>${quandoFoi(x.criado_em)}</span></div>
         <p class="txt" style="font-size:14px">${esc(x.apelido ? "Chamar de " + x.apelido + " · " : "")}WhatsApp ${esc(x.whatsapp)}${x.email ? " · " + esc(x.email) : ""}${x.nascimento ? " · nasc. " + ddmm(x.nascimento + "T12:00:00-03:00") : ""}${x.tem_cpf ? " · CPF ✓" : " · sem CPF"}${x.funcao ? "<br>Função: " + esc(x.funcao) : ""}${x.empresa ? " · " + esc(x.empresa) : ""}${x.observacao ? "<br>" + esc(x.observacao) : ""}</p>
         <div class="props" style="margin-top:8px"><div class="dado"><small>Acesso no ALFY</small><select id="fa-papel-${x.id}">${opc([["colaborador", "Colaborador (vê as rotas dele)"], ["gerente", "Gerente (vê a frente)"]], "colaborador")}</select></div>
@@ -771,7 +770,8 @@ function vistaEquipe() {
         <div style="display:flex;gap:8px;margin-top:8px"><button class="btn turq peq" type="button" data-aprovar="${x.id}">Aprovar e cadastrar</button><button class="btn peq" type="button" data-recusar="${x.id}">Recusar</button></div></div>`).join("") || '<div class="vazio">Nenhuma ficha esperando.</div>'}
       ${s.aprovado ? `<div class="ia-painel" style="margin-top:10px"><div class="t">✅ ${esc(s.aprovado.nome)} cadastrado na Nave ID e no ALFY</div><div class="zap"><div class="msg" style="max-width:none">${zap(convite({ nome: s.aprovado.nome, token: s.aprovado.token }))}</div></div><div><button class="btn turq" type="button" data-acao="copiar-aprovado">Copiar convite do ALFY</button></div></div>` : ""}
       ${feitas.length ? `<p class="rotulo" style="margin-top:12px">Últimos 7 dias</p>${feitas.map((x) => `<p style="margin:0 0 4px;font-size:14px">${x.status === "aprovada" ? "✅" : "✖️"} ${esc(x.nome_completo)}</p>`).join("")}` : ""}</div>
-    ${comando() ? equipeHTML("<h3>Quem tem acesso ao ALFY</h3>") : ""}</div>`;
+    ${comando() ? equipeHTML("<h3>Quem tem acesso ao ALFY</h3>") : ""}
+    ${naveHTML()}</div>`;
 }
 function diarioHTML(h) {
   const d = s.diario;
@@ -1319,7 +1319,7 @@ document.addEventListener("click", async (e) => {
   const d = b.dataset;
   try {
     if (b.id === "eu-av-cel") { s.aba = "eu"; render(); return; }
-    if (d.aba) { s.aba = d.aba; s.pauta = null; s.reuniao = null; if (d.aba === "agenda") { render(); await carregarAgenda(); } if (d.aba === "equipe") { s.aprovado = null; s.naveRes = await chamar("alfy_nave_buscar", { p_q: s.naveBusca || "" }).catch(() => null); s.fichas = await chamar("alfy_fichas"); if (comando()) s.equipe = await chamar("alfy_equipe"); } if (d.aba === "feed") FEED = await chamar("alfy_feed", { p_limite: 150 }); if (d.aba === "comandos" && s.cmd === "perguntar" && !s.chatGeral) s.chatGeral = await chamar("alfy_ia_conversa", { p_escopo: "geral" }); render(); scrollTo(0, 0); return; }
+    if (d.aba) { s.aba = d.aba; s.pauta = null; s.reuniao = null; if (d.aba === "agenda") { render(); await carregarAgenda(); } if (d.aba === "equipe") { s.aprovado = null; if ((s.naveBusca || "").trim()) s.naveRes = await chamar("alfy_nave_buscar", { p_q: s.naveBusca }).catch(() => null); s.fichas = await chamar("alfy_fichas"); if (comando()) s.equipe = await chamar("alfy_equipe"); } if (d.aba === "feed") FEED = await chamar("alfy_feed", { p_limite: 150 }); if (d.aba === "comandos" && s.cmd === "perguntar" && !s.chatGeral) s.chatGeral = await chamar("alfy_ia_conversa", { p_escopo: "geral" }); render(); scrollTo(0, 0); return; }
     if (d.vista) { s.vista = d.vista; if (d.vista === "rar") await rrCarregar(); render(); return; }
     if (d.rrordem) { s.rr.ordem = d.rrordem; s.rr.foco = null; rrSalvar(); render(); return; }
     if (d.rrformato) { s.rr.formato = d.rrformato; rrSalvar(); render(); return; }

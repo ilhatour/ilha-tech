@@ -629,7 +629,8 @@ body{touch-action:manipulation}
 .prio-g.prio-P2 > h2{color:var(--amber)}
 
 /* ---------- 2.9 · Nave ID na Equipe · Minha ordem ---------- */
-.nave-res{display:flex;flex-direction:column;gap:6px;margin-top:8px;max-height:420px;overflow-y:auto}
+.nave-res{display:flex;flex-direction:column;gap:4px;margin-top:6px;max-height:300px;overflow-y:auto}
+.nave-res .sugestao{padding-block:6px}
 .nave-res .sugestao{flex-wrap:wrap}
 .nave-form{flex:1 1 100%;align-items:end}
 .ordem-item{display:flex;gap:8px;align-items:stretch}
