@@ -548,3 +548,8 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 .anexo .tx{flex:1;min-width:0}
 .anexo .tx b{display:block;font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .anexo .tx small{color:var(--aco);font-size:12px}
+.ult{display:inline-flex;align-items:center;gap:6px;color:var(--aco)}
+.ult.u-hoje{color:var(--foam)}
+.ult.u-morna{color:var(--amber)}
+.ult.u-parada{color:#FF9A9C}
+.ult-av{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:var(--mint);color:#0F3B43;font-family:var(--fd);font-weight:700;font-size:9px}
