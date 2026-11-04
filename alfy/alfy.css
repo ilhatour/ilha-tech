@@ -638,3 +638,7 @@ body{touch-action:manipulation}
 .ordem-item .setas b{font-family:var(--fd);font-size:13px;color:var(--aco)}
 .ordem-item .setas .ac{padding:5px 9px}
 .ordem-item .setas .ac:disabled{opacity:.3}
+.rr-agenda{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;background:var(--ferro-1);border:1px solid var(--linha);border-radius:10px;padding:10px 12px}
+.rr-agenda label{display:flex;flex-direction:column;gap:4px;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--aco);font-weight:700}
+.rr-agenda input{background:var(--ferro-2);border:1px solid var(--linha);border-radius:8px;padding:7px 9px;font-size:16px;color:var(--texto)}
+.rr-acoes .ac.on{border-color:var(--turq);color:var(--turq)}

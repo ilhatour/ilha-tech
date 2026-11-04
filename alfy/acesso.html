@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#1B1F23">
+<title>Acesso ao ALFY · Grupo Ilha Tour</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2323282D'/%3E%3Ctext x='32' y='44' font-size='36' text-anchor='middle'%3E🐙%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap">
+<style>
+:root{--ferro-0:#15181B;--ferro-1:#1B1F23;--ferro-2:#23282D;--linha:#343B42;--aco:#8C979F;--texto:#E9EDEF;--turq:#2BAFA6;--coral:#FF7A45;--verm:#E5484D;--mint:#EAF2F0;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ferro-0);color:var(--texto);font-family:"DM Sans",system-ui,sans-serif;font-size:16px;line-height:1.5;
+  background-image:repeating-linear-gradient(90deg,rgba(255,255,255,.012) 0 1px,transparent 1px 3px)}
+main{max-width:560px;margin:0 auto;padding-block:28px 60px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.placa{position:relative;background:linear-gradient(180deg,#2E343A,#252A2F);border:1px solid #3B4249;border-radius:14px;box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 2px 0 rgba(0,0,0,.35);padding:22px 20px}
+.placa::before,.placa::after{content:"";position:absolute;top:8px;width:6px;height:6px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#7C868E,#3A4148 70%)}
+.placa::before{left:8px}.placa::after{right:8px}
+h1{font-family:Poppins,sans-serif;font-size:24px;margin:4px 0 6px}
+.sub{color:var(--aco);margin:0 0 18px}
+form{display:flex;flex-direction:column;gap:14px}
+label{display:flex;flex-direction:column;gap:6px;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--aco);font-weight:700}
+label small{text-transform:none;letter-spacing:0;font-weight:500}
+input,select,textarea{font:inherit;color:var(--texto);background:var(--ferro-1);border:1px solid var(--linha);border-radius:10px;padding:11px 12px;font-size:16px;text-transform:none;letter-spacing:0;font-weight:500;box-shadow:inset 0 1px 2px rgba(0,0,0,.35)}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--turq);outline-offset:1px}
+.duas{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+button{font-family:Poppins,sans-serif;font-weight:700;font-size:16px;border:0;border-radius:12px;padding:13px 18px;background:var(--coral);color:#2A0F02;cursor:pointer;box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 2px 0 #A4441D}
+button:disabled{opacity:.6}
+.erro{color:#FF9A9C;margin:0;min-height:1em}
+.nota{font-size:13px;color:var(--aco);margin:0}
+.ok{text-align:left}
+.ok b{font-family:Poppins,sans-serif;font-size:20px;color:var(--mint)}
+@media (max-width:480px){.duas{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<main>
+  <div class="placa" id="caixa">
+    <div style="font-size:30px">🐙</div>
+    <h1 id="tit">Acesso ao ALFY</h1>
+    <p class="sub" id="sub">Carregando…</p>
+    <form id="f" autocomplete="on" novalidate hidden>
+      <div id="cadastro" hidden style="display:flex;flex-direction:column;gap:14px">
+        <label>Nome completo<input name="nome_completo" autocomplete="name" placeholder="Como está no documento"></label>
+        <label>Como gosta de ser chamado(a)<input name="apelido" autocomplete="nickname"></label>
+        <div class="duas">
+          <label>WhatsApp<input name="whatsapp" type="tel" inputmode="tel" autocomplete="tel" placeholder="(24) 99999-9999"></label>
+          <label>Data de nascimento<input name="nascimento" type="date"></label>
+        </div>
+        <label>Função<input name="funcao" placeholder="Ex.: Atendimento comercial"></label>
+      </div>
+      <label>Usuário <small>(3 a 30 letras, números, ponto ou _; sem espaço)</small><input name="usuario" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="ex.: gabriel.rosa"></label>
+      <div class="duas">
+        <label>Senha <small>(mínimo 6)</small><input name="senha" type="password" autocomplete="new-password"></label>
+        <label>Repita a senha<input name="senha2" type="password" autocomplete="new-password"></label>
+      </div>
+      <p class="erro" id="erro"></p>
+      <button type="submit" id="enviar">Salvar e entrar</button>
+      <p class="nota">Seu usuário fica guardado no seu cadastro da Nave ID, o sistema do Grupo Ilha Tour. A senha fica protegida: nem a Gestão de Pessoas consegue ver.</p>
+    </form>
+  </div>
+</main>
+<script>
+"use strict";
+const API = "https://tladwxithannxstbneon.supabase.co/rest/v1/rpc/";
+const CHAVE = "sb_publishable_FV_NUHwNP2H8gkGsvd6Odw_19NBn9pl";
+const rpc = async (fn, args) => { const r = await fetch(API + fn, { method: "POST", headers: { apikey: CHAVE, "Content-Type": "application/json" }, body: JSON.stringify(args) }); if (!r.ok) { let m = "Não deu certo. Tente de novo."; try { m = (await r.json()).message || m; } catch (_) { /* */ } throw new Error(m.replace(/^./, (c) => c.toUpperCase())); } return r.json(); };
+const codigo = (location.hash.match(/c=([0-9a-f]+)/) || [])[1];
+const $ = (id) => document.getElementById(id);
+(async () => {
+  if (!codigo) { $("sub").textContent = "Abra pelo link que você recebeu no WhatsApp."; return; }
+  try {
+    const v = await rpc("alfy_convite_ver", { p_codigo: codigo });
+    if (!v.ok) { $("sub").textContent = v.msg; return; }
+    $("tit").textContent = v.nome ? "Olá, " + v.nome.split(" ")[0] + "!" : "Bem-vindo ao Grupo Ilha Tour!";
+    $("sub").textContent = v.precisa_cadastro ? "Preencha seus dados e crie seu usuário e senha do ALFY." : v.usuario ? "Escolha uma senha nova. Se quiser, troque também o usuário." : "Crie seu usuário e senha. Depois é só entrar em ilhatech.io/alfy de qualquer aparelho.";
+    $("cadastro").hidden = !v.precisa_cadastro;
+    if (v.usuario) $("f").usuario.value = v.usuario;
+    $("f").hidden = false;
+  } catch (e) { $("sub").textContent = e.message; }
+})();
+$("f").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const d = Object.fromEntries(new FormData(e.target).entries()), erro = $("erro"), b = $("enviar");
+  erro.textContent = "";
+  if (d.senha !== d.senha2) { erro.textContent = "As duas senhas não estão iguais."; return; }
+  delete d.senha2;
+  b.disabled = true; b.textContent = "Salvando…";
+  try {
+    const r = await rpc("alfy_convite_usar", { p_codigo: codigo, p_dados: d });
+    try { localStorage.setItem("alfy-k", r.token); } catch (_) { /* privado */ }
+    $("caixa").innerHTML = '<div class="ok"><div style="font-size:30px">🐙</div><b>Pronto!</b><p>Seu usuário é <b>' + r.usuario.replace(/[<>&]/g, "") + '</b>. Entrando no ALFY…</p></div>';
+    setTimeout(() => { location.href = "/alfy/"; }, 1500);
+  } catch (er) { erro.textContent = er.message; b.disabled = false; b.textContent = "Salvar e entrar"; }
+});
+</script>
+</body>
+</html>

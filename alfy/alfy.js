@@ -1,4 +1,4 @@
-// ALFY · Mapa de Rotas · Ilha Tech · v2.9.1 · 04/11/2026 · Painel de Ferro · comentário que o ALFY entende · Passagem de Rotas
+// ALFY · Mapa de Rotas · Ilha Tech · v2.10.0 · 04/11/2026 · Painel de Ferro · login com usuário e senha
 // Tudo passa pelas funções alfy_* do banco, sempre com a chave pessoal de quem está usando.
 // O banco decide o que cada pessoa vê; a tela só desenha o que voltou.
 // A IA e os comandos são pedidos numa fila (alfy.pedido) que o robô do Mac atende.
@@ -383,7 +383,9 @@ function rrItem(r, foco) {
     <div class="rr-cab" role="button" tabindex="0" data-rrfoco="${r.rt}">${tag(r)}<span class="tt"><b>${esc(r.titulo)}</b>${foco && r.assist && r.assist !== r.titulo ? `<span class="res">${esc(r.assist)}</span>` : ""}${metaLinha(r)}</span></div>
     ${rrNovidade(r)}
     ${foco ? caixaLinha(r, true) : ""}
-    <div class="rr-acoes">${foco ? `<button class="btn turq peq" type="button" data-rrfeita="${r.rt}">Vista · próxima →</button>` : `<button class="ac" type="button" data-rrfeita="${r.rt}">✓<span>Vista</span></button>`}<button class="ac" type="button" data-rrdepois="${r.rt}">⏭<span>Deixar para depois</span></button><button class="ac ok" type="button" data-rapido="concluida" data-rrt="${r.rt}">✓<span>Concluir</span></button><button class="ac" type="button" data-rt="${r.rt}">↗<span>Abrir</span></button></div>
+    ${s.rrAg === r.rt ? `<div class="rr-agenda"><label>Dia<input type="date" id="ag-dia" value="${r.inicio ? dia(r.inicio) : hojeDia()}"></label><label>Das<input type="time" id="ag-ini" value="${r.inicio ? hhmm(r.inicio) : "09:00"}"></label><label>Até<input type="time" id="ag-fim" value="${r.fim ? hhmm(r.fim) : ""}"></label>
+      <span class="rr-acoes"><button class="btn turq peq" type="button" data-agpor="${r.rt}">📅 Pôr na agenda</button><button class="btn peq" type="button" data-agprazo="${r.rt}">Só mudar o prazo</button></span></div>` : ""}
+    <div class="rr-acoes">${foco ? `<button class="btn turq peq" type="button" data-rrfeita="${r.rt}">Vista · próxima →</button>` : `<button class="ac" type="button" data-rrfeita="${r.rt}">✓<span>Vista</span></button>`}<button class="ac" type="button" data-rrdepois="${r.rt}">⏭<span>Deixar para depois</span></button><button class="ac ${s.rrAg === r.rt ? "on" : ""}" type="button" data-rragendar="${r.rt}">📅<span>Agendar</span></button>${r.status !== "andamento" ? `<button class="ac" type="button" data-rapido="andamento" data-rrt="${r.rt}">▶<span>Em andamento</span></button>` : ""}<button class="ac ok" type="button" data-rapido="concluida" data-rrt="${r.rt}">✓<span>Concluir</span></button><button class="ac" type="button" data-rt="${r.rt}">↗<span>Abrir</span></button></div>
   </article>`;
 }
 function rrCartao(r) {
@@ -697,11 +699,17 @@ function emailHTML(h) {
     <p class="nota">O script só lê e manda para o banco do ALFY, que só você vê. Ninguém mais tem a chave. Para desligar: script.google.com › o projeto › Acionadores › apagar.</p></div>`;
 }
 const convite = (p) => `🐙 *ALFY · seu Mapa de Rotas*\n\nOi, ${p.nome.split(" ")[0]}! A partir de agora as suas rotas ficam no ALFY. Abra pelo link abaixo (é só seu, não repasse):\n\nhttps://ilhatech.io/alfy/#k=${p.token}\n\nNo celular, salve na tela de início para usar como app. Lá você vê suas rotas, muda o status, comenta e responde.`;
+const LINK_ACESSO = (c) => `https://ilhatech.io/alfy/acesso.html#c=${c}`;
+const msgAcesso = (nome, c, novo) => `🐙 *ALFY · seu acesso*\n\nOi${nome ? ", " + nome.split(" ")[0] : ""}! ${novo ? "Para entrar no ALFY, faça seu cadastro e crie seu usuário e senha neste link" : "Crie (ou troque) seu usuário e senha do ALFY neste link"} (vale 7 dias, é só seu):\n\n${LINK_ACESSO(c)}\n\nDepois é só entrar em ilhatech.io/alfy com seu usuário e senha, de qualquer aparelho.`;
+async function gerarAcesso(alfyId, papel, frentes) {
+  const r = await chamar("alfy_convite_criar", { p_alfy: alfyId || null, p_papel: papel || null, p_frentes: frentes || null });
+  const txt = msgAcesso(r.nome, r.codigo, !alfyId); copiar(txt); s.ultimoAcesso = { nome: r.nome || "pessoa nova", txt }; render();
+}
 function equipeHTML(h) {
   const e = s.equipe;
   if (!e) return `<div class="bloco">${h}<div class="carregando">Carregando…</div></div>`;
   const papel = { comando: "Comando", gerente: "Gerente", colaborador: "Colaborador" };
-  return `<div class="bloco">${h}<p class="nota" style="margin:0 0 10px">O convite leva o link pessoal: quem tem o link entra. Mande só no privado de cada pessoa.</p>${e.filter((p) => p.papel !== "comando").map((p) => `<div class="sugestao"><div class="tx"><b>${esc(p.nome)}</b><small>${p.nome_completo && p.nome_completo !== p.nome ? esc(p.nome_completo) + " · " : ""}${p.na_nave ? "" : "⚠️ sem Nave ID · "}${papel[p.papel]}${(p.frentes || []).length ? " · " + p.frentes.map(frenteCurta).join(", ") : ""} · ${p.rotas} rotas abertas · ${p.ultimo ? "usou " + quandoFoi(p.ultimo) : "ainda não usou"}${p.ativo ? "" : " · desligado"}</small></div>${p.ativo ? `<button class="btn turq peq" type="button" data-convite="${p.id}">Copiar convite</button>` : ""}</div>`).join("")}</div>`;
+  return `<div class="bloco">${h}<p class="nota" style="margin:0 0 10px">🔑 gera um link de 7 dias em que a pessoa cria usuário e senha (ou troca, se esqueceu). O link é copiado pronto para colar no privado dela no WhatsApp.</p>${s.ultimoAcesso ? `<div class="ia-painel" style="margin-bottom:10px"><div class="t">✅ Link de ${esc(s.ultimoAcesso.nome)} copiado</div><div class="zap"><div class="msg" style="max-width:none">${zap(s.ultimoAcesso.txt)}</div></div></div>` : ""}${e.filter((p) => p.papel !== "comando").map((p) => `<div class="sugestao"><div class="tx"><b>${esc(p.nome)}</b><small>${p.nome_completo && p.nome_completo !== p.nome ? esc(p.nome_completo) + " · " : ""}${p.na_nave ? "" : "⚠️ sem Nave ID · "}${p.usuario ? "👤 " + esc(p.usuario) + " · " : "sem senha · "}${papel[p.papel]}${(p.frentes || []).length ? " · " + p.frentes.map(frenteCurta).join(", ") : ""} · ${p.rotas} rotas abertas · ${p.ultimo ? "usou " + quandoFoi(p.ultimo) : "ainda não usou"}${p.ativo ? "" : " · desligado"}</small></div>${p.ativo ? `<button class="btn turq peq" type="button" data-acessode="${p.id}">🔑 ${p.usuario ? "Trocar senha" : "Link de acesso"}</button>` : ""}</div>`).join("")}</div>`;
 }
 const LINK_FICHA = "https://ilhatech.io/alfy/ficha.html";
 const MSG_FICHA = `🐙 *Ficha de entrada · Grupo Ilha Tour*\n\nOi! Para te cadastrar nos nossos sistemas, preencha esta ficha (leva 2 minutos):\n\n${LINK_FICHA}\n\nDepois que a Gestão de Pessoas conferir, você recebe o seu acesso ao ALFY por aqui.`;
@@ -722,7 +730,7 @@ function naveHTML() {
         : `<button class="btn peq" type="button" data-naveabrir="${x.colaborador_id}">＋ Trazer</button>`}</div>`).join("") : '<div class="vazio">Ninguém com esse nome na Nave ID.</div>'}</div>
     ${s.naveNovo ? `<div class="campo" style="margin-top:10px"><p class="rotulo">Cadastrar na Nave ID e no ALFY</p><div class="props"><div class="dado"><small>Nome completo</small><input id="nn-nome" placeholder="Como está no documento"></div><div class="dado"><small>Chamar de</small><input id="nn-apelido" value="${esc(ligando?.nome || "")}"></div><div class="dado"><small>WhatsApp</small><input id="nn-zap" inputmode="tel" placeholder="(24) 99999-9999"></div><div class="dado"><small>Função</small><input id="nn-funcao"></div>
       ${ligando ? "" : `<div class="dado"><small>Acesso</small><select id="nn-papel">${papeis}</select></div><div class="dado"><small>Frente (gerente)</small><select id="nn-frente">${frs}</select></div>`}</div>
-      <div style="display:flex;gap:8px;margin-top:8px"><button class="btn turq peq" type="button" data-acao="nave-salvar-novo">Cadastrar</button><button class="btn peq" type="button" data-acao="nave-cancelar">Cancelar</button></div></div>` : `<p class="nota">Não achou? <button class="mini" type="button" data-acao="nave-novo">Cadastrar pessoa nova</button> ou mande a ficha de entrada (abaixo).</p>`}
+      <div style="display:flex;gap:8px;margin-top:8px"><button class="btn turq peq" type="button" data-acao="nave-salvar-novo">Cadastrar</button><button class="btn peq" type="button" data-acao="nave-cancelar">Cancelar</button></div></div>` : `<p class="nota">Não achou? <button class="mini" type="button" data-acao="nave-novo">Cadastrar pessoa nova</button> ou <button class="mini ia" type="button" data-acao="acesso-novo">🔑 gerar link para ela se cadastrar</button> (ela preenche e cria usuário e senha).</p>${s.ultimoAcesso && !comando() ? `<div class="ia-painel" style="margin-top:8px"><div class="t">✅ Link copiado</div><div class="zap"><div class="msg" style="max-width:none">${zap(s.ultimoAcesso.txt)}</div></div></div>` : ""}`}
     ${s.aprovado && s.aprovado.daNave ? `<div class="ia-painel" style="margin-top:10px"><div class="t">✅ ${esc(s.aprovado.nome)} está no ALFY</div><div class="zap"><div class="msg" style="max-width:none">${zap(convite({ nome: s.aprovado.nome, token: s.aprovado.token }))}</div></div><div><button class="btn turq" type="button" data-acao="copiar-aprovado">Copiar o convite</button></div></div>` : ""}</div>`;
 }
 async function naveBuscar(q) { s.naveBusca = q; try { s.naveRes = await chamar("alfy_nave_buscar", { p_q: q }); } catch (e) { falhou(e); } const el = document.querySelector(".nave-res"); if (el) { const pos = $("#nave-busca").selectionStart; render(); const i = $("#nave-busca"); i.focus(); i.setSelectionRange(pos, pos); } }
@@ -827,6 +835,7 @@ function vistaEu() {
   return `<div class="placa rebites" style="padding:22px 18px;display:flex;gap:14px;align-items:center"><div class="avatar" style="width:52px;height:52px;font-size:18px">${ini(p.nome)}</div><div><b style="font-family:var(--fd);font-size:18px">${esc(p.nome)}</b><div style="color:var(--aco);font-size:14px">${papelTxt()}</div></div></div>
     <div class="bloco" style="margin-top:14px"><h3>Suas rotas abertas <span class="ct">${minhas.length}</span></h3><p style="margin:0;color:var(--aco-2)">${minhas.filter(vencida).length} vencidas · ${minhas.filter((r) => r.prazo && dias(r.prazo) === 0).length} vencem hoje</p></div>
     <div class="bloco" style="margin-top:14px"><h3>No celular</h3><p style="margin:0;color:var(--aco-2)">Para usar como app: no iPhone, toque em Compartilhar › Adicionar à Tela de Início. No Android, menu ⋮ › Adicionar à tela inicial.</p></div>
+    <div class="bloco" style="margin-top:14px"><h3>Seu acesso</h3><p style="margin:0 0 10px;color:var(--aco-2)">${p.usuario ? `Você entra com o usuário <b>${esc(p.usuario)}</b> e sua senha, de qualquer aparelho.` : "Crie um usuário e uma senha para entrar de qualquer aparelho, sem precisar do link."}</p><button class="btn turq" type="button" data-acao="meu-acesso">🔑 ${p.usuario ? "Trocar minha senha" : "Criar usuário e senha"}</button></div>
     <div style="margin-top:14px"><button class="btn" type="button" data-acao="sair">Sair deste aparelho</button></div>`;
 }
 
@@ -1285,6 +1294,12 @@ document.addEventListener("click", async (e) => {
     if (d.rrordem) { s.rr.ordem = d.rrordem; s.rr.foco = null; rrSalvar(); render(); return; }
     if (d.rrformato) { s.rr.formato = d.rrformato; rrSalvar(); render(); return; }
     if (d.rrfoco) { s.rr.foco = d.rrfoco; render(); setTimeout(() => $("#cl-" + d.rrfoco.replace(/\W/g, ""))?.focus({ preventScroll: true }), 30); return; }
+    if (d.rragendar) { s.rrAg = s.rrAg === d.rragendar ? null : d.rragendar; render(); return; }
+    if (d.agpor || d.agprazo) {
+      const rt = d.agpor || d.agprazo, dd = $("#ag-dia").value, hi = $("#ag-ini").value, hf = $("#ag-fim").value; if (!dd) { aviso("Escolha o dia"); return; }
+      const campos = d.agpor ? { inicio: `${dd}T${hi || "09:00"}:00-03:00`, fim: hf ? `${dd}T${hf}:00-03:00` : "", tipo: "📅 Compromisso" } : { prazo: dd + "T12:00:00-03:00" };
+      await chamar("alfy_editar", { p_rt: rt, p_campos: campos }); s.rrAg = null; aviso(d.agpor ? `📅 ${nomeRota(rt)} na agenda: ${ddmm(dd + "T12:00:00-03:00")} ${hi}` : `Prazo da ${nomeRota(rt)}: ${ddmm(dd + "T12:00:00-03:00")}`); await recarregar(); render(); return;
+    }
     if (d.rrfeita) { rrTirar(d.rrfeita, "feitas"); return; }
     if (d.rrdepois) { rrTirar(d.rrdepois, "depois"); aviso(nomeRota(d.rrdepois) + " ficou para depois"); return; }
     if (d.rrlista) { s.rr.formato = "lista"; s.rr.foco = d.rrlista; rrSalvar(); render(); setTimeout(() => $(".rr-item.foco")?.scrollIntoView({ block: "start", behavior: "smooth" }), 40); return; }
@@ -1325,6 +1340,7 @@ document.addEventListener("click", async (e) => {
     if (d.linhacaixa) { s.linhasAbertas = { ...(s.linhasAbertas || {}), [d.linhacaixa]: !s.linhasAbertas?.[d.linhacaixa] }; render(); setTimeout(() => $("#cl-" + d.linhacaixa.replace(/\W/g, ""))?.focus(), 30); return; }
     if (d.copiartxt) { copiar(s.respLinha[d.copiartxt]); return; }
     if (d.convite) { const p = s.equipe.find((x) => x.id === d.convite); copiar(convite(p)); return; }
+    if (d.acessode) { await gerarAcesso(d.acessode); return; }
     if (d.cmd) { s.cmd = d.cmd; if (d.cmd === "equipe") s.equipe = await chamar("alfy_equipe"); if (d.cmd === "diario") s.diario = await chamar("alfy_diario", { p_dias: 3 }); if (d.cmd === "perguntar" && !s.chatGeral) s.chatGeral = await chamar("alfy_ia_conversa", { p_escopo: "geral" }); if (d.cmd === "bomdia") FEED = await chamar("alfy_feed", { p_limite: 150 }); render(); if (matchMedia("(max-width:900px)").matches) setTimeout(() => $("#det-cmd")?.scrollIntoView({ behavior: "smooth" }), 30); return; }
     if (d.alvo) { s.alvo = d.alvo; render(); return; }
     if (d.mapamodo) { s.mapaModo = d.mapamodo; render(); return; }
@@ -1370,6 +1386,9 @@ document.addEventListener("click", async (e) => {
     if (a === "ronda") { await pedir(a, null, {}); render(); aviso("Pedido na fila do robô"); return; }
     if (a === "copiar-mapa") { const c = s.cmd, modo = c === "cobrar" ? "pessoa" : s.mapaModo || "pessoa"; copiar((modo === "grupo" ? mapaGrupo(s.grupo || []) : modo === "setor" ? mapaSetor(s.alvo) : mapaPessoa(s.alvo, c === "cobrar")).txt); return; }
     if (a === "sair") { sair(); return; }
+    if (a === "acesso-novo") { const fr = $("#nv-frente")?.value; await gerarAcesso(null, "colaborador", fr ? [fr] : null); return; }
+    if (a === "meu-acesso") { const r = await chamar("alfy_convite_criar", { p_alfy: eu().id, p_papel: null, p_frentes: null }); location.href = LINK_ACESSO(r.codigo); return; }
+    if (a === "entrar-codigo") { s.comCodigo = !s.comCodigo; $("#bloco-codigo").hidden = !s.comCodigo; $("#bloco-senha").hidden = s.comCodigo; return; }
     if (a === "nave-novo") { s.naveNovo = true; render(); setTimeout(() => $("#nn-nome")?.focus(), 30); return; }
     if (a === "nave-cancelar") { s.naveNovo = false; render(); return; }
     if (a === "nave-salvar-novo") { const fr = $("#nn-frente")?.value, lig = s.naveLigar; const r = await chamar("alfy_pessoa_nova", { p_nome_completo: $("#nn-nome").value, p_apelido: $("#nn-apelido").value, p_whatsapp: $("#nn-zap").value, p_papel: $("#nn-papel")?.value || "colaborador", p_frentes: fr ? [fr] : null, p_funcao: $("#nn-funcao").value, p_alfy: lig || null }); await naveDepois(lig ? {} : r, lig ? "Cadastrado na Nave ID e ligado" : `${r.nome} cadastrado na Nave ID e no ALFY`); return; }
@@ -1442,7 +1461,12 @@ document.addEventListener("submit", async (e) => {
   if (!["f-coment", "f-chat-rota", "f-msg", "f-chat", "form-entrada"].includes(f.id)) return;
   e.preventDefault();
   try {
-    if (f.id === "form-entrada") { entrar($("#codigo").value.trim()); return; }
+    if (f.id === "form-entrada") {
+      if (!$("#bloco-codigo").hidden) { entrar($("#codigo").value.trim()); return; }
+      const er = $("#erro-entrada"); er.textContent = "";
+      try { const r = await rpc("alfy_entrar", { p_usuario: $("#usuario").value, p_senha: $("#senha").value }); entrar(r.token); } catch (x) { er.textContent = x.message.replace(/^./, (c) => c.toUpperCase()); }
+      return;
+    }
     if (f.id === "f-coment") { const t = $("#t-coment").value.trim(); if (!t) return; const tipo = e.submitter?.dataset.tipoc || "comentario"; s.cartao = await chamar("alfy_comentar", { p_rt: s.aberta, p_texto: t, p_tipo: tipo }); refolha(); aviso((tipo === "orientacao" ? "Orientação registrada" : "Comentário salvo") + ". O ALFY vai ler e atualizar a rota"); await recarregar(); esperarEntender(s.aberta); render(); }
     if (f.id === "f-chat-rota") { falarNaRota($("#t-chat-rota").value); }
     if (f.id === "f-msg") { const t = $("#t-msg").value.trim(); if (!t) return; s.pautaDet = await chamar("alfy_pauta_msg", { p_pauta: s.pauta, p_tipo: s.tipoMsg, p_texto: t }); await recarregar(); render(); setTimeout(() => $("#t-msg")?.focus(), 20); }

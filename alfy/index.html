@@ -13,18 +13,26 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap">
-<link rel="stylesheet" href="alfy.css?v=13">
+<link rel="stylesheet" href="alfy.css?v=14">
 </head>
 <body>
 
 <main id="tela-entrada" class="entrada" hidden>
   <form class="placa rebites" id="form-entrada" autocomplete="off">
     <div class="marca"><span class="polvo">🐙</span><div><b>ALFY</b><small>Mapa de Rotas</small></div></div>
-    <label for="codigo">Código de acesso</label>
-    <input id="codigo" spellcheck="false" placeholder="cole aqui o seu código">
+    <div id="bloco-senha" style="display:flex;flex-direction:column;gap:10px">
+      <label for="usuario">Usuário</label>
+      <input id="usuario" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="seu usuário">
+      <label for="senha">Senha</label>
+      <input id="senha" type="password" autocomplete="current-password" placeholder="sua senha">
+    </div>
+    <div id="bloco-codigo" hidden style="display:flex;flex-direction:column;gap:10px">
+      <label for="codigo">Código de acesso</label>
+      <input id="codigo" spellcheck="false" placeholder="cole aqui o seu código">
+    </div>
     <button class="cta" type="submit">Entrar</button>
     <p class="erro" id="erro-entrada"></p>
-    <p class="nota">O código vem no seu link pessoal do ALFY. Quem abre pelo link entra direto.</p>
+    <p class="nota">Ainda não tem usuário? Peça o link de acesso para a Gestão de Pessoas. Esqueceu a senha? Peça um link novo. <button class="mini" type="button" data-acao="entrar-codigo">Entrar com código</button></p>
   </form>
 </main>
 
@@ -49,6 +57,6 @@
 <button class="cta fab" id="fab" type="button" hidden>＋ Nova rota</button>
 <div id="camada"></div>
 <div class="aviso" id="aviso" hidden role="status"></div>
-<script src="alfy.js?v=20"></script>
+<script src="alfy.js?v=21"></script>
 </body>
 </html>
