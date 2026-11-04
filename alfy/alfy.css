@@ -541,3 +541,4 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
   .ac span{display:none}.ac{padding:7px 12px;font-size:15px}
   .cl-form{flex-direction:column;align-items:stretch}.cl-bot{flex-direction:row;justify-content:flex-end}
 }
+.ac.pronto{border-color:var(--turq);color:var(--turq);box-shadow:0 0 0 2px rgba(43,175,166,.25)}
