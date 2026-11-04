@@ -4,77 +4,50 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex,nofollow">
-<meta name="theme-color" content="#0B0124">
+<meta name="theme-color" content="#1B1F23">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="ALFY">
 <title>ALFY · Mapa de Rotas</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230B0124'/%3E%3Ccircle cx='32' cy='32' r='19' fill='none' stroke='%23C79BFF' stroke-width='3'/%3E%3Ccircle cx='41' cy='24' r='5' fill='%234ADE80'/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2323282D'/%3E%3Ctext x='32' y='44' font-size='36' text-anchor='middle'%3E🐙%3C/text%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Exo+2:wght@600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap">
-<link rel="stylesheet" href="alfy.css?v=1">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap">
+<link rel="stylesheet" href="alfy.css?v=3">
 </head>
 <body>
-<canvas id="ceu" aria-hidden="true"></canvas>
-<div class="palco">
 
-  <!-- Entrada: terminal de acesso da cabine -->
-  <main id="tela-entrada" class="entrada">
-    <form class="terminal" id="form-entrada" autocomplete="off">
-      <div class="topo">
-        <div class="radar" aria-hidden="true"><i></i></div>
-        <div class="marca">ALFY<small>Mapa de Rotas · Ilha Tech</small></div>
-      </div>
-      <div class="feed" id="feed" aria-live="polite"><div>sistemas de bordo ligados</div><div>aguardando código de acesso</div></div>
-      <div class="campo">
-        <label for="codigo">Código de acesso</label>
-        <input id="codigo" class="entrada-codigo" inputmode="text" spellcheck="false" placeholder="cole aqui o seu código">
-      </div>
-      <button class="btn btn-cta btn-larga" type="submit">Entrar no comando</button>
-      <p class="erro" id="erro-entrada"></p>
-      <p class="nota-entrada">O código vem no seu link pessoal do ALFY. Quem tem o link entra direto.</p>
-    </form>
-  </main>
+<main id="tela-entrada" class="entrada" hidden>
+  <form class="placa rebites" id="form-entrada" autocomplete="off">
+    <div class="marca"><span class="polvo">🐙</span><div><b>ALFY</b><small>Mapa de Rotas</small></div></div>
+    <label for="codigo">Código de acesso</label>
+    <input id="codigo" spellcheck="false" placeholder="cole aqui o seu código">
+    <button class="cta" type="submit">Entrar</button>
+    <p class="erro" id="erro-entrada"></p>
+    <p class="nota">O código vem no seu link pessoal do ALFY. Quem abre pelo link entra direto.</p>
+  </form>
+</main>
 
-  <!-- Painel -->
-  <div id="tela-painel" hidden>
-    <header class="barra">
-      <div class="barra-l1">
-        <div class="marca">ALFY<small>Mapa de Rotas</small></div>
-        <div class="quem"><b id="eu-nome"></b><span class="selo" id="eu-papel"></span></div>
-        <div class="instrumentos">
-          <div class="inst"><span>Rotas</span><b id="i-abertas">0</b></div>
-          <div class="inst alerta"><span>Vencidas</span><b id="i-vencidas">0</b></div>
-          <div class="inst"><span>Bordo</span><b id="i-hora">--:--</b></div>
-          <span class="vivo" id="vivo">ao vivo</span>
-          <button class="btn" type="button" id="sair">Sair</button>
-        </div>
-      </div>
-      <nav class="abas" role="tablist">
-        <button class="aba" role="tab" data-vista="lista" aria-selected="true">Lista</button>
-        <button class="aba" role="tab" data-vista="kanban" aria-selected="false">Kanban</button>
-        <button class="aba" role="tab" data-vista="pautas" aria-selected="false" id="aba-pautas">Pautas <span class="n" id="n-pautas"></span></button>
-        <button class="aba" role="tab" data-vista="sistema" aria-selected="false" id="aba-sistema">Como funciona</button>
-      </nav>
+<div class="app" id="tela-painel" hidden>
+  <aside class="lateral">
+    <div class="placa rebites marca"><span class="polvo">🐙</span><div><b>ALFY</b><small>Mapa de Rotas</small></div></div>
+    <nav class="nav" id="nav"></nav>
+    <div class="placa eu"><div class="avatar" id="eu-av"></div><div class="quem"><b id="eu-nome"></b><span id="eu-papel"></span></div></div>
+  </aside>
+  <div class="principal">
+    <header class="topo">
+      <div class="topo-cel"><div class="placa rebites" style="padding-left:18px"><span>🐙</span><b>ALFY</b></div><span class="titulo" id="titulo-cel"></span><span id="alterna-cel"></span><div class="avatar" id="eu-av-cel" role="button" tabindex="0" aria-label="Eu"></div></div>
+      <div class="topo-l1" id="topo-l1"></div>
+      <div class="filtros" id="filtros"></div>
     </header>
-
-    <main class="conteudo">
-      <div class="filtros" id="filtros">
-        <input type="search" id="busca" placeholder="Buscar rota, número ou assunto">
-        <select id="f-pessoa" aria-label="Pessoa"></select>
-        <select id="f-frente" aria-label="Frente"></select>
-        <button class="chip" type="button" id="f-vencidas" aria-pressed="false">Só vencidas</button>
-        <button class="chip" type="button" id="f-minhas" aria-pressed="false">Só as minhas</button>
-      </div>
-      <section id="vista-lista"></section>
-      <section id="vista-kanban" hidden><div class="kanban" id="kanban"></div></section>
-      <section id="vista-pautas" hidden></section>
-      <section id="vista-sistema" hidden></section>
-    </main>
-    <button class="btn btn-cta fab" type="button" id="nova-ideia">+ Ideia</button>
+    <div class="medidores" id="medidores"></div>
+    <main class="conteudo" id="conteudo"><div class="carregando">Carregando…</div></main>
   </div>
 </div>
-
-<div class="fundo-modal" id="modal" hidden></div>
+<nav class="barra-baixo" id="barra-baixo" hidden></nav>
+<button class="cta fab" id="fab" type="button" hidden>＋ Nova rota</button>
+<div id="camada"></div>
 <div class="aviso" id="aviso" hidden role="status"></div>
-<script src="alfy.js?v=2"></script>
+<script src="alfy.js?v=3"></script>
 </body>
 </html>

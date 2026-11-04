@@ -1,585 +1,942 @@
-// ALFY · Mapa de Rotas · Ilha Tech · v1.0.0 · 03/11/2026
+// ALFY · Mapa de Rotas · Ilha Tech · v2.0.0 · 04/11/2026 · Painel de Ferro
 // Tudo passa pelas funções alfy_* do banco, sempre com a chave pessoal de quem está usando.
 // O banco decide o que cada pessoa vê; a tela só desenha o que voltou.
+// A IA e os comandos são pedidos numa fila (alfy.pedido) que o robô do Mac atende.
 "use strict";
 
 const API = "https://tladwxithannxstbneon.supabase.co/rest/v1/rpc/";
 const CHAVE_PUBLICA = "sb_publishable_FV_NUHwNP2H8gkGsvd6Odw_19NBn9pl";
 const GUARDA = "alfy-k";
+const FUSO = "America/Sao_Paulo";
 
 const ST = {
-  rota:      { nome: "Rotas",        curto: "A fazer",    cor: "var(--st-rota)" },
-  andamento: { nome: "Em andamento", curto: "Andamento",  cor: "var(--st-andamento)" },
-  pausada:   { nome: "Pausadas",     curto: "Pausar",     cor: "var(--st-pausada)" },
-  concluida: { nome: "Concluídas",   curto: "Concluída",  cor: "var(--st-concluida)" },
-  ideia:     { nome: "Ideias",       curto: "Ideia",      cor: "var(--st-ideia)" },
+  rota:      { nome: "Rotas",        um: "Rota",      cor: "#E5484D", bola: "🔴", leg: "Não iniciada" },
+  andamento: { nome: "Em andamento", um: "Andamento", cor: "#F2C94C", bola: "🟡", leg: "Em andamento" },
+  pausada:   { nome: "Pausadas",     um: "Pausada",   cor: "#F2994A", bola: "🟠", leg: "Parada" },
+  concluida: { nome: "Concluídas",   um: "Concluída", cor: "#7FCBA0", bola: "🟢", leg: "Concluída" },
+  ideia:     { nome: "Ideias",       um: "Ideia",     cor: "#A9B4F5", bola: "💡", leg: "Ideia" },
 };
 const ORDEM = ["rota", "andamento", "pausada", "concluida", "ideia"];
+const ABERTOS = ["rota", "andamento", "pausada"];
 const PRIORIDADES = ["🚨 P1 · 24h", "⚡ P2 · 72h", "⏳ P3 · 7 dias", "💤 P4 · 30 dias", "⏸️ P5 · sem prazo"];
+const PRIO_IC = { P1: "🚨", P2: "⚡", P3: "⏳", P4: "💤", P5: "⏸️" };
 const FRENTES = ["🔥💧 Ilha Tour · Fogo e Água", "🌬️ Ilha Tour · Ar", "🌍 Terra · OP IG", "👥 Ilha Tour · Gestão de Pessoas",
-  "🏨 Pousadas", "⚓️ Vou de Barco", "🌊 Buena Onda", "🏡 Cantinho da Ilha", "🏖️ Agência Ilha", "🚘 Ilha Go",
+  "⚓️ Vou de Barco", "🏨 Pousadas", "🌊 Buena Onda", "🏡 Cantinho da Ilha", "🏖️ Agência Ilha", "🚘 Ilha Go",
   "👾 Ilha Tech", "🌇 Agência Rio", "🧍 Pessoal"];
 const NATUREZAS = ["🔴 Sobrevivência", "🟡 Manutenção", "🔵 Desenvolvimento", "🟢 Crescimento"];
-const TIPOS = ["📞 Comunicação", "🛠️ Ação", "🧠 Decisão", "🛒 Compra"];
+const TIPOS = ["🛠️ Ação", "📞 Comunicação", "🧠 Decisão", "🛒 Compra"];
+const NIVEIS = ["Baixo", "Médio", "Alto"];
+const BUDGET_ST = ["sem custo", "a orçar", "aguardando aprovação", "aprovado", "recusado"];
+const CAMPOS = {
+  assist:    { rot: "🎯 O que fazer", dica: "o pedido, em 1 ou 2 frases. É o texto que vai no Mapa de Rotas do WhatsApp" },
+  instr:     { rot: "📝 Instruções", dica: "tudo o que a pessoa precisa saber: contexto, números, contatos e o passo a passo" },
+  resultado: { rot: "✅ Resultado esperado", dica: "como saber que acabou" },
+  como_esta: { rot: "📍 Como está agora", dica: "o pé em que a rota está" },
+};
+const COLUNA = { assist: "assist", instr: "instrucoes", resultado: "resultado", como_esta: "como_esta" };
+const PTIPO = { decidir: "🧠 Para decidir", conversar: "💬 Para conversar", compartilhar: "📎 Para compartilhar" };
+const PST = { aberta: "Em discussão", decidida: "Decidida", tratada: "Tratada", arquivada: "Arquivada" };
+const MSG_TIPO = { comentario: "💬 Comentário", ideia: "💡 Ideia", pergunta: "❓ Pergunta", partilha: "📎 Compartilhar", decisao: "✅ Decisão" };
+const RST = { marcada: "Marcada", acontecendo: "Acontecendo", encerrada: "Encerrada" };
 
-let token = null, mapa = null, versao = null, vista = "lista", ultimaLeitura = 0, cartaoAberto = null;
-const filtro = { busca: "", pessoa: "", frente: "", vencidas: false, minhas: false };
-const $ = (s) => document.querySelector(s);
+const svg = (p, extra = "") => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" ${extra}>${p}</svg>`;
+const IC = {
+  rotas: svg('<path d="M8 6h13M8 12h13M8 18h13"/><circle cx="3.5" cy="6" r="1.2" fill="currentColor"/><circle cx="3.5" cy="12" r="1.2" fill="currentColor"/><circle cx="3.5" cy="18" r="1.2" fill="currentColor"/>'),
+  feed: svg('<path d="M4 11a9 9 0 0 1 9 9M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1.4" fill="currentColor"/>'),
+  pautas: svg('<rect x="4" y="4" width="16" height="17" rx="2"/><path d="M8 2v4M16 2v4M4 10h16M8 14h5M8 17h8"/>'),
+  comandos: svg('<path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/>'),
+  eu: svg('<circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/>'),
+  despejo: svg('<path d="M12 3v12M7 10l5 5 5-5"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/>'),
+  whatsapp: svg('<path d="M21 12a9 9 0 0 1-13.4 7.8L3 21l1.3-4.4A9 9 0 1 1 21 12z"/><path d="M9 10h6M9 14h4"/>'),
+  email: svg('<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/>'),
+  grupos: svg('<path d="M20 11a8 8 0 0 0-14.9-4M4 4v4h4M4 13a8 8 0 0 0 14.9 4M20 20v-4h-4"/>'),
+  mapa: svg('<path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2zM9 4v14M15 6v14"/>'),
+  cobrar: svg('<path d="M8 21h8M12 17v4M8 12a4 4 0 1 1 8 0c0 2-1 3-2 4h-4c-1-1-2-2-2-4z"/>'),
+  bomdia: svg('<circle cx="12" cy="13" r="4"/><path d="M12 3v3M4.2 7.2l2 2M19.8 7.2l-2 2M2 17h20M6 21h12"/>'),
+  ronda: svg('<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>'),
+  virada: svg('<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4M9 15l2 2 4-4"/>'),
+  perguntar: svg('<path d="M21 12a9 9 0 1 1-4-7.5"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14M12 17.5v.01"/>'),
+  x: svg('<path d="M6 6l12 12M18 6 6 18"/>', 'width="18" height="18" stroke-width="2.2"'),
+  filtro: svg('<path d="M4 6h16M7 12h10M10 18h4"/>', 'width="18" height="18"'),
+};
+
+// ---------------------------------------------------------------- estado
+let token = null, M = null, versao = null, FEED = null;
+const s = {
+  aba: "rotas", vista: "lista", agrupar: "frente", st: "abertas", busca: "", pessoa: "", frente: "", venc: false, filtrosAbertos: false,
+  aberta: null, cartao: null, abaFolha: "ficha", editando: null, colMovel: 0,
+  fFeed: "todos", pvista: "reunioes", reuniao: null, pauta: null, pautaDet: null, tipoMsg: "comentario",
+  cmd: "despejo", alvo: null, despejo: { texto: "", anexos: [], pedido: null, itens: null, feitos: {} },
+  chatGeral: null, esperando: {}, gravando: false,
+};
 
 // ---------------------------------------------------------------- utilidades
-function h(tag, attrs, ...filhos) {
-  const el = document.createElement(tag);
-  for (const [k, v] of Object.entries(attrs || {})) {
-    if (v === null || v === undefined || v === false) continue;
-    if (k === "class") el.className = v;
-    else if (k.startsWith("on")) el.addEventListener(k.slice(2), v);
-    else if (k === "style") el.setAttribute("style", v);
-    else el.setAttribute(k, v === true ? "" : v);
-  }
-  for (const f of filhos.flat()) if (f !== null && f !== undefined && f !== false) el.append(f.nodeType ? f : String(f));
-  return el;
-}
+const $ = (q, el = document) => el.querySelector(q);
+const esc = (t) => String(t ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 async function rpc(fn, args) {
-  const r = await fetch(API + fn, {
-    method: "POST",
-    headers: { apikey: CHAVE_PUBLICA, "Content-Type": "application/json" },
-    body: JSON.stringify(args),
-  });
+  const r = await fetch(API + fn, { method: "POST", headers: { apikey: CHAVE_PUBLICA, "Content-Type": "application/json" }, body: JSON.stringify(args) });
   if (!r.ok) {
-    let msg = "Falhou a conexão com a base.";
-    try { msg = (await r.json()).message || msg; } catch (_) { /* resposta sem corpo */ }
+    let msg = "Falhou a conexão com o banco.";
+    try { msg = (await r.json()).message || msg; } catch (_) { /* sem corpo */ }
     throw new Error(msg);
   }
   return r.json();
 }
-function avisar(txt, ruim) {
-  const a = $("#aviso");
-  a.textContent = txt; a.className = "aviso" + (ruim ? " ruim" : ""); a.hidden = false;
-  clearTimeout(avisar.t); avisar.t = setTimeout(() => (a.hidden = true), 3200);
-}
-const guardar = (k) => { try { k ? localStorage.setItem(GUARDA, k) : localStorage.removeItem(GUARDA); } catch (_) { /* navegação privada */ } };
+const chamar = (fn, args = {}) => rpc(fn, { p_token: token, ...args });
+function aviso(t, ruim) { const a = $("#aviso"); a.textContent = t; a.className = "aviso" + (ruim ? " ruim" : ""); a.hidden = false; clearTimeout(aviso.t); aviso.t = setTimeout(() => (a.hidden = true), 3200); }
+const falhou = (e) => aviso(e.message || String(e), true);
+const guardar = (k) => { try { k ? localStorage.setItem(GUARDA, k) : localStorage.removeItem(GUARDA); } catch (_) { /* privado */ } };
 const lerGuardado = () => { try { return localStorage.getItem(GUARDA); } catch (_) { return null; } };
 
-const papel = () => mapa?.eu?.papel;
+const eu = () => M?.eu || {};
+const papel = () => eu().papel;
+const comando = () => papel() === "comando";
 const manda = () => papel() === "comando" || papel() === "gerente";
-const pessoaPorId = (id) => mapa?.pessoas?.find((p) => p.id === id);
-const nomeDe = (id) => pessoaPorId(id)?.nome || "Sem responsável";
-const hoje0 = () => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; };
-const vencida = (r) => r.prazo && !["concluida", "ideia"].includes(r.status) && new Date(r.prazo) < hoje0();
-function dataCurta(iso) {
-  if (!iso) return "";
-  const d = new Date(iso);
-  return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", timeZone: "America/Sao_Paulo" });
+const pessoa = (id) => M?.pessoas?.find((p) => p.id === id);
+const nomeDe = (id) => pessoa(id)?.nome || "";
+const curto = (n) => (!n ? "Sem dono" : n.split(" ")[0]);
+const ini = (n) => (!n ? "–" : n === "ALFY" ? "🐙" : n.split(" ").slice(0, 2).map((p) => p[0]).join(""));
+const frenteCurta = (f) => (f || "Sem frente").replace("Ilha Tour · ", "");
+const dia = (iso) => (iso ? new Date(iso).toLocaleDateString("en-CA", { timeZone: FUSO }) : "");
+const hojeDia = () => new Date().toLocaleDateString("en-CA", { timeZone: FUSO });
+const ddmm = (iso) => (iso ? new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", timeZone: FUSO }) : "");
+const hhmm = (iso) => new Date(iso).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: FUSO });
+const dias = (iso) => Math.round((new Date(dia(iso) + "T12:00") - new Date(hojeDia() + "T12:00")) / 864e5);
+const pcod = (p) => (p || "").match(/P[1-5]/)?.[0] || "";
+const prioTxt = (p) => (pcod(p) ? `${PRIO_IC[pcod(p)]} ${pcod(p)}` : "");
+const ehNova = (r) => r.rt.startsWith("IDEIA-") && r.status !== "ideia";
+const num = (rt) => String(rt).replace(/^RT-/, "").replace(/^IDEIA-/, "");
+// na tela é sempre "Rota 266", nunca o código RT-266 do banco
+const nomeRota = (rt) => { const r = rotaDe(rt); if (r && ehNova(r)) return "Rota nova"; return String(rt).replace(/^RT-/, "Rota ").replace(/^IDEIA-/, "Ideia "); };
+const rotaDe = (rt) => M?.rotas?.find((r) => r.rt === rt);
+const vencida = (r) => r.prazo && ABERTOS.includes(r.status) && pcod(r.prioridade) !== "P5" && dias(r.prazo) < 0;
+const instrDe = (r) => r.instrucoes || [r.detalhamento, r.como_fazer].filter(Boolean).join("\n\n");
+const ordPrio = (a, b) => (pcod(a.prioridade) || "P9").localeCompare(pcod(b.prioridade) || "P9") || (a.prazo || "9").localeCompare(b.prazo || "9") || a.rt.localeCompare(b.rt);
+function prazoInfo(r) {
+  if (pcod(r.prioridade) === "P5" && ABERTOS.includes(r.status)) return { txt: "sem prazo", cls: "" };
+  if (!r.prazo) return { txt: "sem prazo", cls: "" };
+  if (!ABERTOS.includes(r.status)) return { txt: ddmm(r.prazo), cls: "" };
+  const n = dias(r.prazo);
+  if (n < 0) return { txt: `venceu ${ddmm(r.prazo)}`, cls: "venc" };
+  if (n === 0) return { txt: "hoje", cls: "hoje" };
+  if (n === 1) return { txt: "amanhã", cls: "" };
+  return { txt: "até " + ddmm(r.prazo), cls: "" };
+}
+function gerenteDe(frente) {
+  const gs = (M?.pessoas || []).filter((p) => p.papel === "gerente" && (p.frentes || []).includes(frente));
+  gs.sort((a, b) => a.frentes.length - b.frentes.length);
+  return gs[0] || null;
 }
 function quandoFoi(iso) {
-  const d = new Date(iso), dif = (Date.now() - d) / 60000;
+  const dif = (Date.now() - new Date(iso)) / 60000;
   if (dif < 1) return "agora";
   if (dif < 60) return `há ${Math.round(dif)} min`;
-  if (dif < 60 * 24) return `há ${Math.round(dif / 60)} h`;
-  return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }) + " " +
-    d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+  if (dia(iso) === hojeDia()) return "hoje " + hhmm(iso);
+  return ddmm(iso) + " " + hhmm(iso);
 }
-// na tela é sempre "Rota 266", nunca o código RT-266 do banco
-const nomeRota = (rt) => String(rt).replace(/^RT-/, "Rota ").replace(/^IDEIA-/, "Ideia ");
-const prioCurta = (p) => (p || "").match(/P[1-5]/)?.[0] || "";
-const bolinha = (st) => h("span", { class: "st", style: `background:${ST[st].cor};box-shadow:0 0 8px ${ST[st].cor}` });
+function copiar(texto) {
+  (navigator.clipboard ? navigator.clipboard.writeText(texto) : Promise.reject())
+    .then(() => aviso("Copiado. É só colar no WhatsApp."))
+    .catch(() => { const t = document.createElement("textarea"); t.value = texto; document.body.append(t); t.select(); try { document.execCommand("copy"); aviso("Copiado"); } catch (_) { aviso("Não deu para copiar aqui", true); } t.remove(); });
+}
+function filtradas() {
+  const q = s.busca.trim().toLowerCase();
+  return (M?.rotas || []).filter((r) =>
+    (!q || [r.titulo, nomeRota(r.rt), r.rt, r.assist, instrDe(r)].join(" ").toLowerCase().includes(q)) &&
+    (!s.pessoa || r.responsavel_id === s.pessoa || r.co_responsavel_id === s.pessoa) &&
+    (!s.frente || r.frente === s.frente) && (!s.venc || vencida(r)));
+}
+const ativo = () => { const a = document.activeElement; return a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName) && a.id !== "busca"; };
+const opc = (lista, atual, vazio) => (vazio !== undefined ? `<option value="">${vazio}</option>` : "") +
+  lista.map((x) => { const [v, n] = Array.isArray(x) ? x : [x, x]; return `<option value="${esc(v)}" ${v === atual ? "selected" : ""}>${esc(n)}</option>`; }).join("");
+const gente = () => (M?.pessoas || []).filter((p) => p.nome).map((p) => [p.id, p.nome]);
 
-// ---------------------------------------------------------------- céu da cabine
-const ceu = { estrelas: [], vel: 0.15, alvo: 0.15, raf: 0, parado: false };
-const calmo = matchMedia("(prefers-reduced-motion: reduce)").matches;
-function desenhaCeu(salto) {
-  const c = $("#ceu"), x = c.getContext("2d"), w = innerWidth, hgt = innerHeight, dpr = Math.min(2, devicePixelRatio || 1);
-  if (c.width !== w * dpr || c.height !== hgt * dpr) { c.width = w * dpr; c.height = hgt * dpr; }
-  x.setTransform(dpr, 0, 0, dpr, 0, 0);
-  x.fillStyle = "#0B0124"; x.fillRect(0, 0, w, hgt);
-  // Via Láctea inclinada, igual à cabine da Nave Mãe
-  x.save(); x.translate(w / 2, hgt * 0.42); x.rotate(-18 * Math.PI / 180);
-  const k = Math.max(w, hgt) / 1600, g = x.createLinearGradient(0, -170 * k, 0, 170 * k);
-  g.addColorStop(0, "rgba(0,0,0,0)"); g.addColorStop(0.5, "rgba(199,155,255,.13)"); g.addColorStop(1, "rgba(0,0,0,0)");
-  x.fillStyle = g; x.fillRect(-1100 * k, -170 * k, 2200 * k, 340 * k); x.restore();
-  const cx = w / 2, cy = hgt * 0.45, f = Math.max(w, hgt) / 2;
-  x.lineCap = "round";
-  for (const s of ceu.estrelas) {
-    if (salto) s.z -= ceu.vel * 0.016;
-    if (s.z <= 0.03) Object.assign(s, novaEstrela(false));
-    const px = cx + (s.x / s.z) * f, py = cy + (s.y / s.z) * f;
-    if (px < -50 || px > w + 50 || py < -50 || py > hgt + 50) { Object.assign(s, novaEstrela(false)); continue; }
-    const t = Math.max(0.4, (1 - s.z) * 2.2);
-    x.globalAlpha = Math.min(1, (1 - s.z) * 1.4);
-    x.strokeStyle = x.fillStyle = s.c;
-    if (salto && ceu.vel > 0.6) {
-      const z2 = s.z + ceu.vel * 0.05, qx = cx + (s.x / z2) * f, qy = cy + (s.y / z2) * f;
-      x.lineWidth = t; x.beginPath(); x.moveTo(qx, qy); x.lineTo(px, py); x.stroke();
-    } else x.fillRect(px, py, t, t);
+// ---------------------------------------------------------------- casca
+function navItens() {
+  const abertas = (M?.rotas || []).filter((r) => ABERTOS.includes(r.status)).length;
+  const pautas = (M?.pautas || []).filter((p) => p.status === "aberta").length;
+  const it = [["rotas", "Rotas", IC.rotas, abertas], ["feed", "Feed", IC.feed, ""], ["pautas", "Pautas", IC.pautas, pautas || ""]];
+  if (comando()) it.push(["comandos", "Comandos", IC.comandos, (M?.sugestoes || []).length || ""]);
+  return it;
+}
+function casca() {
+  const p = eu();
+  $("#nav").innerHTML = navItens().map(([k, n, ic, c]) => `<button type="button" data-aba="${k}" aria-current="${s.aba === k}">${ic}<span>${n}</span><span class="n">${c}</span></button>`).join("");
+  const bb = [...navItens(), ["eu", "Eu", IC.eu]];
+  $("#barra-baixo").innerHTML = bb.map(([k, n, ic]) => `<button type="button" data-aba="${k}" aria-current="${s.aba === k}">${ic}<span>${n}</span></button>`).join("");
+  $("#barra-baixo").style.gridTemplateColumns = `repeat(${bb.length},1fr)`;
+  $("#eu-av").textContent = ini(p.nome); $("#eu-av-cel").textContent = ini(p.nome);
+  $("#eu-nome").textContent = p.nome;
+  $("#eu-papel").textContent = papelTxt();
+  $("#titulo-cel").textContent = { rotas: "Rotas", feed: "Feed", pautas: "Pautas", comandos: "Comandos", eu: "Eu" }[s.aba];
+  $("#fab").hidden = s.aba !== "rotas";
+}
+const papelTxt = () => comando() ? "Comando · vê tudo" : papel() === "gerente" ? "Gerente · " + (eu().frentes || []).map(frenteCurta).join(", ") : "Vê as rotas dele";
+function filtrosHTML(extra = "") {
+  const vs = M?.rotas || [];
+  const ids = [...new Set(vs.flatMap((r) => [r.responsavel_id, r.co_responsavel_id]).filter(Boolean))];
+  const pes = ids.map((id) => [id, nomeDe(id)]).filter((x) => x[1]).sort((a, b) => a[1].localeCompare(b[1]));
+  const frs = [...new Set(vs.map((r) => r.frente).filter(Boolean))].sort((a, b) => FRENTES.indexOf(a) - FRENTES.indexOf(b));
+  return `<input class="busca" type="search" id="busca" placeholder="Buscar rota, número ou assunto" value="${esc(s.busca)}">
+    <select class="sel" id="f-pessoa" aria-label="Pessoa">${opc(pes, s.pessoa, "Todas as pessoas")}</select>
+    <select class="sel" id="f-frente" aria-label="Frente">${opc(frs.map((f) => [f, frenteCurta(f)]), s.frente, "Todas as frentes")}</select>
+    ${extra}<button class="chip" type="button" id="f-mais" aria-label="Mais filtros" aria-pressed="${s.filtrosAbertos}" style="padding:5px 9px">${IC.filtro}</button>`;
+}
+function topo() {
+  const l1 = $("#topo-l1"), fi = $("#filtros"), cel = matchMedia("(max-width:900px)").matches;
+  fi.className = "filtros" + (s.filtrosAbertos ? " aberto" : "");
+  const vivo = `<span class="ao-vivo"><i></i>ao vivo</span>`;
+  if (s.aba === "rotas") {
+    const alt = `<div class="alterna" role="group" aria-label="Visão"><button type="button" data-vista="lista" aria-pressed="${s.vista === "lista"}">Lista</button><button type="button" data-vista="kanban" aria-pressed="${s.vista === "kanban"}">Kanban</button></div>`;
+    l1.innerHTML = `<h1>Rotas<small>${comando() ? "todas as frentes" : curto(eu().nome)}</small></h1>${alt}<span class="espaco"></span>${vivo}<button class="cta" type="button" data-acao="nova">＋ Nova rota</button>`;
+    $("#alterna-cel").innerHTML = alt;
+    fi.innerHTML = filtrosHTML(`<button class="chip alerta" type="button" id="f-venc" aria-pressed="${s.venc}">Só vencidas</button>` +
+      (s.vista === "lista" ? `<select class="sel" id="f-agrupar" aria-label="Agrupar">${opc([["frente", "Por frente e pessoa"], ["prazo", "Por prazo"]], s.agrupar)}</select>` : ""));
+  } else if (s.aba === "feed") {
+    l1.innerHTML = `<h1>Feed<small>últimas atualizações das rotas</small></h1><span class="espaco"></span>${vivo}`;
+    $("#alterna-cel").innerHTML = "";
+    const tipos = [["todos", "Tudo"], ["comentario", "Comentários"], ["orientacao", "Orientações"], ["whatsapp", "WhatsApp"], ["status", "Status"], ["editar", "Edições"], ["nova", "Rotas novas"], ["budget", "Budget"], ["pauta", "Pautas"]];
+    fi.innerHTML = filtrosHTML() + `<div style="display:flex;gap:6px;overflow-x:auto;flex-basis:100%;scrollbar-width:none">${tipos.map(([k, n]) => `<button class="chip" type="button" data-ffeed="${k}" aria-pressed="${s.fFeed === k}">${n}</button>`).join("")}</div>`;
+  } else {
+    const t = { pautas: "Pautas e reuniões", comandos: "Comandos do ALFY", eu: "Eu" }[s.aba];
+    l1.innerHTML = `<h1>${t}</h1><span class="espaco"></span>${vivo}${s.aba === "pautas" && manda() ? '<button class="btn" type="button" data-acao="nova-pauta">＋ Nova pauta</button><button class="cta" type="button" data-acao="nova-reuniao">＋ Nova reunião</button>' : ""}`;
+    fi.innerHTML = ""; $("#alterna-cel").innerHTML = "";
   }
-  x.globalAlpha = 1;
+  const fm = $("#f-mais"); if (fm) fm.style.display = cel ? "" : "none";
 }
-function novaEstrela(inicio) {
-  const cores = ["#EDE8FF", "#EDE8FF", "#C79BFF", "#6EE79B", "#A855F4"];
-  return { x: (Math.random() * 2 - 1) * 1.2, y: (Math.random() * 2 - 1) * 1.2, z: inicio ? 0.05 + Math.random() * 0.95 : 1,
-           c: cores[(Math.random() * cores.length) | 0] };
+function medidores() {
+  const m = $("#medidores");
+  if (s.aba !== "rotas" || s.vista !== "lista") { m.innerHTML = ""; m.hidden = true; return; }
+  m.hidden = false;
+  const vs = filtradas(), venc = vs.filter(vencida).length;
+  const its = [["abertas", "Todas abertas", vs.filter((r) => ABERTOS.includes(r.status)).length, "#E9EDEF", venc]].concat(ORDEM.map((k) => [k, ST[k].nome, vs.filter((r) => r.status === k).length, ST[k].cor]));
+  m.innerHTML = its.map(([k, n, c, cor, v]) => `<button type="button" class="placa medidor" data-st="${k}" aria-pressed="${s.st === k}"><i class="barra-st" style="background:${cor}"></i><span>${n}</span><b>${c}</b>${v ? `<em>${v} vencidas</em>` : `<em style="color:transparent">.</em>`}</button>`).join("");
+  m.style.gridTemplateColumns = `repeat(${its.length},minmax(0,1fr))`;
 }
-function ligaCeu() {
-  ceu.estrelas = Array.from({ length: Math.round(Math.min(520, innerWidth * innerHeight / 3600)) }, () => novaEstrela(true));
-  if (calmo) { desenhaCeu(false); return; }
-  const quadro = () => {
-    ceu.vel += (ceu.alvo - ceu.vel) * 0.06;
-    desenhaCeu(true);
-    ceu.raf = ceu.parado ? 0 : requestAnimationFrame(quadro);
-  };
-  quadro();
+
+// ---------------------------------------------------------------- rotas
+function tag(r) {
+  if (ehNova(r)) return `<span class="tag nova"><i class="dot" style="background:${ST[r.status].cor}"></i><small>ROTA</small><b>NOVA</b></span>`;
+  return `<span class="tag ${r.status === "ideia" ? "ideia" : ""}"><i class="dot" style="background:${ST[r.status].cor}"></i><small>${r.rt.startsWith("IDEIA-") ? "IDEIA" : "ROTA"}</small><b>${num(r.rt)}</b></span>`;
 }
-addEventListener("resize", () => { if (calmo || ceu.parado) desenhaCeu(false); });
-function salto() {
-  return new Promise((ok) => {
-    if (calmo) return ok();
-    ceu.alvo = 4; setTimeout(() => { ceu.alvo = 0.15; }, 650); setTimeout(ok, 900);
+const semEmoji = (t) => (t || "").replace(/^\S+\s/, "");
+function metaLinha(r, semPessoa) {
+  const pz = prazoInfo(r), b = r.budget_valor || r.budget_status !== "sem custo";
+  return `<span class="meta2">${semPessoa ? "" : `<span>👤 ${esc(curto(nomeDe(r.responsavel_id)))}${r.co_responsavel_id ? " + " + esc(curto(nomeDe(r.co_responsavel_id))) : ""}</span>`}${r.prioridade ? `<span>${prioTxt(r.prioridade)}</span>` : ""}<span class="${pz.cls}">📅 ${pz.txt}</span>${r.natureza ? `<span>🧭 ${esc(semEmoji(r.natureza))}</span>` : ""}${r.tipo ? `<span>🏷️ ${esc(semEmoji(r.tipo))}</span>` : ""}${b && r.budget_status !== "sem custo" ? `<span class="bud ${r.budget_status === "aprovado" ? "ok" : ""}">💰 ${esc(r.budget_valor || "")} ${r.budget_status}</span>` : ""}${r.comentarios ? `<span style="color:var(--turq)">💬 ${r.comentarios}</span>` : ""}</span>`;
+}
+function linha(r, semPessoa) {
+  return `<button type="button" class="linha2" data-rt="${r.rt}">${tag(r)}<span class="tt"><b>${esc(r.titulo)}</b>${r.assist && r.assist !== r.titulo ? `<span class="res">${esc(r.assist)}</span>` : ""}${metaLinha(r, semPessoa)}</span></button>`;
+}
+function vistaLista() {
+  let vs = filtradas();
+  vs = s.st === "abertas" ? vs.filter((r) => ABERTOS.includes(r.status)) : vs.filter((r) => r.status === s.st);
+  if (!vs.length) return `<div class="vazio">Nenhuma rota aqui.${s.busca || s.pessoa || s.frente || s.venc ? " Limpe os filtros para ver mais." : ""}</div>`;
+  if (s.agrupar === "prazo") {
+    const g = { vencidas: [], hoje: [], semana: [], depois: [], sem: [] };
+    vs.forEach((r) => { if (!r.prazo || pcod(r.prioridade) === "P5") g.sem.push(r); else { const n = dias(r.prazo); if (n < 0 && ABERTOS.includes(r.status)) g.vencidas.push(r); else if (n <= 0) g.hoje.push(r); else if (n <= 7) g.semana.push(r); else g.depois.push(r); } });
+    const nomes = { vencidas: "Vencidas", hoje: "Hoje", semana: "Próximos 7 dias", depois: "Mais adiante", sem: "Sem prazo" };
+    return Object.entries(g).filter(([, l]) => l.length).map(([k, l]) => `<section class="grupo ${k}"><h2>${nomes[k]}<span class="ct">${l.length}</span></h2><div class="lista">${l.sort(ordPrio).map((r) => linha(r)).join("")}</div></section>`).join("");
+  }
+  // padrão do Mapa de Rotas do Doc: frente › pessoa (gerente primeiro, Miguel por último) › prioridade
+  const pos = (f) => { const i = FRENTES.indexOf(f); return i < 0 ? 50 : i; };
+  const frentes = [...new Set(vs.map((r) => r.frente || ""))].sort((a, b) => pos(a) - pos(b));
+  return frentes.map((f) => {
+    const fr = vs.filter((r) => (r.frente || "") === f), ger = gerenteDe(f);
+    const ids = [...new Set(fr.map((r) => r.responsavel_id || ""))];
+    const ehMiguel = (id) => pessoa(id)?.papel === "comando";
+    ids.sort((a, b) => (a === ger?.id ? -1 : b === ger?.id ? 1 : 0) || (ehMiguel(a) ? 1 : ehMiguel(b) ? -1 : 0) || nomeDe(a).localeCompare(nomeDe(b)));
+    return `<section class="grupo-frente"><h2>${esc(frenteCurta(f))}<span class="ct">${fr.length}</span></h2>${ids.map((id) => {
+      const l = fr.filter((r) => (r.responsavel_id || "") === id).sort(ordPrio), v = l.filter(vencida).length, n = nomeDe(id) || "Sem dono";
+      return `<div class="grupo-pessoa"><h3><span class="avatar">${ini(n)}</span>${ehMiguel(id) && !f.includes("Pessoal") ? "Comigo (Miguel)" : esc(n)}${ger && id === ger.id ? " <small>· gerente</small>" : ""}<small>· ${l.length}</small>${v ? `<em>· ${v} vencidas</em>` : ""}</h3><div class="lista">${l.map((r) => linha(r, true)).join("")}</div></div>`;
+    }).join("")}</section>`;
+  }).join("");
+}
+function cartaoK(r) {
+  const pz = prazoInfo(r);
+  return `<button type="button" class="cartao" draggable="true" data-rt="${r.rt}"><span class="c1">${tag(r)}<b>${esc(r.titulo)}</b></span><span class="c2"><span class="pessoa"><span class="avatar">${ini(nomeDe(r.responsavel_id))}</span><span>${esc(curto(nomeDe(r.responsavel_id)))}${r.co_responsavel_id ? " + " + esc(curto(nomeDe(r.co_responsavel_id))) : ""}</span></span>${r.comentarios ? `<span>💬 ${r.comentarios}</span>` : ""}<span class="prazo ${pz.cls}">${pz.txt.replace("até ", "")}</span></span></button>`;
+}
+function vistaKanban() {
+  const vs = filtradas();
+  return `<div class="abas-col">${ORDEM.map((k, i) => `<button type="button" class="chip" data-col="${i}" aria-pressed="${s.colMovel === i}">${ST[k].nome} · ${vs.filter((r) => r.status === k).length}</button>`).join("")}</div><div class="kanban" id="kanban">${ORDEM.map((k) => {
+    const l = vs.filter((r) => r.status === k).sort(ordPrio);
+    return `<section class="coluna" data-col-st="${k}"><header><i style="background:${ST[k].cor}"></i><b>${ST[k].nome}</b><span>${l.length}</span></header><div class="cartoes">${l.length ? l.map(cartaoK).join("") : `<div class="vazio">Arraste uma rota para cá</div>`}</div></section>`;
+  }).join("")}</div>`;
+}
+function ligarKanban() {
+  const k = $("#kanban"); if (!k) return;
+  k.addEventListener("dragstart", (e) => { const el = e.target.closest(".cartao"); if (!el) return; el.classList.add("arrastando"); e.dataTransfer.setData("text/plain", el.dataset.rt); });
+  k.addEventListener("dragend", (e) => { const el = e.target.closest(".cartao"); el && el.classList.remove("arrastando"); });
+  k.querySelectorAll(".coluna").forEach((col) => {
+    col.addEventListener("dragover", (e) => { e.preventDefault(); col.classList.add("alvo"); });
+    col.addEventListener("dragleave", () => col.classList.remove("alvo"));
+    col.addEventListener("drop", (e) => { e.preventDefault(); col.classList.remove("alvo"); mover(e.dataTransfer.getData("text/plain"), col.dataset.colSt); });
   });
-}
-function estacionaCeu() {
-  // no painel o céu fica parado: não gasta bateria enquanto a pessoa trabalha
-  setTimeout(() => { ceu.parado = true; cancelAnimationFrame(ceu.raf); desenhaCeu(false); }, 1600);
+  k.addEventListener("scroll", () => { const w = k.querySelector(".coluna").offsetWidth + 10, i = Math.round(k.scrollLeft / w); if (i !== s.colMovel) { s.colMovel = i; document.querySelectorAll(".abas-col .chip").forEach((b, j) => b.setAttribute("aria-pressed", j === i)); } }, { passive: true });
 }
 
-// ---------------------------------------------------------------- entrada
-function linhaFeed(txt) {
-  const f = $("#feed"); f.append(h("div", {}, txt));
-  while (f.children.length > 4) f.firstChild.remove();
+// ---------------------------------------------------------------- feed
+const EV_IC = { comentario: "💬", orientacao: "🧭", whatsapp: "📱", status: "🔀", nova: "🗺️", ideia: "💡", editar: "✏️", budget: "💰", pauta_ligar: "🗓️", reuniao_ligar: "🗓️", pauta_desligar: "🗓️", reuniao_desligar: "🗓️" };
+const CAMPO_NOME = { titulo: "o título", prioridade: "a prioridade", prazo: "o prazo", frente: "a frente", natureza: "a natureza", tipo: "o tipo", impacto: "o impacto", esforco: "o esforço", responsavel_id: "o responsável", co_responsavel_id: "o co-responsável", assist: "o O que fazer", instrucoes: "as Instruções", resultado: "o Resultado esperado", como_esta: "o Como está agora", detalhamento: "o detalhamento", como_fazer: "o como fazer" };
+function evTexto(e) {
+  const d = e.dados || {};
+  if (e.tipo === "status") return d.nova ? "lançou a rota" : `moveu para ${ST[e.para]?.nome || e.para}`;
+  if (e.tipo === "nova" || e.tipo === "ideia") return "lançou a ideia";
+  if (e.tipo === "editar") return "editou " + Object.keys(d.campos || {}).map((k) => CAMPO_NOME[k] || k).join(", ");
+  if (e.tipo === "budget") return `${d.status === "aprovado" ? "aprovou" : d.status === "recusado" ? "recusou" : "marcou como " + d.status} o budget${d.valor ? " de " + d.valor : ""}`;
+  if (e.tipo === "pauta_ligar") return `levou para a pauta ${d.titulo || ""}`;
+  if (e.tipo === "reuniao_ligar") return `levou para a reunião ${d.titulo || ""}`;
+  if (e.tipo === "pauta_desligar" || e.tipo === "reuniao_desligar") return `tirou da ${e.tipo.startsWith("pauta") ? "pauta" : "reunião"} ${d.titulo || ""}`;
+  return e.tipo;
 }
-async function entrar(k, viaLink) {
-  $("#erro-entrada").textContent = "";
-  linhaFeed("conferindo código de acesso");
-  let eu;
-  try { eu = await rpc("alfy_entrar", { p_token: k }); }
-  catch (e) { $("#erro-entrada").textContent = "Sem conexão com a base. Tente de novo."; return; }
-  if (!eu) {
-    guardar(null);
-    $("#erro-entrada").textContent = viaLink ? "Esse link não vale mais. Peça um novo ao Miguel." : "Código não reconhecido.";
-    linhaFeed("acesso negado");
-    return;
-  }
-  token = k; guardar(k);
-  linhaFeed(`identidade confirmada: ${eu.nome}`);
-  linhaFeed("traçando o mapa de rotas");
-  await carregar();
-  await salto();
-  $("#tela-entrada").hidden = true;
-  $("#tela-painel").hidden = false;
-  estacionaCeu();
-  montarPainel();
-  vigiar();
-}
-$("#form-entrada").addEventListener("submit", (e) => {
-  e.preventDefault();
-  const k = $("#codigo").value.trim().replace(/^.*#k=/, "");
-  if (k) entrar(k, false);
-});
-$("#sair").addEventListener("click", () => { guardar(null); location.reload(); });
-
-// ---------------------------------------------------------------- dados ao vivo
-async function carregar() {
-  mapa = await rpc("alfy_mapa", { p_token: token });
-  if (!mapa) { guardar(null); location.reload(); return; }
-  versao = mapa.versao; ultimaLeitura = Date.now();
-}
-function vigiar() {
-  setInterval(async () => {
-    if (document.hidden) return;
-    try {
-      const v = await rpc("alfy_versao", { p_token: token });
-      ultimaLeitura = Date.now(); $("#vivo").classList.remove("parado");
-      if (v !== versao) {
-        await carregar(); desenhar();
-        if (cartaoAberto) abrirCartao(cartaoAberto, true);
-      }
-    } catch (_) { $("#vivo").classList.add("parado"); }
-  }, 8000);
-  setInterval(() => {
-    const s = Math.round((Date.now() - ultimaLeitura) / 1000);
-    $("#vivo").textContent = s < 15 ? "ao vivo" : `sem sinal há ${s}s`;
-    $("#i-hora").textContent = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" });
-  }, 1000);
-}
-async function acao(fn, args, ok) {
-  try {
-    const r = await rpc(fn, { p_token: token, ...args });
-    await carregar(); desenhar();
-    if (ok) avisar(ok);
-    return r;
-  } catch (e) { avisar(e.message || "Não salvou.", true); return null; }
-}
-const mover = (rt, st) => acao("alfy_mover", { p_rt: rt, p_status: st }, `${nomeRota(rt)} → ${ST[st].nome}`);
-
-// ---------------------------------------------------------------- painel
-function montarPainel() {
-  $("#eu-nome").textContent = mapa.eu.nome;
-  $("#eu-papel").textContent = { comando: "Comando", gerente: "Gerente", colaborador: "Tripulação" }[papel()];
-  $("#aba-pautas").hidden = !manda();
-  $("#aba-sistema").hidden = papel() !== "comando";
-  $("#f-pessoa").hidden = !manda();
-  $("#f-frente").hidden = !manda();
-  $("#f-minhas").hidden = !manda();
-  for (const a of document.querySelectorAll(".aba")) a.addEventListener("click", () => trocaVista(a.dataset.vista));
-  $("#busca").addEventListener("input", (e) => { filtro.busca = e.target.value.trim().toLowerCase(); desenhar(); });
-  $("#f-pessoa").addEventListener("change", (e) => { filtro.pessoa = e.target.value; desenhar(); });
-  $("#f-frente").addEventListener("change", (e) => { filtro.frente = e.target.value; desenhar(); });
-  for (const [id, chave] of [["#f-vencidas", "vencidas"], ["#f-minhas", "minhas"]]) {
-    $(id).addEventListener("click", () => { filtro[chave] = !filtro[chave]; $(id).setAttribute("aria-pressed", filtro[chave]); desenhar(); });
-  }
-  $("#nova-ideia").addEventListener("click", novaIdeia);
-  try { const v = localStorage.getItem("alfy-vista"); if (v && v !== "sistema") vista = v; } catch (_) { /* sem storage */ }
-  trocaVista(vista);
-}
-function trocaVista(v) {
-  if ((v === "pautas" && !manda()) || (v === "sistema" && papel() !== "comando")) v = "lista";
-  vista = v;
-  try { localStorage.setItem("alfy-vista", v); } catch (_) { /* sem storage */ }
-  for (const a of document.querySelectorAll(".aba")) a.setAttribute("aria-selected", a.dataset.vista === v);
-  for (const s of ["lista", "kanban", "pautas", "sistema"]) $("#vista-" + s).hidden = s !== v;
-  $("#filtros").hidden = v === "sistema" || v === "pautas";
-  desenhar();
-}
-function rotasFiltradas() {
-  return mapa.rotas.filter((r) => {
-    if (filtro.pessoa && (filtro.pessoa === "-" ? r.responsavel_id : r.responsavel_id !== filtro.pessoa)) return false;
-    if (filtro.frente && r.frente !== filtro.frente) return false;
-    if (filtro.vencidas && !vencida(r)) return false;
-    if (filtro.minhas && r.responsavel_id !== mapa.eu.id) return false;
-    if (filtro.busca) {
-      const t = `${r.rt} ${nomeRota(r.rt)} ${r.titulo} ${r.assist || ""} ${nomeDe(r.responsavel_id)}`.toLowerCase();
-      if (!t.includes(filtro.busca)) return false;
-    }
+function vistaFeed() {
+  if (!FEED) return `<div class="carregando">Carregando o feed…</div>`;
+  const grupoTipo = (t) => (t.startsWith("pauta") || t.startsWith("reuniao") ? "pauta" : t === "ideia" ? "nova" : t);
+  const l = FEED.filter((e) => {
+    const r = rotaDe(e.rt);
+    if (s.fFeed !== "todos" && grupoTipo(e.tipo) !== s.fFeed) return false;
+    if (s.pessoa && !(r && (r.responsavel_id === s.pessoa || r.co_responsavel_id === s.pessoa)) && e.quem !== nomeDe(s.pessoa)) return false;
+    if (s.frente && !(r && r.frente === s.frente)) return false;
+    if (s.busca && !((e.texto || "") + " " + (r?.titulo || "") + " " + nomeRota(e.rt)).toLowerCase().includes(s.busca.toLowerCase())) return false;
     return true;
   });
-}
-function desenhar() {
-  if (!mapa) return;
-  const vivas = mapa.rotas.filter((r) => ["rota", "andamento", "pausada"].includes(r.status));
-  $("#i-abertas").textContent = vivas.length;
-  $("#i-vencidas").textContent = vivas.filter(vencida).length;
-  $("#n-pautas").textContent = mapa.pautas.filter((p) => p.status === "aberta").length || "";
-  // filtros de pessoa e frente, só com o que existe no mapa
-  const sel = $("#f-pessoa"), atual = sel.value;
-  const ids = [...new Set(mapa.rotas.map((r) => r.responsavel_id).filter(Boolean))];
-  sel.replaceChildren(h("option", { value: "" }, "Todas as pessoas"),
-    ...ids.map((id) => ({ id, nome: nomeDe(id) })).sort((a, b) => a.nome.localeCompare(b.nome))
-      .map((p) => h("option", { value: p.id }, p.nome)),
-    h("option", { value: "-" }, "Sem responsável"));
-  sel.value = atual;
-  const fr = $("#f-frente"), atualF = fr.value;
-  const frentes = [...new Set(mapa.rotas.map((r) => r.frente).filter(Boolean))].sort();
-  fr.replaceChildren(h("option", { value: "" }, "Todas as frentes"), ...frentes.map((f) => h("option", { value: f }, f)));
-  fr.value = atualF;
-  if (vista === "lista") desenhaLista();
-  if (vista === "kanban") desenhaKanban();
-  if (vista === "pautas") desenhaPautas();
-  if (vista === "sistema") desenhaSistema();
+  if (!l.length) return `<div class="vazio">Nada por aqui com esses filtros.</div>`;
+  let d0 = "";
+  return `<div class="feed">${l.map((e) => {
+    const r = rotaDe(e.rt), d = dia(e.em), cab = d !== d0 ? ((d0 = d), `<div class="dia">${d === hojeDia() ? "Hoje" : ddmm(e.em)}</div>`) : "";
+    const fala = ["comentario", "orientacao", "whatsapp"].includes(e.tipo);
+    const verbo = { comentario: "comentou", orientacao: "deu uma orientação", whatsapp: "respondeu pelo WhatsApp" }[e.tipo];
+    return cab + `<button type="button" class="ev" data-rt="${e.rt}"><span class="ic-ev">${EV_IC[e.tipo] || "•"}</span><span class="c"><span class="l1"><b>${esc(curto(e.quem))}</b> ${fala ? verbo : esc(evTexto(e))}</span>${fala ? `<p>${esc((e.texto || "").slice(0, 400))}</p>` : ""}<span class="rr">${esc(nomeRota(e.rt))}${r ? " · " + esc(r.titulo) + " · " + esc(frenteCurta(r.frente)) : ""}</span></span><small class="hh">${hhmm(e.em)}</small></button>`;
+  }).join("")}</div>`;
 }
 
-// ---------------------------------------------------------------- lista
-function metaDe(r, comFrente) {
-  const m = h("div", { class: "meta" });
-  if (r.prioridade) m.append(h("span", {}, r.prioridade.split(" · ")[0]));
-  if (r.prazo) m.append(h("span", { class: vencida(r) ? "v" : "" }, (vencida(r) ? "venceu " : "até ") + dataCurta(r.prazo)));
-  if (comFrente && r.frente) m.append(h("span", {}, r.frente));
-  if (r.comentarios) m.append(h("span", {}, `💬 ${r.comentarios}`));
-  if (r.pautas?.length) m.append(h("span", {}, `🗂️ pauta`));
-  return m;
+// ---------------------------------------------------------------- pautas e reuniões
+const reuniaoDe = (id) => M?.reunioes?.find((x) => x.id === id);
+const quandoReuniao = (re) => re.quando ? new Date(re.quando).toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "2-digit", timeZone: FUSO }) + " · " + hhmm(re.quando) : "sem data";
+function linhaPauta(p) {
+  const re = reuniaoDe(p.reuniao_id);
+  return `<button type="button" class="linha2" data-pauta="${p.id}"><span class="tag ideia" style="width:50px"><small>PAUTA</small><b>${p.id}</b></span><span class="tt"><b>${esc(p.titulo)}</b>${p.detalhe ? `<span class="res">${esc(p.detalhe)}</span>` : ""}<span class="meta2"><span>${PTIPO[p.tipo] || p.tipo}</span><span>${PST[p.status]}</span>${p.frente ? `<span>${esc(frenteCurta(p.frente))}</span>` : ""}${p.msgs ? `<span style="color:var(--turq)">💬 ${p.msgs}</span>` : ""}${p.rotas.length ? `<span>🔗 ${p.rotas.map(nomeRota).join(", ")}</span>` : ""}${re ? `<span style="color:var(--amber)">🗓️ ${esc(re.titulo)}</span>` : `<span>sem reunião</span>`}</span></span></button>`;
 }
-function botoesRapidos(r) {
-  const opcoes = r.status === "ideia" ? ["rota"] : ["rota", "andamento", "pausada", "concluida"];
-  return h("div", { class: "rapidos" }, opcoes.map((st) => h("button", {
-    class: "rapido", type: "button", "aria-pressed": r.status === st,
-    style: r.status === st ? `background:${ST[st].cor};color:#0B0124` : null,
-    title: `Mover para ${ST[st].nome}`,
-    onclick: (e) => { e.stopPropagation(); if (r.status !== st) mover(r.rt, st); },
-  }, r.status === "ideia" ? "Virar rota" : ST[st].curto)));
-}
-function linhaDe(r, comDono) {
-  return h("article", { class: "linha" },
-    bolinha(r.status),
-    h("div", { class: "meio", role: "button", tabindex: "0", onclick: () => abrirCartao(r.rt),
-                onkeydown: (e) => { if (e.key === "Enter") abrirCartao(r.rt); } },
-      h("div", { class: "tt" }, h("span", { class: "rt" }, nomeRota(r.rt)), r.titulo),
-      metaDe(r, comDono)),
-    botoesRapidos(r));
-}
-function desenhaLista() {
-  const alvo = $("#vista-lista"), rs = rotasFiltradas();
-  alvo.replaceChildren();
-  if (!rs.length) { alvo.append(h("div", { class: "vazio" }, "Nenhuma rota com esse filtro.")); return; }
-  const ordemSt = (r) => ORDEM.indexOf(r.status);
-  const porPrazo = (a, b) => ordemSt(a) - ordemSt(b) || (a.prazo || "9").localeCompare(b.prazo || "9");
-  if (manda()) {
-    const grupos = {};
-    for (const r of rs) (grupos[r.responsavel_id || "-"] ||= []).push(r);
-    const chaves = Object.keys(grupos).sort((a, b) =>
-      (a === "-") - (b === "-") || grupos[b].length - grupos[a].length);
-    for (const k of chaves) {
-      const g = grupos[k].sort(porPrazo), venc = g.filter(vencida).length;
-      alvo.append(h("section", { class: "grupo" },
-        h("h2", {}, k === "-" ? "Sem responsável" : nomeDe(k),
-          h("span", { class: "mono" }, `${g.length} rotas${venc ? ` · ${venc} vencidas` : ""}`)),
-        g.map((r) => linhaDe(r, true))));
-    }
-  } else {
-    for (const st of ORDEM) {
-      const g = rs.filter((r) => r.status === st).sort(porPrazo);
-      if (!g.length) continue;
-      alvo.append(h("section", { class: "grupo" },
-        h("h2", {}, ST[st].nome, h("span", { class: "mono" }, g.length)), g.map((r) => linhaDe(r, false))));
-    }
+function vistaPautas() {
+  if (s.pauta) return pautaDet();
+  if (s.reuniao) return reuniaoDet(reuniaoDe(s.reuniao));
+  const seg = `<div class="alterna" role="group" style="margin-bottom:14px"><button type="button" data-pvista="reunioes" aria-pressed="${s.pvista === "reunioes"}">Reuniões · ${(M.reunioes || []).filter((x) => x.status !== "encerrada").length}</button><button type="button" data-pvista="pautas" aria-pressed="${s.pvista === "pautas"}">Pautas · ${(M.pautas || []).filter((x) => x.status === "aberta").length}</button></div>`;
+  if (s.pvista === "reunioes") {
+    const rs = M.reunioes || [];
+    const soltas = (M.pautas || []).filter((p) => !p.reuniao_id && p.status === "aberta");
+    return seg + `<div class="pl" style="max-width:860px">${rs.map((re) => { const np = (M.pautas || []).filter((p) => p.reuniao_id === re.id).length; return `<button type="button" class="placa rebites" data-reuniao="${re.id}"><b>${esc(re.titulo)}</b><span>${quandoReuniao(re)}${re.onde ? " · " + esc(re.onde) : ""} · ${RST[re.status]} · ${re.rotas.length} rotas · ${np} pautas</span></button>`; }).join("") || '<div class="vazio">Nenhuma reunião marcada. Use ＋ Nova reunião.</div>'}
+      ${soltas.length ? `<section class="grupo" style="margin-top:18px"><h2>Pautas esperando reunião<span class="ct">${soltas.length}</span></h2><div class="lista">${soltas.map(linhaPauta).join("")}</div></section>` : ""}
+      <p class="nota">Uma reunião trata rotas e pautas. Pauta é um tópico para decidir, conversar ou compartilhar, como "qual motor comprar". Ela pode ter rotas ligadas, mas não precisa.</p></div>`;
   }
+  const grupos = ["aberta", "decidida", "tratada"].map((st) => { const l = (M.pautas || []).filter((p) => p.status === st); return l.length ? `<section class="grupo"><h2>${PST[st]}<span class="ct">${l.length}</span></h2><div class="lista">${l.map(linhaPauta).join("")}</div></section>` : ""; }).join("");
+  return seg + (grupos || '<div class="vazio">Nenhuma pauta ainda. Use ＋ Nova pauta.</div>');
+}
+function buscaRotaHTML(alvo) {
+  return `<input class="busca" style="width:100%" placeholder="Buscar rota para ligar (número ou assunto)" data-buscarota="${alvo}" value="${esc(s.buscaRota || "")}"><div class="busca-rotas" id="res-busca-rota">${resultadoBuscaRota(alvo)}</div>`;
+}
+function resultadoBuscaRota(alvo) {
+  const q = (s.buscaRota || "").trim().toLowerCase();
+  if (q.length < 2) return "";
+  return (M.rotas || []).filter((r) => (nomeRota(r.rt) + " " + r.titulo).toLowerCase().includes(q)).slice(0, 8)
+    .map((r) => `<button type="button" class="linha2" data-ligar="${alvo}" data-lrt="${r.rt}">${tag(r)}<span class="tt"><b>${esc(r.titulo)}</b></span></button>`).join("") || '<div class="vazio">Nenhuma rota com isso</div>';
+}
+function reuniaoDet(re) {
+  if (!re) { s.reuniao = null; return vistaPautas(); }
+  const pautas = (M.pautas || []).filter((p) => p.reuniao_id === re.id);
+  const rotas = re.rotas.map(rotaDe).filter(Boolean);
+  const pode = manda();
+  return `<div class="pd" style="max-width:900px"><div class="placa rebites cab-p"><button class="btn peq" type="button" data-acao="pautas-voltar">‹ Reuniões</button>
+      <h2>${esc(re.titulo)}</h2><div class="q">${quandoReuniao(re)}${re.onde ? " · " + esc(re.onde) : ""} · ${re.gente.map((g) => esc(curto(nomeDe(g)))).join(", ")}</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><div class="st3">${Object.entries(RST).map(([k, n]) => `<button type="button" data-rst="${k}" aria-pressed="${re.status === k}" ${pode ? "" : "disabled"}>${n}</button>`).join("")}</div>${pode ? '<button class="btn peq" type="button" data-acao="editar-reuniao" style="margin-top:10px">Editar</button>' : ""}</div></div>
+    <div class="bloco"><h3>Rotas da reunião <span class="ct">${rotas.length}</span></h3><div class="lista">${rotas.map((r) => linha(r)).join("") || '<div class="vazio">Nenhuma rota ligada</div>'}</div>${pode ? buscaRotaHTML("reuniao") : ""}</div>
+    <div class="bloco"><h3>Pautas da reunião <span class="ct">${pautas.length}</span></h3><div class="lista">${pautas.map(linhaPauta).join("") || '<div class="vazio">Nenhuma pauta ainda</div>'}</div>${pode ? '<div style="margin-top:10px"><button class="btn" type="button" data-acao="nova-pauta-reuniao">＋ Nova pauta nesta reunião</button></div>' : ""}</div>
+    ${comando() ? `<div class="ia-painel"><div class="t">🐙 Ata com o ALFY</div><div style="font-size:14px;color:#9ED9D2">No fim, o ALFY escreve a ata: o que foi tratado em cada pauta e rota, as decisões, quem faz o quê e o que ficou em aberto.</div>
+      ${re.ata ? `<div class="ia-saida">${esc(re.ata)}</div>` : ""}${s.esperando["ata:" + re.id] ? '<div class="ia-saida pensando">🐙 escrevendo a ata… (o robô do Mac pega em segundos)</div>' : ""}
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn turq" type="button" data-acao="ata">🐙 ${re.ata ? "Escrever de novo" : "Montar a ata"}</button>${re.ata ? '<button class="btn" type="button" data-acao="copiar-ata">Copiar</button>' : ""}</div></div>` : re.ata ? `<div class="bloco"><h3>Ata</h3><div class="ia-saida">${esc(re.ata)}</div></div>` : ""}</div>`;
+}
+function pautaDet() {
+  const p = s.pautaDet;
+  if (!p) return `<div class="carregando">Abrindo a pauta…</div>`;
+  const pode = manda(), ops = p.opcoes || [];
+  return `<div class="pd" style="max-width:900px"><div class="placa rebites cab-p"><button class="btn peq" type="button" data-acao="pautas-voltar">‹ Voltar</button>
+      <h2>${esc(p.titulo)}</h2><div class="q">${PTIPO[p.tipo]} · trazida por ${esc(curto(nomeDe(p.criado_por)))}${p.frente ? " · " + esc(frenteCurta(p.frente)) : ""}</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><div class="st3">${Object.entries(PST).map(([k, n]) => `<button type="button" data-pst="${k}" aria-pressed="${p.status === k}" ${pode ? "" : "disabled"}>${n}</button>`).join("")}</div>${pode ? '<button class="btn peq" type="button" data-acao="editar-pauta" style="margin-top:10px">Editar</button>' : ""}</div></div>
+    <div class="bloco"><h3>Do que se trata</h3><p style="margin:0;font-size:15px;line-height:1.55;white-space:pre-wrap">${esc(p.detalhe || "Sem descrição.")}</p>
+      ${ops.length || pode ? `<p class="rotulo" style="margin-top:14px">Opções na mesa</p><div class="alvos">${ops.map((o, i) => `<button class="chip" type="button" data-opcao="${i}" aria-pressed="${p.escolha === i}">${esc(o)}${pode ? `<span class="opcao-x" data-tiraopcao="${i}" role="button" aria-label="Tirar opção">✕</span>` : ""}</button>`).join("")}${pode ? '<button class="chip" type="button" data-acao="nova-opcao">＋ opção</button>' : ""}</div>` : ""}
+      ${p.decisao ? `<div class="campo" style="margin-top:10px;border-color:#2A5A47"><div class="cab-campo"><b style="color:var(--foam)">✅ Decisão</b></div><p class="txt">${esc(p.decisao)}</p></div>` : ""}</div>
+    <div class="bloco"><h3>Reunião</h3><div class="alvos" style="margin:0">${(M.reunioes || []).filter((x) => x.status !== "encerrada").map((x) => `<button class="chip" type="button" data-levar="${x.id}" aria-pressed="${p.reuniao_id === x.id}" ${pode ? "" : "disabled"}>${esc(x.titulo)} · ${quandoReuniao(x)}</button>`).join("")}<button class="chip" type="button" data-levar="0" aria-pressed="${!p.reuniao_id}" ${pode ? "" : "disabled"}>Sem reunião</button></div></div>
+    <div class="bloco"><h3>Rotas ligadas <span class="ct">${p.rotas.length}</span></h3><div class="lista">${p.rotas.map(rotaDe).filter(Boolean).map((r) => linha(r)).join("") || '<div class="vazio">Nenhuma rota. Pauta não precisa ter rota.</div>'}</div>${pode ? buscaRotaHTML("pauta") : ""}</div>
+    <div class="bloco"><h3>Discussão <span class="ct">${p.conversa.length}</span></h3>
+      <div>${p.conversa.map((m) => `<div class="topico"><span class="tk ${m.tipo === "partilha" ? "comentario" : m.tipo}">${MSG_TIPO[m.tipo]}</span><div class="c"><p style="white-space:pre-wrap">${esc(m.texto)}</p><small>${esc(curto(m.quem))} · ${quandoFoi(m.em)}${m.rt_gerada ? ` · virou <b>${esc(nomeRota(m.rt_gerada))}</b>` : ""}</small></div>${pode && !m.rt_gerada && m.tipo !== "comentario" ? `<button class="btn peq" type="button" data-msgrota="${m.id}">Virar rota</button>` : ""}</div>`).join("") || '<div class="vazio">Comece a discussão</div>'}</div>
+      <form class="compor" id="f-msg"><div class="tipos">${Object.entries(MSG_TIPO).map(([k, n]) => `<button class="chip" type="button" data-tmsg="${k}" aria-pressed="${s.tipoMsg === k}">${n}</button>`).join("")}</div>
+      <div class="linha-c"><input id="t-msg" placeholder="${s.tipoMsg === "decisao" ? "Escreva a decisão" : s.tipoMsg === "partilha" ? "O que quer compartilhar (link, novidade)" : "Escreva aqui"}" autocomplete="off"><button class="btn turq" type="submit">Adicionar</button></div></form></div>
+    ${comando() ? `<div class="ia-painel"><div class="t">🐙 ALFY nesta pauta</div><div class="rap">${["Resuma a discussão em até 5 linhas", "Liste prós e contras de cada opção com o que foi dito", "O que falta saber para decidir, e com quem"].map((t) => `<button type="button" data-iapauta="${esc(t)}">${esc(t)}</button>`).join("")}</div>
+      <div class="chat">${(p.ia || []).map((m) => `<div class="m ${m.papel === "user" ? "eu" : "alfy"}">${esc(m.texto)}</div>`).join("")}${s.esperando["pauta:" + p.id] ? '<div class="m alfy">🐙 pensando…</div>' : ""}</div></div>` : ""}</div>`;
 }
 
-// ---------------------------------------------------------------- kanban
-function desenhaKanban() {
-  const k = $("#kanban"), rs = rotasFiltradas();
-  k.replaceChildren(...ORDEM.map((st) => {
-    const col = h("div", { class: "coluna", "data-st": st,
-      ondragover: (e) => { e.preventDefault(); col.classList.add("alvo"); },
-      ondragleave: () => col.classList.remove("alvo"),
-      ondrop: (e) => { e.preventDefault(); col.classList.remove("alvo");
-        const rt = e.dataTransfer.getData("text/plain"); const r = mapa.rotas.find((x) => x.rt === rt);
-        if (r && r.status !== st) mover(rt, st); } });
-    const g = rs.filter((r) => r.status === st).sort((a, b) => (a.prazo || "9").localeCompare(b.prazo || "9"));
-    col.append(h("h3", {}, h("i", { style: `background:${ST[st].cor}` }), ST[st].nome, h("span", { class: "mono" }, g.length)));
-    for (const r of g) {
-      const c = h("div", { class: "card", draggable: "true", tabindex: "0",
-        ondragstart: (e) => { e.dataTransfer.setData("text/plain", r.rt); c.classList.add("arrastando"); },
-        ondragend: () => c.classList.remove("arrastando"),
-        onclick: () => abrirCartao(r.rt), onkeydown: (e) => { if (e.key === "Enter") abrirCartao(r.rt); } },
-        h("div", { class: "rt" }, nomeRota(r.rt)),
-        h("div", { class: "tt" }, r.titulo),
-        manda() ? h("div", { class: "meta" }, h("span", {}, nomeDe(r.responsavel_id))) : null,
-        metaDe(r, false));
-      col.append(c);
-    }
-    if (!g.length) col.append(h("div", { class: "meta", style: "padding:6px 4px" }, "Arraste uma rota para cá."));
-    return col;
-  }));
+// ---------------------------------------------------------------- Mapa de Rotas do WhatsApp (formato oficial de 28/10, com "Rota N")
+const LEGENDA = (ex) => `*STATUS:* 🔴 Não iniciada · 🟡 Em andamento · 🟠 Parada · 🟢 Concluída\n*PRIORIDADE:* 🚨 P1 urgente, 24h · ⚡ P2 até 3 dias · ⏳ P3 até 7 dias · 💤 P4 até 30 dias · ⏸️ P5 sem prazo\n\n*COMO RESPONDER:*\nnúmero da rota + comentário\nEx.: ${ex} já liguei, aguardando retorno`;
+const SITUACAO = { andamento: "em andamento", pausada: "parada" };
+function blocoMapa(r, quem) {
+  const partes = [`${ST[r.status].bola} *${nomeRota(r.rt)}*`];
+  if (pcod(r.prioridade)) partes.push(prioTxt(r.prioridade));
+  if (SITUACAO[r.status]) partes.push(SITUACAO[r.status]);
+  else if (pcod(r.prioridade) === "P5" || !r.prazo) partes.push("sem prazo");
+  else partes.push(`${dias(r.prazo) < 0 ? "venceu" : "até"} *${ddmm(r.prazo)}*`);
+  if (quem) partes.push(`👤 ${quem}`);
+  let t = (r.assist || r.titulo).trim().replace(/\.+$/, "");
+  if (!/[?!]$/.test(t)) t += ".";
+  return partes.join(" · ") + "\n" + t;
 }
+const contagem = (l) => { const v = l.filter(vencida).length, n = l.length; return `${n} rota${n !== 1 ? "s" : ""} aberta${n !== 1 ? "s" : ""}` + (v ? `, ${v} vencida${v !== 1 ? "s" : ""}` : ""); };
+const mapeavel = (r) => ABERTOS.includes(r.status) && !ehNova(r) && !r.rt.startsWith("IDEIA-") && r.frente !== "🧍 Pessoal" && !/\b[Rr]otina\b/.test(r.titulo);
+const dataHoje = () => new Date().toLocaleDateString("pt-BR", { timeZone: FUSO });
+function mapaPessoa(id, soVencidas) {
+  const p = pessoa(id);
+  let minhas = (M.rotas || []).filter((r) => mapeavel(r) && r.responsavel_id === id).sort(ordPrio);
+  if (soVencidas) minhas = minhas.filter(vencida);
+  // gerente recebe também o que está com o time dele nas frentes que chefia (fora o Miguel)
+  let time = [];
+  if (!soVencidas && p?.papel === "gerente") time = (M.rotas || []).filter((r) => mapeavel(r) && (p.frentes || []).includes(r.frente) && r.responsavel_id && r.responsavel_id !== id && pessoa(r.responsavel_id)?.papel !== "comando").sort(ordPrio);
+  const l = ["🗺️ *Mapa de Rotas*", "", `👤 *${p?.nome || ""}*`, `📅 ${dataHoje()} · ${contagem(minhas)}`, "", soVencidas ? "*SUAS ROTAS VENCIDAS:*" : "*SUAS ROTAS:*", ""];
+  minhas.forEach((r) => l.push(blocoMapa(r), ""));
+  if (!minhas.length) l.push(soVencidas ? "Nenhuma rota vencida com você agora." : "Nenhuma rota aberta com você agora.", "");
+  if (time.length) { l.push("*DA SUA EQUIPE (para acompanhar e cobrar):*", ""); time.forEach((r) => l.push(blocoMapa(r, curto(nomeDe(r.responsavel_id))), "")); }
+  l.push(LEGENDA(num((minhas[0] || time[0] || { rt: "RT-374" }).rt)));
+  return { n: minhas.length + time.length, txt: l.join("\n") };
+}
+function mapaSetor(frente) {
+  const rotas = (M.rotas || []).filter((r) => mapeavel(r) && r.frente === frente);
+  const ger = gerenteDe(frente);
+  const ids = [...new Set(rotas.map((r) => r.responsavel_id || ""))];
+  const ehMiguel = (id) => pessoa(id)?.papel === "comando";
+  ids.sort((a, b) => (a === ger?.id ? -1 : b === ger?.id ? 1 : 0) || (ehMiguel(a) ? 1 : ehMiguel(b) ? -1 : 0) || nomeDe(a).localeCompare(nomeDe(b)));
+  const l = ["🗺️ *Mapa de Rotas*", "", `*${frente}*`, `📅 ${dataHoje()} · ${contagem(rotas)}`, ""];
+  ids.forEach((id) => { l.push(ehMiguel(id) ? "*COMIGO (Miguel):*" : `👤 *${nomeDe(id) || "Sem responsável"}*`, ""); rotas.filter((r) => (r.responsavel_id || "") === id).sort(ordPrio).forEach((r) => l.push(blocoMapa(r), "")); });
+  if (!rotas.length) l.push("Nenhuma rota aberta nesta frente agora.", "");
+  l.push(LEGENDA(num((rotas[0] || { rt: "RT-374" }).rt)));
+  return { n: rotas.length, txt: l.join("\n") };
+}
+const rotaTxt = (t) => String(t || "").replace(/\bRT[-\s]?(\d{2,4})\b/g, "Rota $1");
+const zap = (t) => esc(t).replace(/\*([^*\n]+)\*/g, "<b>$1</b>");
 
-// ---------------------------------------------------------------- cartão
-function fecharCartao() { cartaoAberto = null; $("#modal").hidden = true; $("#modal").replaceChildren(); document.body.style.overflow = ""; }
-$("#modal").addEventListener("click", (e) => { if (e.target.id === "modal") fecharCartao(); });
-addEventListener("keydown", (e) => { if (e.key === "Escape" && cartaoAberto) fecharCartao(); });
-
-async function abrirCartao(rt, silencioso) {
-  let c;
-  try { c = await rpc("alfy_cartao", { p_token: token, p_rt: rt }); } catch (e) { avisar(e.message, true); return; }
-  if (!c) { if (!silencioso) avisar("Essa rota não está no seu mapa.", true); fecharCartao(); return; }
-  // não redesenha por cima de quem está digitando
-  if (silencioso && $("#modal").contains(document.activeElement) && document.activeElement.matches("textarea,input")) return;
-  cartaoAberto = rt;
-  const edita = manda();
-  const m = $("#modal");
-  const bloco = (rotulo, campo, valor) => {
-    if (!edita) return valor ? h("div", { class: "bloco" }, h("h4", {}, rotulo), h("p", {}, valor)) : null;
-    const ta = h("textarea", { id: `b-${campo}`, placeholder: "Vazio" }); ta.value = valor || "";
-    const cabe = () => { ta.style.height = "auto"; ta.style.height = Math.max(64, ta.scrollHeight + 2) + "px"; };
-    ta.addEventListener("input", cabe); requestAnimationFrame(cabe);
-    const salvar = h("button", { class: "btn", type: "button", hidden: true,
-      onclick: async () => { const r = await acao("alfy_editar", { p_rt: rt, p_campos: { [campo]: ta.value } }, "Salvo"); if (r) abrirCartao(rt, true); } }, "Salvar");
-    ta.addEventListener("input", () => (salvar.hidden = ta.value === (valor || "")));
-    return h("div", { class: "bloco" }, h("h4", {}, rotulo), ta, h("div", { style: "margin-top:6px" }, salvar));
-  };
-  const statusBarra = h("div", { class: "status-barra" }, ORDEM.map((st) => h("button", {
-    type: "button", "aria-pressed": c.status === st, style: c.status === st ? `background:${ST[st].cor};color:#0B0124` : null,
-    onclick: async () => { if (c.status !== st) { await mover(rt, st); abrirCartao(rt, true); } } }, ST[st].nome)));
-
-  const coments = h("div", { class: "comentarios" }, h("h4", { class: "rotulo" }, `Comentários (${c.lista_comentarios.length})`),
-    c.lista_comentarios.map((x) => h("div", { class: "coment" + (x.origem === "alfy" ? " alfy" : "") },
-      h("div", { class: "quem" }, h("b", {}, x.quem), " ", h("span", { class: "mono" }, quandoFoi(x.em))),
-      h("p", {}, x.texto))));
-  const novo = h("textarea", { id: "novo-coment", placeholder: "Escreva o andamento, uma dúvida ou o que falta" });
-  coments.append(h("div", { class: "novo-coment" }, novo, h("div", {}, h("button", { class: "btn btn-cta", type: "button",
-    onclick: async () => {
-      const t = novo.value.trim(); if (!t) return;
-      const r = await acao("alfy_comentar", { p_rt: rt, p_texto: t }, "Comentário enviado");
-      if (r) abrirCartao(rt, true);
-    } }, "Comentar"))));
-
-  // propriedades
-  const prop = (rotulo, el) => h("div", { class: "prop" }, h("label", {}, rotulo), el);
-  const seletor = (campo, valor, opcoes, vazio) => {
-    if (!edita) return h("div", { class: "val" }, valor || "—");
-    const s = h("select", { id: `p-${campo}` }, h("option", { value: "" }, vazio || "—"),
-      opcoes.map((o) => (typeof o === "string" ? h("option", { value: o }, o) : h("option", { value: o.v }, o.t))));
-    s.value = valor || "";
-    s.addEventListener("change", () => acao("alfy_editar", { p_rt: rt, p_campos: { [campo]: s.value } }, "Salvo"));
-    return s;
-  };
-  let prazoEl;
-  if (edita) {
-    prazoEl = h("input", { type: "date", id: "p-prazo" });
-    if (c.prazo) prazoEl.value = new Date(c.prazo).toLocaleDateString("sv-SE", { timeZone: "America/Sao_Paulo" });
-    prazoEl.addEventListener("change", () => acao("alfy_editar", { p_rt: rt,
-      p_campos: { prazo: prazoEl.value ? `${prazoEl.value}T21:00:00Z` : "" } }, "Prazo salvo"));
-  } else prazoEl = h("div", { class: "val" + (vencida(c) ? " v" : "") }, c.prazo ? dataCurta(c.prazo) : "—");
-  const pessoas = mapa.pessoas.filter((p) => p.codigo !== "ALFY" || c.responsavel_id === p.id)
-    .map((p) => ({ v: p.id, t: p.nome }));
-  const lado = h("aside", { class: "modal-lado" },
-    prop("Responsável", seletor("responsavel_id", c.responsavel_id, pessoas, "Sem responsável")),
-    prop("Prioridade", seletor("prioridade", c.prioridade, PRIORIDADES)),
-    prop("Prazo", prazoEl),
-    prop("Frente", seletor("frente", c.frente, FRENTES)),
-    prop("Natureza", seletor("natureza", c.natureza, NATUREZAS)),
-    prop("Tipo", seletor("tipo", c.tipo, TIPOS)));
-  if (edita && mapa.pautas.length) {
-    const abertas = mapa.pautas.filter((p) => p.status === "aberta" || c.pautas.includes(p.id));
-    lado.append(prop("Pautas de reunião", h("div", { class: "pautas-do-cartao" }, abertas.map((p) => {
-      const cb = h("input", { type: "checkbox", id: `pa-${p.id}` }); cb.checked = c.pautas.includes(p.id);
-      cb.addEventListener("change", () => acao("alfy_pauta_ligar", { p_pauta: p.id, p_rt: rt, p_ligar: cb.checked },
-        cb.checked ? "Ligada à pauta" : "Tirada da pauta"));
-      return h("label", { for: `pa-${p.id}` }, cb, h("span", {}, p.titulo));
-    }))));
+// ---------------------------------------------------------------- comandos (só o Miguel, por enquanto)
+const CMDS = [
+  { g: "Despejar", k: "despejo", n: "Despejo", faz: "Joga aqui o que vier na cabeça: texto, áudio gravado na hora, áudio ou arquivo. O ALFY separa em rota, pauta, arquivo ou lembrete.", quando: "quando você quiser", onde: "mac" },
+  { g: "Ler", k: "whatsapp", n: "Ler o WhatsApp", faz: "Lê suas conversas das últimas 24 horas: quem respondeu rota (citou o número) e o que pode virar rota nova.", quando: "quando você pedir", onde: "mac" },
+  { g: "Ler", k: "grupos", n: "Atualizar os grupos", faz: "A mesma leitura, olhando os últimos 7 dias de todas as conversas e grupos de trabalho.", quando: "quando você pedir", onde: "mac" },
+  { g: "Ler", k: "email", n: "Ler o e-mail", faz: "Lê a caixa miguel@ilha.tours e faz o mesmo que com o WhatsApp.", quando: "falta autorizar", onde: "nuvem" },
+  { g: "Mandar", k: "mapa", n: "Lançar o Mapa de Rotas", faz: "A mensagem oficial do Mapa de Rotas de uma pessoa ou de um setor, pronta para colar no WhatsApp.", quando: "na hora", onde: "nuvem" },
+  { g: "Mandar", k: "cobrar", n: "Cobrar as vencidas", faz: "Uma mensagem por pessoa só com as rotas vencidas dela.", quando: "na hora", onde: "nuvem" },
+  { g: "Mandar", k: "bomdia", n: "Bom dia do Miguel", faz: "O seu dia numa tela: reuniões, o que vence hoje, o que venceu e quem respondeu.", quando: "na hora", onde: "nuvem" },
+  { g: "Organizar", k: "ronda", n: "Fazer a ronda agora", faz: "Roda o robô do Comando: prazos, pessoa e frente nos cartões, devoluções e espelhos nos quadros das frentes.", quando: "8h, 11h, 14h, 17h e 20h", onde: "mac" },
+  { g: "Organizar", k: "virada", n: "Virada da semana", faz: "Fecha a semana no Comando: arquiva o concluído e passa o que ficou para a semana seguinte.", quando: "domingo 12h", onde: "mac" },
+  { g: "Pensar", k: "perguntar", n: "Perguntar ao ALFY", faz: "Pergunte qualquer coisa sobre as rotas e as pautas. O ALFY responde com os dados do painel.", quando: "quando você pedir", onde: "mac" },
+];
+const filaRodando = (tipo, escopo) => (M.fila || []).find((q) => q.tipo === tipo && (escopo === undefined || q.escopo === escopo) && (q.status === "fila" || q.status === "rodando"));
+const ROTULO_FILA = { ia: "Pergunta ao ALFY", despejo: "Despejo", whatsapp: "Leitura do WhatsApp", ronda: "Ronda", virada: "Virada da semana", ata: "Ata da reunião" };
+function filaHTML() {
+  const f = M.fila || [];
+  return `<div class="bloco"><h3>Fila do robô <span class="ct">${f.filter((q) => q.status === "fila" || q.status === "rodando").length}</span></h3><div class="fila">${f.slice(0, 7).map((q) => `<div class="it"><i style="background:${q.status === "feito" ? "var(--foam)" : q.status === "erro" ? "var(--verm)" : "var(--amber)"}"></i><span>${ROTULO_FILA[q.tipo] || q.tipo}${q.resumo ? ` · ${esc(q.resumo)}` : ""}${q.status === "erro" ? " · deu erro" : ""}</span><small>${q.status === "feito" || q.status === "erro" ? quandoFoi(q.feito_em) : q.status === "rodando" ? "rodando" : "na fila"}</small></div>`).join("") || '<div class="vazio">Nada na fila</div>'}</div>
+    <p class="nota">💻 precisa do Mac do escritório ligado (o robô pega o pedido em segundos). ☁️ roda direto, sem o Mac.</p></div>`;
+}
+function vistaComandos() {
+  if (!comando()) return `<div class="vazio">Por enquanto os comandos são só do Miguel.</div>`;
+  const c = CMDS.find((x) => x.k === s.cmd);
+  const grupos = ["Despejar", "Ler", "Mandar", "Organizar", "Pensar"].map((g) => `<section class="cmd-grupo"><h2>${g}</h2><div class="cmd-grade">${CMDS.filter((x) => x.g === g).map((x) => `<button type="button" class="placa rebites comando2" data-cmd="${x.k}" aria-pressed="${s.cmd === x.k}"><span class="l1"><span class="ic">${IC[x.k]}</span><b>${x.n}</b></span><span class="faz">${x.faz}</span><span class="onde"><span class="selo">⏱ ${x.quando}</span><span class="selo ${x.onde}">${x.onde === "mac" ? "💻 precisa do Mac" : "☁️ direto"}</span>${x.k === "whatsapp" && (M.sugestoes || []).length ? `<span class="selo novo">${M.sugestoes.length}</span>` : ""}</span></button>`).join("")}</div></section>`).join("");
+  return `<div class="painel-cmd cmd2"><div>${grupos}</div><div class="det-cmd" id="det-cmd">${detCmd(c)}${filaHTML()}</div></div>`;
+}
+const DEST = { rota: "🗺️ Rota", pauta: "🗓️ Pauta", arquivo: "🗂️ Arquivo", lembrete: "⏰ Lembrete", descartar: "🗑️ Descartar" };
+function detCmd(c) {
+  const h = `<h3>${c.n}</h3>`;
+  if (c.k === "despejo") {
+    const d = s.despejo, rod = d.pedido && filaRodando("despejo");
+    return `<div class="bloco">${h}<textarea id="desp-txt" class="busca" rows="5" style="width:100%" placeholder="Escreva do seu jeito. Ex.: falar com a Gabriela sobre o ar da suíte 12 até sexta, pagar a Protegy, ideia de pacote de réveillon com a Buena Onda, dentista quinta 10h">${esc(d.texto)}</textarea>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><button class="btn" type="button" data-acao="gravar">${s.gravando ? "⏹ Parar gravação" : "🎙️ Gravar áudio"}</button><label class="btn" style="cursor:pointer">📎 Anexar<input type="file" id="desp-arq" multiple hidden></label><button class="btn turq" type="button" data-acao="despejar" ${rod ? "disabled" : ""}>🐙 Mandar para o ALFY</button></div>
+      ${d.anexos.length ? `<div class="alvos" style="margin-top:10px">${d.anexos.map((a, i) => `<span class="chip">${a.audio ? "🎙️" : "📎"} ${esc(a.nome)}${a.id ? "" : " · subindo…"}<span class="opcao-x" data-tiraanexo="${i}" role="button" aria-label="Tirar">✕</span></span>`).join("")}</div>` : ""}
+      ${rod ? `<div class="ia-saida pensando" style="margin-top:10px">🐙 O ALFY está ${d.anexos.some((a) => a.audio) ? "ouvindo o áudio e " : ""}separando o despejo…</div>` : ""}
+      ${d.itens ? `<p class="rotulo" style="margin-top:14px">O ALFY separou assim</p>${d.transcricao ? `<p class="nota" style="margin:0 0 6px">Transcrição: ${esc(d.transcricao)}</p>` : ""}${d.itens.map((it, i) => `<div class="sugestao ${d.feitos[i] ? "feita" : ""}"><div class="tx"><b>${esc(it.titulo)}</b><small>${DEST[it.destino] || it.destino}${it.responsavel ? " · " + esc(it.responsavel) : ""}${it.prazo ? " · até " + esc(ddmm(it.prazo + "T12:00:00-03:00")) : ""}</small></div>${d.feitos[i] ? `<small style="color:var(--aco)">${esc(d.feitos[i])}</small>` : `<button class="btn turq peq" type="button" data-desp="${i}">${{ rota: "Criar rota", pauta: "Criar pauta", arquivo: "Ok, guardado", lembrete: "Criar lembrete", descartar: "Descartar" }[it.destino] || "Ok"}</button><select class="sel" data-despdest="${i}" style="padding:4px 6px;font-size:12px" aria-label="Destino">${Object.entries(DEST).map(([k, n]) => `<option value="${k}" ${k === it.destino ? "selected" : ""}>${n}</option>`).join("")}</select>`}</div>`).join("")}` : ""}
+      <p class="nota">O grupo ALFY do WhatsApp continua valendo como despejo. Arquivo anexado vai para o Drive 🗂️ ALFY · Arquivos › 00 Entrada. Lembrete vira rota sua na frente Pessoal, com o prazo.</p></div>`;
   }
-  if (c.trello_url) lado.append(h("a", { class: "link-trello", href: c.trello_url, target: "_blank", rel: "noopener" }, "Abrir no Trello ↗"));
-  lado.append(h("div", { class: "meta" }, `Atualizada ${quandoFoi(c.atualizado_em)}`));
-
-  let titulo;
-  if (edita) {
-    titulo = h("textarea", { id: "c-titulo", rows: "1", class: "titulo-edita" });
-    titulo.value = c.titulo;
-    const cabe = () => { titulo.style.height = "auto"; titulo.style.height = titulo.scrollHeight + "px"; };
-    titulo.addEventListener("input", cabe); requestAnimationFrame(cabe);
-    titulo.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); titulo.blur(); } });
-    titulo.addEventListener("focus", () => (titulo.style.borderColor = "var(--line-2)"));
-    titulo.addEventListener("blur", () => { titulo.style.borderColor = "transparent";
-      if (titulo.value.trim() && titulo.value.trim() !== c.titulo) acao("alfy_editar", { p_rt: rt, p_campos: { titulo: titulo.value.trim() } }, "Título salvo"); });
-  } else titulo = h("h2", {}, c.titulo);
-
-  m.replaceChildren(h("div", { class: "modal", role: "dialog", "aria-modal": "true", "aria-label": c.titulo },
-    h("div", { class: "modal-cab" }, bolinha(c.status),
-      h("div", { style: "min-width:0;flex:1" }, h("div", { class: "rt" }, `${nomeRota(c.rt)} · ${nomeDe(c.responsavel_id)}`), titulo),
-      h("button", { class: "fechar", type: "button", "aria-label": "Fechar", onclick: fecharCartao }, "×")),
-    h("div", { class: "modal-corpo" },
-      h("div", { class: "modal-principal" }, statusBarra,
-        bloco("Resumo", "assist", c.assist),
-        bloco("Detalhamento", "detalhamento", c.detalhamento),
-        bloco("Como fazer", "como_fazer", c.como_fazer),
-        bloco("Resultado esperado", "resultado", c.resultado),
-        coments),
-      lado)));
-  if (!m.hidden && silencioso) return;
-  m.hidden = false; document.body.style.overflow = "hidden";
+  if (c.k === "whatsapp" || c.k === "grupos") {
+    const rod = filaRodando("whatsapp"), sug = M.sugestoes || [];
+    const ret = sug.filter((x) => x.tipo === "retorno"), nov = sug.filter((x) => x.tipo === "nova");
+    return `<div class="bloco">${h}<button class="btn turq" type="button" data-acao="${c.k}" ${rod ? "disabled" : ""}>${rod ? "Lendo…" : c.k === "whatsapp" ? "Ler as últimas 24 horas" : "Ler os últimos 7 dias"}</button>${rod ? '<p class="estado-fila">🐙 O robô do Mac está lendo as conversas. Leva de 1 a 3 minutos.</p>' : ""}
+      <p class="rotulo" style="margin-top:14px">Responderam rotas · ${ret.length}</p>${ret.map((x) => { const r = rotaDe(x.rt); return `<div class="retorno">${r ? tag(r) : ""}<div class="bal"><small><b style="color:var(--texto)">${esc(x.quem || "")}</b> · ${esc(x.quando || "")} · ${esc(x.conversa || "")}</small><br><p>${esc(rotaTxt(x.texto))}</p><br><span style="display:inline-flex;gap:6px;flex-wrap:wrap">${r ? `<button class="btn turq peq" type="button" data-sug="${x.id}" data-sugacao="comentar">Pôr na conversa da ${esc(nomeRota(x.rt))}</button><button class="btn peq" type="button" data-rt="${x.rt}">Abrir</button>` : ""}<button class="btn peq" type="button" data-sug="${x.id}" data-sugacao="descartar">Descartar</button></span></div></div>`; }).join("") || '<div class="vazio">Nenhum retorno novo</div>'}
+      <p class="rotulo" style="margin-top:14px">Podem virar rota · ${nov.length}</p>${nov.map((x) => `<div class="sugestao"><div class="tx"><b style="white-space:pre-wrap">${esc(rotaTxt(x.texto))}</b><small>${esc(x.quem || "")}${x.conversa ? " · " + esc(x.conversa) : ""}${x.quando ? " · " + esc(x.quando) : ""}</small></div><button class="btn turq peq" type="button" data-sug="${x.id}" data-sugacao="rota">Virar rota</button><button class="btn peq" type="button" data-sug="${x.id}" data-sugacao="descartar">Descartar</button></div>`).join("") || '<div class="vazio">Nada novo</div>'}</div>`;
+  }
+  if (c.k === "email") return `<div class="bloco">${h}<p style="margin:0 0 8px">Você aprovou ligar. Falta um passo seu: autorizar uma vez o ALFY a <b>ler</b> a caixa miguel@ilha.tours (só leitura, nada é enviado nem apagado). Assim que autorizar, a leitura entra aqui do mesmo jeito que o WhatsApp: resposta sobre rota vai para a conversa da rota e o que pede ação aparece como "Pode virar rota".</p></div>`;
+  if (c.k === "mapa" || c.k === "cobrar") {
+    const pessoasAlvo = (M.pessoas || []).filter((p) => p.papel !== "comando" && p.nome !== "ALFY" && (M.rotas || []).some((r) => r.responsavel_id === p.id && mapeavel(r)));
+    if (!s.alvo) s.alvo = pessoasAlvo[0]?.id || null;
+    const setores = FRENTES.filter((f) => f !== "🧍 Pessoal" && (M.rotas || []).some((r) => r.frente === f && mapeavel(r)));
+    if (c.k === "cobrar" && setores.includes(s.alvo)) s.alvo = pessoasAlvo[0]?.id;
+    const m = !s.alvo ? { n: 0, txt: "" } : setores.includes(s.alvo) ? mapaSetor(s.alvo) : mapaPessoa(s.alvo, c.k === "cobrar");
+    return `<div class="bloco">${h}<p class="rotulo">Pessoa</p><div class="alvos">${pessoasAlvo.map((p) => `<button class="chip" type="button" data-alvo="${p.id}" aria-pressed="${s.alvo === p.id}">${esc(curto(p.nome))}${c.k === "cobrar" ? ` · ${(M.rotas || []).filter((r) => mapeavel(r) && r.responsavel_id === p.id && vencida(r)).length}` : ""}</button>`).join("")}</div>
+      ${c.k === "mapa" ? `<p class="rotulo">Setor</p><div class="alvos">${setores.map((f) => `<button class="chip" type="button" data-alvo="${esc(f)}" aria-pressed="${s.alvo === f}">${esc(frenteCurta(f))}</button>`).join("")}</div>` : ""}
+      <div class="zap"><div class="msg" style="max-width:none">${zap(m.txt)}<small>prévia · ${m.n} rotas</small></div></div>
+      <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap"><button class="btn turq" type="button" data-acao="copiar-mapa">Copiar para o WhatsApp</button></div>
+      <p class="nota">Formato oficial do Mapa de Rotas. O texto de cada rota é o 🎯 O que fazer do cartão. Rota da frente Pessoal e rota concluída nunca entram.</p></div>`;
+  }
+  if (c.k === "bomdia") {
+    const hoje = (M.rotas || []).filter((r) => ABERTOS.includes(r.status) && r.prazo && dias(r.prazo) === 0 && (r.responsavel_id === eu().id || r.co_responsavel_id === eu().id));
+    const venc = (M.rotas || []).filter((r) => vencida(r) && r.responsavel_id === eu().id).sort(ordPrio);
+    const reus = (M.reunioes || []).filter((x) => x.quando && dia(x.quando) === hojeDia());
+    const resp = (FEED || []).filter((e) => (e.tipo === "whatsapp" || e.tipo === "comentario") && e.quem !== eu().nome && (Date.now() - new Date(e.em)) < 864e5);
+    const bud = (M.rotas || []).filter((r) => r.budget_status === "aguardando aprovação");
+    return `<div class="bloco">${h}<p class="rotulo">Reuniões de hoje · ${reus.length}</p>${reus.map((x) => `<p style="margin:0 0 4px">🗓️ ${hhmm(x.quando)} · ${esc(x.titulo)}</p>`).join("") || '<p class="nota" style="margin:0">Nenhuma</p>'}
+      <p class="rotulo" style="margin-top:14px">Vencem hoje · ${hoje.length}</p><div class="lista">${hoje.map((r) => linha(r)).join("") || '<p class="nota" style="margin:0">Nada</p>'}</div>
+      <p class="rotulo" style="margin-top:14px">Suas vencidas · ${venc.length}</p><div class="lista">${venc.map((r) => linha(r)).join("") || '<p class="nota" style="margin:0">Nenhuma</p>'}</div>
+      <p class="rotulo" style="margin-top:14px">Budget esperando você · ${bud.length}</p><div class="lista">${bud.map((r) => linha(r)).join("") || '<p class="nota" style="margin:0">Nenhum</p>'}</div>
+      <p class="rotulo" style="margin-top:14px">Responderam nas últimas 24 h · ${resp.length}</p>${resp.slice(0, 8).map((e) => `<button type="button" class="ev" data-rt="${e.rt}"><span class="ic-ev">${EV_IC[e.tipo]}</span><span class="c"><span class="l1"><b>${esc(curto(e.quem))}</b> · ${esc(nomeRota(e.rt))}</span><p>${esc((e.texto || "").slice(0, 200))}</p></span></button>`).join("") || '<p class="nota" style="margin:0">Ninguém</p>'}</div>`;
+  }
+  if (c.k === "ronda" || c.k === "virada") { const rod = filaRodando(c.k); return `<div class="bloco">${h}<p style="margin:0 0 10px">${c.faz}</p><button class="btn turq" type="button" data-acao="${c.k}" ${rod ? "disabled" : ""}>${rod ? "Rodando…" : c.k === "ronda" ? "Rodar a ronda agora" : "Rodar a virada agora"}</button></div>`; }
+  if (c.k === "perguntar") {
+    const msgs = s.chatGeral || [], rod = s.esperando.geral;
+    return `<div class="bloco">${h}<div class="chat" id="chat-geral">${msgs.map((m) => `<div class="m ${m.papel === "user" ? "eu" : "alfy"}">${esc(m.texto)}</div>`).join("") || `<div class="m alfy">🐙 Oi, Miguel. Pergunte sobre as rotas e as pautas. Ex.: "o que está vencido da Karoline?", "o que precisa de decisão minha?", "quais rotas têm budget esperando aprovação?"</div>`}${rod ? '<div class="m alfy">🐙 pensando…</div>' : ""}</div>
+      <form class="chat-form" id="f-chat"><input id="t-chat" placeholder="Pergunte ao ALFY" autocomplete="off"><button class="btn turq" type="submit">Perguntar</button></form></div>`;
+  }
+  return "";
 }
 
-// ---------------------------------------------------------------- ideia
-function novaIdeia() {
-  cartaoAberto = null;
-  const t = h("input", { id: "ideia-titulo", placeholder: "Em uma frase, qual é a ideia" });
-  const d = h("textarea", { id: "ideia-texto", placeholder: "Contexto, por que importa, quem envolve (opcional)" });
-  $("#modal").replaceChildren(h("div", { class: "modal", role: "dialog", "aria-modal": "true", "aria-label": "Nova ideia" },
-    h("div", { class: "modal-cab" }, h("div", {}, h("div", { class: "rt" }, "Nova ideia"), h("h2", {}, "O que você quer lançar?")),
-      h("button", { class: "fechar", type: "button", "aria-label": "Fechar", onclick: fecharCartao }, "×")),
-    h("form", { class: "modal-principal", onsubmit: async (e) => {
-        e.preventDefault(); if (!t.value.trim()) return;
-        const r = await acao("alfy_ideia", { p_titulo: t.value, p_texto: d.value }, "Ideia lançada");
-        if (r) abrirCartao(r.rt);
-      } },
-      h("div", { class: "campo" }, h("label", { for: "ideia-titulo" }, "Ideia"), t),
-      h("div", { class: "campo" }, h("label", { for: "ideia-texto" }, "Detalhes"), d),
-      h("p", { class: "meta" }, "A ideia entra na coluna Ideias. Quando o Miguel decidir que vira rota, ela ganha número e vai para o mapa."),
-      h("button", { class: "btn btn-cta", type: "submit" }, "Lançar ideia"))));
-  $("#modal").hidden = false; document.body.style.overflow = "hidden"; t.focus();
+function vistaEu() {
+  const p = eu(), minhas = (M.rotas || []).filter((r) => (r.responsavel_id === p.id || r.co_responsavel_id === p.id) && ABERTOS.includes(r.status));
+  return `<div class="placa rebites" style="padding:22px 18px;display:flex;gap:14px;align-items:center"><div class="avatar" style="width:52px;height:52px;font-size:18px">${ini(p.nome)}</div><div><b style="font-family:var(--fd);font-size:18px">${esc(p.nome)}</b><div style="color:var(--aco);font-size:14px">${papelTxt()}</div></div></div>
+    <div class="bloco" style="margin-top:14px"><h3>Suas rotas abertas <span class="ct">${minhas.length}</span></h3><p style="margin:0;color:var(--aco-2)">${minhas.filter(vencida).length} vencidas · ${minhas.filter((r) => r.prazo && dias(r.prazo) === 0).length} vencem hoje</p></div>
+    <div class="bloco" style="margin-top:14px"><h3>No celular</h3><p style="margin:0;color:var(--aco-2)">Para usar como app: no iPhone, toque em Compartilhar › Adicionar à Tela de Início. No Android, menu ⋮ › Adicionar à tela inicial.</p></div>
+    <div style="margin-top:14px"><button class="btn" type="button" data-acao="sair">Sair deste aparelho</button></div>`;
 }
 
-// ---------------------------------------------------------------- pautas
-function desenhaPautas() {
-  const alvo = $("#vista-pautas");
-  const form = h("form", { class: "pauta", id: "nova-pauta", hidden: true });
-  const tt = h("input", { id: "np-titulo", placeholder: "Assunto da pauta" });
-  const re = h("input", { id: "np-reuniao", placeholder: "Reunião (ex.: Comercial de quarta)" });
-  const dt = h("input", { id: "np-data", type: "date" });
-  const de = h("textarea", { id: "np-detalhe", placeholder: "O que precisa sair dessa conversa (opcional)" });
-  form.append(h("div", { class: "campo" }, h("label", { for: "np-titulo" }, "Pauta"), tt),
-    h("div", { style: "display:flex;gap:10px;flex-wrap:wrap" },
-      h("div", { class: "campo", style: "flex:1 1 220px" }, h("label", { for: "np-reuniao" }, "Reunião"), re),
-      h("div", { class: "campo", style: "flex:0 1 180px" }, h("label", { for: "np-data" }, "Data"), dt)),
-    h("div", { class: "campo" }, h("label", { for: "np-detalhe" }, "Detalhe"), de),
-    h("button", { class: "btn btn-cta", type: "submit" }, "Criar pauta"));
-  form.addEventListener("submit", async (e) => {
-    e.preventDefault(); if (!tt.value.trim()) return;
-    await acao("alfy_pauta_salvar", { p_id: null, p_titulo: tt.value, p_detalhe: de.value, p_reuniao: re.value, p_data: dt.value || null }, "Pauta criada");
+// ---------------------------------------------------------------- cartão da rota
+function podeCampo(k) { return manda() || k === "como_esta"; }
+function campoHTML(r, k) {
+  const c = CAMPOS[k], v = k === "instr" ? instrDe(r) : r[COLUNA[k]] || "", ed = s.editando === k;
+  return `<div class="campo"><div class="cab-campo"><b>${c.rot}</b><span class="acoes">${ed || !podeCampo(k) ? "" : `<button class="mini" type="button" data-editar="${k}">Editar</button>`}${comando() ? `<button class="mini ia" type="button" data-iacampo="${k}">🐙 Pedir ao ALFY</button>` : ""}</span></div>
+    <div class="dica-campo">${c.dica}</div>
+    ${ed ? `<textarea id="ed-${k}" rows="6">${esc(v)}</textarea><div style="display:flex;gap:6px;margin-top:6px"><button class="btn turq peq" type="button" data-salvar="${k}">Salvar</button><button class="btn peq" type="button" data-cancelar="1">Cancelar</button></div>`
+      : `<p class="txt ${v ? "" : "vazio"}">${v ? esc(v) : "Vazio."}</p>`}</div>`;
+}
+function chatRotaHTML(r) {
+  const msgs = s.cartao?.ia || [], rod = s.esperando["rota:" + r.rt];
+  const resp = curto(nomeDe(r.responsavel_id));
+  const rap = [`Escreva uma mensagem de WhatsApp para ${resp} sobre esta rota`, "Qual é o próximo passo?", "Escreva as Instruções com o que já sabemos", "Resuma a conversa da rota"];
+  return `<div class="chat" id="chat-rota">${msgs.map((m) => `<div class="m ${m.papel === "user" ? "eu" : "alfy"}">${esc(m.texto)}${m.papel === "assistant" ? `<div class="usar">${Object.keys(CAMPOS).map((k) => `<button class="mini" type="button" data-usar="${m.id}" data-campo="${k}">Usar em ${CAMPOS[k].rot.split(" ").slice(1).join(" ")}</button>`).join("")}<button class="mini" type="button" data-copiarmsg="${m.id}">Copiar</button></div>` : ""}</div>`).join("") || `<div class="m alfy">🐙 Eu já li tudo desta rota: o pedido, as instruções, a conversa e o histórico. Peça o que precisar, por exemplo uma mensagem para ${esc(resp)} do jeito que você quer.</div>`}${rod ? '<div class="m alfy">🐙 pensando… (o robô do Mac responde em alguns segundos)</div>' : ""}</div>
+    <div class="rap" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">${rap.map((t) => `<button class="chip" type="button" data-rap="${esc(t)}">${esc(t)}</button>`).join("")}</div>
+    <form class="chat-form" id="f-chat-rota"><textarea id="t-chat-rota" rows="2" class="busca" style="flex:1;min-width:0;resize:vertical" placeholder="Escreva para o ALFY. Ex.: faz uma mensagem curta cobrando, sem pressionar">${esc(s.rascunhoRota || "")}</textarea><button class="btn turq" type="submit" ${rod ? "disabled" : ""}>Enviar</button></form>`;
+}
+function folha() {
+  const r = s.cartao; if (!r) return;
+  const pz = prazoInfo(r), ger = gerenteDe(r.frente), pode = manda();
+  const abas = [["ficha", "Ficha"], ["conversa", "Conversa", (r.lista_comentarios || []).length], ...(comando() ? [["alfy", "🐙 ALFY", (r.ia || []).filter((m) => m.papel === "user").length]] : []), ["hist", "Histórico", (r.historico || []).length]];
+  let corpo = "";
+  if (s.abaFolha === "ficha") corpo = Object.keys(CAMPOS).map((k) => campoHTML(r, k)).join("");
+  else if (s.abaFolha === "conversa") corpo = `<div class="coments">${(r.lista_comentarios || []).map((c) => `<div class="coment ${c.tipo === "orientacao" ? "orient-c" : ""}"><span class="avatar">${ini(c.quem)}</span><div><b>${esc(c.quem)}</b><small>${quandoFoi(c.em)}</small>${c.origem === "whatsapp" ? '<span class="origem">pelo WhatsApp</span>' : c.tipo === "orientacao" ? '<span class="origem" style="color:var(--turq)">🧭 orientação</span>' : c.origem === "trello" ? '<span class="origem" style="color:var(--aco)">pelo Trello</span>' : ""}<p style="white-space:pre-wrap">${esc(c.texto)}</p></div></div>`).join("") || '<span style="color:var(--aco);font-size:14px">Ninguém comentou ainda.</span>'}</div>
+    <form class="escrever2" id="f-coment"><textarea id="t-coment" rows="2" class="busca" style="width:100%;resize:vertical" placeholder="Escreva um retorno${pode ? " ou uma orientação" : ""}"></textarea><div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap"><button class="btn turq" type="submit" data-tipoc="comentario">Comentar</button>${pode ? '<button class="btn" type="submit" data-tipoc="orientacao">🧭 Dar como orientação</button>' : ""}</div></form>`;
+  else if (s.abaFolha === "alfy") corpo = chatRotaHTML(r);
+  else corpo = `<div class="hist">${(r.historico || []).map((e) => `<div class="h"><small>${quandoFoi(e.em)}</small><span>${EV_IC[e.acao === "status" ? "status" : e.acao] || "•"} <b>${esc(curto(e.quem))}</b> ${e.acao === "comentario" ? (e.dados?.tipo === "orientacao" ? "deu uma orientação" : "comentou") : esc(evTexto({ ...e, tipo: e.acao === "ideia" ? "nova" : e.acao }))}</span></div>`).join("") || '<span style="color:var(--aco);font-size:14px">Sem histórico ainda.</span>'}</div>`;
+  const reus = (M.reunioes || []).filter((x) => x.status !== "encerrada");
+  $("#camada").innerHTML = `<div class="veu" id="veu"><section class="folha" role="dialog" aria-modal="true" aria-label="${esc(nomeRota(r.rt))}">
+    <div class="cab">${tag(r)}<h2>${esc(r.titulo)}</h2><button class="fechar" type="button" data-acao="fechar" aria-label="Fechar">${IC.x}</button></div>
+    <div class="corpo" id="corpo-folha">
+      ${ehNova(r) ? '<p class="nota" style="margin:0">Rota nova: o número sai em até 5 minutos, quando o robô sincroniza.</p>' : ""}
+      <div class="status5">${ORDEM.map((k) => `<button type="button" data-mover="${k}" aria-pressed="${r.status === k}"><i style="background:${ST[k].cor}"></i>${ST[k].um}</button>`).join("")}</div>
+      <div><p class="rotulo">Cadeia de responsabilidade</p><div class="cadeia ${pode ? "" : "so-leitura"}">
+        <div class="elo"><small>🗺️ Frente</small><select data-prop="frente">${opc(FRENTES.map((f) => [f, frenteCurta(f)]), r.frente, "Sem frente")}</select></div><span class="seta">›</span>
+        <div class="elo"><small>👤 Responsável</small><select data-prop="responsavel_id">${opc(gente(), r.responsavel_id, "Sem dono")}</select></div><span class="seta">›</span>
+        <div class="elo"><small>🤝 Co-responsável</small><select data-prop="co_responsavel_id">${opc(gente(), r.co_responsavel_id, "Ninguém")}</select></div></div>
+        <div class="cadeia-nota">${ger ? `Gerente da frente: <b>${esc(ger.nome)}</b>, acompanha e recebe no Mapa do setor.` : "Frente sem gerente no ALFY."}</div></div>
+      <div class="props ${pode ? "" : "so-leitura"}">
+        <div class="dado"><small>Prioridade</small><select data-prop="prioridade">${opc(PRIORIDADES, r.prioridade, "Sem prioridade")}</select></div>
+        <div class="dado"><small>Prazo ${pz.cls === "venc" ? '<span style="color:#FF9A9C">· vencida</span>' : pz.cls === "hoje" ? '<span style="color:var(--amber)">· hoje</span>' : ""}</small><input type="date" data-prop="prazo" value="${dia(r.prazo)}"></div>
+        <div class="dado"><small>Tipo</small><select data-prop="tipo">${opc(TIPOS, r.tipo, "Sem tipo")}</select></div>
+        <div class="dado"><small>Natureza</small><select data-prop="natureza">${opc(NATUREZAS, r.natureza, "Sem natureza")}</select></div>
+        <div class="dado"><small>Impacto</small><select data-prop="impacto">${opc(NIVEIS, r.impacto, "Sem")}</select></div>
+        <div class="dado"><small>Esforço</small><select data-prop="esforco">${opc(NIVEIS, r.esforco, "Sem")}</select></div>
+      </div>
+      <div class="budget ${pode ? "" : "so-leitura"}"><div><div class="rot">💰 Budget</div><input data-bud="1" value="${esc(r.budget_valor || "")}" placeholder="Valor ou estimativa"></div>
+        <div class="sts">${BUDGET_ST.map((x) => `<button type="button" data-budst="${x}" class="${x === "aprovado" ? "ok" : x === "recusado" ? "rec" : ""}" aria-pressed="${r.budget_status === x}" ${(x === "aprovado" || x === "recusado") && !comando() ? "disabled" : ""}>${x}</button>`).join("")}</div>
+        ${r.budget_por ? `<div class="por">${r.budget_status === "recusado" ? "Recusado" : "Aprovado"} por ${esc(nomeDe(r.budget_por))}${r.budget_em ? " em " + ddmm(r.budget_em) : ""}</div>` : ""}</div>
+      <div><p class="rotulo">Pautas e reuniões</p><div class="alvos" style="margin:0">${(r.pautas || []).map((id) => { const p = (M.pautas || []).find((x) => x.id === id); return p ? `<button class="chip" type="button" aria-pressed="true" data-irpauta="${id}">🗓️ ${esc(p.titulo)}</button>` : ""; }).join("")}${(r.reunioes || []).map((id) => { const x = reuniaoDe(id); return x ? `<button class="chip" type="button" aria-pressed="true" data-irreuniao="${id}">🗓️ ${esc(x.titulo)}</button>` : ""; }).join("")}
+        ${pode ? `<button class="chip" type="button" data-acao="pauta-da-rota">＋ Criar pauta</button>${reus.length ? `<select class="sel" data-levarreuniao="1" style="font-size:13px;padding:5px 8px"><option value="">＋ Levar para reunião</option>${reus.filter((x) => !(r.reunioes || []).includes(x.id)).map((x) => `<option value="${x.id}">${esc(x.titulo)} · ${quandoReuniao(x)}</option>`).join("")}</select>` : ""}` : ""}</div></div>
+      <div class="abas-folha" role="tablist">${abas.map(([k, n, c]) => `<button type="button" role="tab" data-afolha="${k}" aria-selected="${s.abaFolha === k}">${n}${c ? `<span class="n">${c}</span>` : ""}</button>`).join("")}</div>
+      ${corpo}
+      ${r.trello_url ? `<p class="nota" style="margin:4px 0 0">Espelho no Trello: <a href="${esc(r.trello_url)}" target="_blank" rel="noopener" style="color:var(--turq)">abrir cartão</a></p>` : ""}
+    </div></section></div>`;
+}
+function refolha() { const c = $("#corpo-folha"), y = c ? c.scrollTop : 0; folha(); const n = $("#corpo-folha"); if (n) n.scrollTop = y; }
+async function abrir(rt) {
+  s.aberta = rt; s.abaFolha = "ficha"; s.editando = null; s.rascunhoRota = "";
+  try { s.cartao = await chamar("alfy_cartao", { p_rt: rt }); if (!s.cartao) { aviso("Você não tem acesso a essa rota", true); return; } folha(); } catch (e) { falhou(e); }
+}
+async function recarregarCartao() { if (!s.aberta) return; const c = await chamar("alfy_cartao", { p_rt: s.aberta }); if (c) { s.cartao = c; s.aberta = c.rt; } }
+function fechar() { $("#camada").innerHTML = ""; s.aberta = null; s.cartao = null; s.editando = null; }
+
+// ---------------------------------------------------------------- formulários
+function novaRota(pre = {}) {
+  fechar();
+  const st = pre.status || (manda() ? "rota" : "ideia");
+  $("#camada").innerHTML = `<div class="veu" id="veu"><section class="folha" role="dialog" aria-modal="true" aria-label="Nova rota">
+    <div class="cab"><span class="tag nova"><small>ROTA</small><b>＋</b></span><h2>${st === "ideia" ? "Nova ideia" : "Nova rota"}</h2><button class="fechar" type="button" data-acao="fechar" aria-label="Fechar">${IC.x}</button></div>
+    <form class="corpo" id="f-nova">
+      <label><p class="rotulo">Título</p><input id="n-tit" class="busca" style="width:100%" value="${esc(pre.titulo || "")}" placeholder="Ex.: Trocar a contabilidade" required></label>
+      <label><p class="rotulo">🎯 O que fazer · é o texto que vai no Mapa de Rotas</p><textarea id="n-assist" class="busca" rows="3" style="width:100%" placeholder="Na sua voz, falando com quem faz.">${esc(pre.assist || "")}</textarea></label>
+      ${manda() ? `<div class="cadeia"><div class="elo"><small>🗺️ Frente</small><select id="n-frente">${opc(FRENTES.map((f) => [f, frenteCurta(f)]), pre.frente || (eu().frentes || [])[0] || "", "Sem frente")}</select></div><span class="seta">›</span>
+        <div class="elo"><small>👤 Responsável</small><select id="n-resp">${opc(gente(), pre.responsavel_id || eu().id)}</select></div><span class="seta">›</span>
+        <div class="elo"><small>🤝 Co-responsável</small><select id="n-co">${opc(gente(), "", "Ninguém")}</select></div></div>
+      <div class="props"><div class="dado"><small>Prioridade</small><select id="n-prio">${opc(PRIORIDADES, pre.prioridade || "⏳ P3 · 7 dias")}</select></div><div class="dado"><small>Prazo</small><input id="n-prazo" type="date" value="${esc(pre.prazo || "")}"></div><div class="dado"><small>Vai para</small><select id="n-st">${opc([["rota", "Rotas"], ["ideia", "Ideias"]], st)}</select></div></div>` : '<p class="nota" style="margin:0">Entra como ideia. Quem coordena a frente transforma em rota.</p>'}
+      <p class="nota" style="margin:0">Depois de salvar, a rota abre para você completar Instruções, Resultado esperado e Budget.</p>
+      <div><button class="cta" type="submit">Salvar</button></div></form></section></div>`;
+  setTimeout(() => $("#n-tit")?.focus(), 50);
+  $("#f-nova").addEventListener("submit", async (ev) => {
+    ev.preventDefault();
+    const v = (id) => $("#" + id)?.value || "";
+    const campos = { titulo: v("n-tit").trim(), assist: v("n-assist").trim(), frente: v("n-frente"), responsavel_id: v("n-resp"), co_responsavel_id: v("n-co"),
+      prioridade: v("n-prio"), prazo: v("n-prazo") ? v("n-prazo") + "T12:00:00-03:00" : "", status: v("n-st") || "ideia" };
+    try {
+      const c = await chamar("alfy_nova_rota", { p_campos: campos });
+      if (pre.depois) await pre.depois(c.rt);
+      await recarregar(); s.aba = "rotas"; render(); aviso("Salvo"); abrir(c.rt);
+    } catch (e) { falhou(e); }
   });
-  const topo = h("div", { class: "filtros" }, h("h2", { style: "margin:0;font-family:var(--font-display);font-size:18px" }, "Pautas de reunião"),
-    h("button", { class: "btn mais", type: "button", onclick: () => { form.hidden = !form.hidden; if (!form.hidden) tt.focus(); } }, "+ Nova pauta"));
-  const lista = h("div", { class: "pautas" });
-  const pautas = [...mapa.pautas].sort((a, b) => (a.status === "tratada") - (b.status === "tratada") || (a.data || "9").localeCompare(b.data || "9"));
-  if (!pautas.length) lista.append(h("div", { class: "vazio" }, "Nenhuma pauta ainda. Crie uma e ligue as rotas que vão ser discutidas, ou deixe só como assunto."));
-  for (const p of pautas) {
-    const rotas = p.rotas.map((rt) => mapa.rotas.find((r) => r.rt === rt) || { rt, titulo: "(fora do seu mapa)", status: "rota" });
-    const busca = h("input", { placeholder: "Ligar uma rota: digite o número ou o assunto", id: `lg-${p.id}` });
-    const sug = h("div", { class: "sugestoes" });
-    busca.addEventListener("input", () => {
-      const q = busca.value.trim().toLowerCase(); sug.replaceChildren();
-      if (q.length < 2) return;
-      mapa.rotas.filter((r) => !p.rotas.includes(r.rt) && `${r.rt} ${r.titulo}`.toLowerCase().includes(q)).slice(0, 6)
-        .forEach((r) => sug.append(h("button", { type: "button", onclick: () => acao("alfy_pauta_ligar", { p_pauta: p.id, p_rt: r.rt, p_ligar: true }, `${nomeRota(r.rt)} na pauta`) },
-          `${nomeRota(r.rt)} · ${r.titulo}`)));
-    });
-    lista.append(h("article", { class: "pauta" + (p.status === "tratada" ? " tratada" : "") },
-      h("div", { class: "pauta-cab" }, h("h3", {}, p.titulo),
-        h("span", { class: "quando" }, [p.reuniao, p.data && dataCurta(p.data + "T15:00:00Z")].filter(Boolean).join(" · ")),
-        h("button", { class: "btn", type: "button", onclick: () => acao("alfy_pauta_status", { p_pauta: p.id, p_status: p.status === "aberta" ? "tratada" : "aberta" },
-          p.status === "aberta" ? "Pauta tratada" : "Pauta reaberta") }, p.status === "aberta" ? "Marcar tratada" : "Reabrir")),
-      p.detalhe ? h("p", {}, p.detalhe) : null,
-      rotas.length ? h("ul", {}, rotas.map((r) => h("li", {}, bolinha(r.status),
-        h("button", { class: "lk", type: "button", onclick: () => abrirCartao(r.rt) }, h("span", { class: "rt" }, nomeRota(r.rt)), " ", r.titulo),
-        h("button", { class: "rapido", type: "button", style: "margin-left:auto", title: "Tirar da pauta",
-          onclick: () => acao("alfy_pauta_ligar", { p_pauta: p.id, p_rt: r.rt, p_ligar: false }, "Tirada da pauta") }, "×")))) :
-        h("p", { class: "meta" }, "Pauta sem rota ligada."),
-      p.status === "aberta" ? h("div", { class: "ligar" }, busca) : null, sug));
+}
+function formReuniao(re) {
+  fechar();
+  const q = re?.quando ? new Date(re.quando) : null;
+  const d0 = q ? q.toLocaleDateString("en-CA", { timeZone: FUSO }) : "", h0 = q ? q.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: FUSO }) : "";
+  const g = new Set(re?.gente || [eu().id]);
+  $("#camada").innerHTML = `<div class="veu" id="veu"><section class="folha" role="dialog" aria-modal="true" aria-label="Reunião">
+    <div class="cab"><span class="tag ideia"><small>REUNIÃO</small><b>🗓️</b></span><h2>${re ? "Editar reunião" : "Nova reunião"}</h2><button class="fechar" type="button" data-acao="fechar" aria-label="Fechar">${IC.x}</button></div>
+    <form class="corpo" id="f-reuniao">
+      <label><p class="rotulo">Título</p><input id="r-tit" class="busca" style="width:100%" value="${esc(re?.titulo || "")}" placeholder="Ex.: Reunião geral da VDB" required></label>
+      <div class="form-linha"><label><p class="rotulo">Dia</p><input id="r-dia" type="date" class="busca" style="width:100%" value="${d0}"></label><label><p class="rotulo">Hora</p><input id="r-hora" type="time" class="busca" style="width:100%" value="${h0}"></label></div>
+      <label><p class="rotulo">Onde</p><input id="r-onde" class="busca" style="width:100%" value="${esc(re?.onde || "")}" placeholder="House, VDB, online…"></label>
+      <div><p class="rotulo">Quem participa (só quem participa vê a reunião)</p><div class="gente-sel">${(M.pessoas || []).filter((p) => p.nome !== "ALFY").map((p) => `<label class="chip" style="cursor:pointer"><input type="checkbox" value="${p.id}" ${g.has(p.id) ? "checked" : ""} style="margin-right:6px">${esc(p.nome)}</label>`).join("")}</div></div>
+      <div><button class="cta" type="submit">Salvar</button></div></form></section></div>`;
+  $("#f-reuniao").addEventListener("submit", async (ev) => {
+    ev.preventDefault();
+    const dd = $("#r-dia").value, hh = $("#r-hora").value || "09:00";
+    const campos = { titulo: $("#r-tit").value.trim(), onde: $("#r-onde").value.trim(), quando: dd ? `${dd}T${hh}:00-03:00` : "",
+      gente: [...document.querySelectorAll("#f-reuniao input[type=checkbox]:checked")].map((x) => x.value) };
+    try { const r = await chamar("alfy_reuniao_salvar", { p_id: re?.id || null, p_campos: campos }); fechar(); await recarregar(); s.aba = "pautas"; s.pauta = null; s.reuniao = r.id; render(); aviso("Reunião salva"); } catch (e) { falhou(e); }
+  });
+}
+function formPauta(p, pre = {}) {
+  fechar();
+  $("#camada").innerHTML = `<div class="veu" id="veu"><section class="folha" role="dialog" aria-modal="true" aria-label="Pauta">
+    <div class="cab"><span class="tag ideia"><small>PAUTA</small><b>＋</b></span><h2>${p ? "Editar pauta" : "Nova pauta"}</h2><button class="fechar" type="button" data-acao="fechar" aria-label="Fechar">${IC.x}</button></div>
+    <form class="corpo" id="f-pauta">
+      <label><p class="rotulo">Assunto</p><input id="p-tit" class="busca" style="width:100%" value="${esc(p?.titulo || pre.titulo || "")}" placeholder="Ex.: Motor do Flex: 300 ou 350?" required></label>
+      <div class="form-linha"><label><p class="rotulo">Tipo</p><select id="p-tipo" class="busca" style="width:100%">${opc(Object.entries(PTIPO), p?.tipo || pre.tipo || "conversar")}</select></label>
+        <label><p class="rotulo">Reunião</p><select id="p-reu" class="busca" style="width:100%">${opc((M.reunioes || []).filter((x) => x.status !== "encerrada").map((x) => [String(x.id), x.titulo + " · " + quandoReuniao(x)]), String(p?.reuniao_id || pre.reuniao_id || ""), "Sem reunião ainda")}</select></label></div>
+      <label><p class="rotulo">Frente</p><select id="p-frente" class="busca" style="width:100%">${opc(FRENTES.map((f) => [f, frenteCurta(f)]), p?.frente || pre.frente || "", "Sem frente")}</select></label>
+      <label><p class="rotulo">Do que se trata</p><textarea id="p-det" class="busca" rows="4" style="width:100%" placeholder="O contexto, o que precisa ser decidido ou compartilhado.">${esc(p?.detalhe || pre.detalhe || "")}</textarea></label>
+      <div><button class="cta" type="submit">Salvar</button></div></form></section></div>`;
+  $("#f-pauta").addEventListener("submit", async (ev) => {
+    ev.preventDefault();
+    const campos = { titulo: $("#p-tit").value.trim(), tipo: $("#p-tipo").value, detalhe: $("#p-det").value.trim(), reuniao_id: $("#p-reu").value, frente: $("#p-frente").value, ...(pre.rt ? { rt: pre.rt } : {}) };
+    try { const r = await chamar("alfy_pauta_salvar", { p_id: p?.id || null, p_campos: campos }); fechar(); await recarregar(); s.aba = "pautas"; s.reuniao = null; await abrirPauta(r.id); aviso("Pauta salva"); if (pre.depois) pre.depois(r.id); } catch (e) { falhou(e); }
+  });
+}
+async function abrirPauta(id) { s.pauta = id; s.pautaDet = null; render(); try { s.pautaDet = await chamar("alfy_pauta", { p_id: id }); } catch (e) { falhou(e); } render(); scrollTo(0, 0); }
+
+// ---------------------------------------------------------------- desenhar
+function render() {
+  if (!M) return;
+  casca(); topo(); medidores();
+  const c = $("#conteudo");
+  c.innerHTML = { rotas: () => (s.vista === "lista" ? vistaLista() : vistaKanban()), feed: vistaFeed, pautas: vistaPautas, comandos: vistaComandos, eu: vistaEu }[s.aba]();
+  if (s.aba === "rotas" && s.vista === "kanban") ligarKanban();
+  try { localStorage.setItem("alfy-vista", JSON.stringify({ vista: s.vista, agrupar: s.agrupar })); } catch (_) { /* privado */ }
+}
+// não redesenha o que a pessoa está digitando: espera ela sair do campo
+function renderSeguro() {
+  const a = document.activeElement, dentro = a && $("#conteudo").contains(a) && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName) && a.id !== "busca";
+  if (dentro) { s.pendente = true; return; }
+  render();
+}
+async function recarregar() {
+  const m = await chamar("alfy_mapa");
+  if (!m) { sair(); return; }
+  M = m; versao = m.versao;
+  if (s.aba === "feed" || s.cmd === "bomdia" || !FEED) FEED = await chamar("alfy_feed", { p_limite: 150 }).catch(() => FEED);
+  // pedidos que terminaram: traz o resultado
+  for (const [escopo, pid] of Object.entries(s.esperando)) {
+    const q = (M.fila || []).find((x) => x.id === pid);
+    if (!q || q.status === "fila" || q.status === "rodando") continue;
+    delete s.esperando[escopo];
+    if (q.status === "erro") aviso("O robô não conseguiu: " + (q.erro || "erro").slice(0, 120), true);
+    if (escopo === "geral") s.chatGeral = await chamar("alfy_ia_conversa", { p_escopo: "geral" });
   }
-  alvo.replaceChildren(topo, form, lista);
+  const d = s.despejo;
+  if (d.pedido) {
+    const q = (M.fila || []).find((x) => x.id === d.pedido);
+    if (q && (q.status === "feito" || q.status === "erro")) {
+      const p = await chamar("alfy_pedido", { p_id: d.pedido });
+      d.pedido = null;
+      if (p.status === "erro") aviso("O despejo deu erro: " + (p.erro || "").slice(0, 120), true);
+      else { d.itens = p.resultado?.itens || []; d.feitos = {}; d.transcricao = (p.resultado?.transcricao || []).map((t) => t.texto).join(" "); d.anexos = []; d.texto = ""; const rs = p.resultado?.resumo || ""; aviso(rs.startsWith("sem separar") ? rs.replace("sem separar: ", "Não separei: ") : "O ALFY separou o despejo", rs.startsWith("sem separar")); }
+    }
+  }
+  if (s.aberta) { await recarregarCartao(); if (!ativoNaFolha()) refolha(); }
+  if (s.pauta) s.pautaDet = await chamar("alfy_pauta", { p_id: s.pauta }).catch(() => s.pautaDet);
+}
+const ativoNaFolha = () => { const a = document.activeElement; return a && $("#camada").contains(a) && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName); };
+
+// ---------------------------------------------------------------- ações
+async function mover(rt, st) {
+  const r = rotaDe(rt) || s.cartao; if (!r || r.status === st) return;
+  try { await chamar("alfy_mover", { p_rt: rt, p_status: st }); aviso(`${nomeRota(rt)} foi para ${ST[st].nome}`); await recarregar(); render(); } catch (e) { falhou(e); }
+}
+async function editar(campos, msg) {
+  try { s.cartao = await chamar("alfy_editar", { p_rt: s.aberta, p_campos: campos }); s.editando = null; aviso(msg || "Salvo"); refolha(); await recarregar(); render(); } catch (e) { falhou(e); }
+}
+async function pedir(tipo, escopo, dados, chave) {
+  try {
+    const r = await chamar("alfy_pedir", { p_tipo: tipo, p_escopo: escopo || null, p_dados: dados || {} });
+    if (chave) s.esperando[chave] = r.id;
+    await recarregar();
+    return r.id;
+  } catch (e) { falhou(e); return null; }
+}
+async function falarNaRota(texto) {
+  if (!texto.trim()) return;
+  s.rascunhoRota = ""; s.abaFolha = "alfy";
+  await pedir("ia", "rota:" + s.aberta, { texto }, "rota:" + s.aberta);
+  refolha(); const c = $("#corpo-folha"); if (c) c.scrollTop = c.scrollHeight;
+}
+function pessoaPorNome(n) {
+  if (!n) return null;
+  const a = n.toLowerCase().trim();
+  const exatos = (M.pessoas || []).filter((p) => p.nome.toLowerCase() === a);
+  if (exatos.length === 1) return exatos[0].id;
+  const inicio = (M.pessoas || []).filter((p) => p.nome.toLowerCase().startsWith(a) || a.startsWith(p.nome.toLowerCase()));
+  return inicio.length === 1 ? inicio[0].id : null;
 }
 
-// ---------------------------------------------------------------- como funciona (comando)
-function desenhaSistema() {
-  const svg = `<svg viewBox="0 0 980 300" xmlns="http://www.w3.org/2000/svg" font-family="Inter, sans-serif" role="img" aria-label="Fluxo do ALFY">
-  <defs><marker id="s" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#C79BFF"/></marker>
-    <marker id="s2" viewBox="0 0 10 10" refX="1" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M10 0L0 5L10 10z" fill="#C79BFF"/></marker></defs>
-  <g fill="#14062F" stroke="#3a2470">
-    <rect x="20" y="40" width="200" height="90" rx="14"/><rect x="20" y="170" width="200" height="90" rx="14"/>
-    <rect x="390" y="95" width="200" height="110" rx="14" stroke="#4ADE80"/>
-    <rect x="760" y="40" width="200" height="90" rx="14"/><rect x="760" y="170" width="200" height="90" rx="14"/></g>
-  <g fill="#EDE8FF" font-weight="700" font-size="16">
-    <text x="40" y="74">ALFY online</text><text x="40" y="204">Trello</text>
-    <text x="410" y="132">Banco do ALFY</text><text x="780" y="74">ALFY (Claude)</text><text x="780" y="204">WhatsApp</text></g>
-  <g fill="#B9A6E8" font-size="13">
-    <text x="40" y="96">ilhatech.io/alfy</text><text x="40" y="114">cada um no seu mapa</text>
-    <text x="40" y="226">espelho, durante a troca</text><text x="40" y="244">robô sincroniza</text>
-    <text x="410" y="154">Supabase · rotas, pautas,</text><text x="410" y="172">comentários e eventos</text><text x="410" y="190">guarda tudo, com histórico</text>
-    <text x="780" y="96">lê e escreve direto</text><text x="780" y="114">no banco, a qualquer hora</text>
-    <text x="780" y="226">retorno "RT-N + recado"</text><text x="780" y="244">vira comentário na rota</text></g>
-  <g stroke="#C79BFF" stroke-width="2" fill="none" marker-end="url(#s)">
-    <path d="M222 85 C300 85 310 130 386 135"/><path d="M386 165 C310 170 300 215 222 215" marker-start="url(#s2)"/>
-    <path d="M594 135 C680 130 690 85 756 85"/><path d="M756 215 C680 215 680 170 594 165"/></g>
-  <g fill="#8a7bbd" font-size="12"><text x="258" y="100">8 s</text><text x="250" y="212">10 min</text><text x="664" y="98">sempre</text><text x="664" y="210">na ronda</text></g>
-</svg>`;
-  const d = h("div", { class: "diagrama" }); d.innerHTML = svg; // SVG fixo, sem dado de ninguém
-  $("#vista-sistema").replaceChildren(h("div", { class: "sistema" },
-    h("div", { class: "caixa" }, h("h3", {}, "Onde as rotas ficam"), d,
-      h("p", {}, "O banco do ALFY é a fonte da verdade. Tudo o que alguém faz aqui (mover, comentar, criar ideia, ligar a uma pauta) grava na hora e vira um evento com nome, data e o antes e o depois. O ALFY lê esse banco direto, então o que acontece aqui e o que você fala no chat chegam no mesmo lugar.")),
-    h("div", { class: "caixa" }, h("h3", {}, "Quem vê o quê"),
-      h("ul", {}, h("li", {}, "Comando (você): todas as rotas, todas as pautas, e pode mudar qualquer propriedade."),
-        h("li", {}, "Gerente: as rotas inteiras das frentes dele e as que estão no nome dele. Edita propriedades e cria pautas."),
-        h("li", {}, "Tripulação: só as rotas no próprio nome. Move, comenta e lança ideia."))),
-    h("div", { class: "caixa" }, h("h3", {}, "Acesso"),
-      h("p", {}, "Cada pessoa tem um link pessoal com a chave dela. Quem abre o link entra no próprio mapa, sem senha. O link pode ser trocado a qualquer momento se vazar.")),
-    h("div", { class: "caixa" }, h("h3", {}, "Trello, durante a troca"),
-      h("p", {}, "O Trello continua funcionando como espelho: o robô leva para o cartão o que foi feito aqui e traz para cá o que mudou lá. Quando todo mundo estiver usando o ALFY online, o Trello pode ser desligado sem perder nada."))));
+// áudio: gravado ou anexado vira WAV 16 kHz mono no próprio aparelho (o robô transcreve com o Whisper do Mac)
+let gravador = null, pedacos = [];
+async function paraWav(blob) {
+  const ctx = new (window.AudioContext || window.webkitAudioContext)();
+  const buf = await ctx.decodeAudioData(await blob.arrayBuffer());
+  const off = new OfflineAudioContext(1, Math.ceil(buf.duration * 16000), 16000);
+  const src = off.createBufferSource(); src.buffer = buf; src.connect(off.destination); src.start();
+  const out = (await off.startRendering()).getChannelData(0);
+  ctx.close && ctx.close();
+  const dv = new DataView(new ArrayBuffer(44 + out.length * 2));
+  const w = (o, t) => [...t].forEach((c, i) => dv.setUint8(o + i, c.charCodeAt(0)));
+  w(0, "RIFF"); dv.setUint32(4, 36 + out.length * 2, true); w(8, "WAVE"); w(12, "fmt "); dv.setUint32(16, 16, true); dv.setUint16(20, 1, true); dv.setUint16(22, 1, true);
+  dv.setUint32(24, 16000, true); dv.setUint32(28, 32000, true); dv.setUint16(32, 2, true); dv.setUint16(34, 16, true); w(36, "data"); dv.setUint32(40, out.length * 2, true);
+  for (let i = 0; i < out.length; i++) dv.setInt16(44 + i * 2, Math.max(-1, Math.min(1, out[i])) * 0x7fff, true);
+  return new Blob([dv], { type: "audio/wav" });
+}
+async function base64(blob) {
+  const b = new Uint8Array(await blob.arrayBuffer()); let s2 = "";
+  for (let i = 0; i < b.length; i += 0x8000) s2 += String.fromCharCode.apply(null, b.subarray(i, i + 0x8000));
+  return btoa(s2);
+}
+async function subirAnexo(blob, nome, audio) {
+  const d = s.despejo, item = { nome, audio, id: null }; d.anexos.push(item); render();
+  try {
+    let arq = blob, tipo = blob.type || "application/octet-stream";
+    if (audio) { try { arq = await paraWav(blob); tipo = "audio/wav"; nome = nome.replace(/\.[^.]+$/, "") + ".wav"; } catch (_) { /* o Mac tenta converter */ } }
+    if (arq.size > 10 * 1024 * 1024) throw new Error("Arquivo grande demais (máximo 10 MB).");
+    const r = await chamar("alfy_anexar", { p_nome: nome, p_tipo: tipo, p_base64: await base64(arq) });
+    item.id = r.id; item.nome = nome;
+  } catch (e) { d.anexos = d.anexos.filter((x) => x !== item); falhou(e); }
+  render();
+}
+async function gravar() {
+  if (gravador) { gravador.stop(); return; }
+  try {
+    const st = await navigator.mediaDevices.getUserMedia({ audio: true });
+    gravador = new MediaRecorder(st); pedacos = [];
+    gravador.ondataavailable = (e) => pedacos.push(e.data);
+    gravador.onstop = () => { st.getTracks().forEach((t) => t.stop()); const blob = new Blob(pedacos, { type: gravador.mimeType || "audio/webm" }); gravador = null; s.gravando = false; subirAnexo(blob, `áudio ${new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}.webm`, true); };
+    gravador.start(); s.gravando = true; render();
+  } catch (_) { aviso("Não consegui usar o microfone. Libere o acesso nas configurações do navegador.", true); }
+}
+async function despejar() {
+  const d = s.despejo; d.texto = $("#desp-txt")?.value.trim() || d.texto;
+  if (!d.texto && !d.anexos.length) { aviso("Escreva, grave ou anexe alguma coisa"); return; }
+  if (d.anexos.some((a) => !a.id)) { aviso("Espere o anexo terminar de subir"); return; }
+  d.itens = null; d.feitos = {};
+  d.pedido = await pedir("despejo", null, { texto: d.texto, anexos: d.anexos.map((a) => a.id) });
+  render();
+}
+async function usarItemDespejo(i) {
+  const d = s.despejo, it = d.itens[i];
+  const prazo = it.prazo && /^\d{4}-\d{2}-\d{2}$/.test(it.prazo) ? it.prazo : "";
+  if (it.destino === "rota") { novaRota({ titulo: it.titulo, assist: it.o_que_fazer, responsavel_id: pessoaPorNome(it.responsavel) || eu().id, prazo, depois: async (rt) => { d.feitos[i] = "virou rota"; } }); return; }
+  try {
+    if (it.destino === "pauta") { await chamar("alfy_pauta_salvar", { p_id: null, p_campos: { titulo: it.titulo, tipo: "conversar" } }); d.feitos[i] = "virou pauta"; }
+    else if (it.destino === "lembrete") { await chamar("alfy_nova_rota", { p_campos: { titulo: it.titulo, frente: "🧍 Pessoal", responsavel_id: eu().id, prazo: prazo ? prazo + "T12:00:00-03:00" : "", prioridade: "⚡ P2 · 72h", status: "rota" } }); d.feitos[i] = "virou rota sua na frente Pessoal"; }
+    else d.feitos[i] = it.destino === "arquivo" ? "guardado" : "descartado";
+    await recarregar(); render();
+  } catch (e) { falhou(e); }
 }
 
-// ---------------------------------------------------------------- partida
-ligaCeu();
-// abriu outro link pessoal na mesma aba: entra como essa pessoa
-addEventListener("hashchange", () => { if (/k=[a-f0-9]{16,}/i.test(location.hash)) location.reload(); });
-(function partida() {
-  const m = location.hash.match(/k=([a-f0-9]{16,})/i);
-  if (m) { history.replaceState(null, "", location.pathname); entrar(m[1], true); return; }
-  const k = lerGuardado();
-  if (k) entrar(k, false);
+// ---------------------------------------------------------------- eventos
+document.addEventListener("click", async (e) => {
+  if (e.target.id === "veu") { fechar(); return; }
+  const x = e.target.closest("[data-tiraopcao],[data-tiraanexo]");
+  if (x) {
+    e.stopPropagation();
+    if (x.dataset.tiraanexo !== undefined) { s.despejo.anexos.splice(+x.dataset.tiraanexo, 1); render(); return; }
+    const p = s.pautaDet, ops = [...(p.opcoes || [])]; ops.splice(+x.dataset.tiraopcao, 1);
+    try { await chamar("alfy_pauta_salvar", { p_id: p.id, p_campos: { opcoes: ops, escolha: "" } }); await recarregar(); render(); } catch (er) { falhou(er); }
+    return;
+  }
+  const b = e.target.closest("button,[role=button]"); if (!b || b.disabled) return;
+  if (b.type === "submit") return;
+  const d = b.dataset;
+  try {
+    if (b.id === "eu-av-cel") { s.aba = "eu"; render(); return; }
+    if (d.aba) { s.aba = d.aba; s.pauta = null; s.reuniao = null; if (d.aba === "feed") FEED = await chamar("alfy_feed", { p_limite: 150 }); if (d.aba === "comandos" && s.cmd === "perguntar" && !s.chatGeral) s.chatGeral = await chamar("alfy_ia_conversa", { p_escopo: "geral" }); render(); scrollTo(0, 0); return; }
+    if (d.vista) { s.vista = d.vista; render(); return; }
+    if (d.st) { s.st = d.st; render(); return; }
+    if (d.ffeed) { s.fFeed = d.ffeed; render(); return; }
+    if (d.ligar) { const rt = d.lrt; s.buscaRota = ""; if (d.ligar === "reuniao") await chamar("alfy_reuniao_rota", { p_reuniao: s.reuniao, p_rt: rt, p_ligar: true }); else await chamar("alfy_pauta_ligar", { p_pauta: s.pauta, p_rt: rt, p_ligar: true }); await recarregar(); render(); aviso(nomeRota(rt) + " ligada"); return; }
+    if (d.rt && !d.acao) { abrir(d.rt); return; }
+    if (d.mover) { mover(s.aberta, d.mover); return; }
+    if (d.afolha) { s.abaFolha = d.afolha; s.editando = null; refolha(); if (d.afolha === "alfy") { const c = $("#corpo-folha"); c.scrollTop = c.scrollHeight; } return; }
+    if (d.editar) { s.editando = d.editar; refolha(); setTimeout(() => $("#ed-" + d.editar)?.focus(), 30); return; }
+    if (d.salvar) { editar({ [COLUNA[d.salvar]]: $("#ed-" + d.salvar).value.trim() }); return; }
+    if (d.cancelar) { s.editando = null; refolha(); return; }
+    if (d.iacampo) { const c = CAMPOS[d.iacampo], nome = c.rot.split(" ").slice(1).join(" "), atual = d.iacampo === "instr" ? instrDe(s.cartao) : s.cartao[COLUNA[d.iacampo]]; s.rascunhoRota = atual ? `Melhore o campo ${nome}: ` : `Escreva o campo ${nome} com o que já sabemos. `; s.abaFolha = "alfy"; refolha(); const c2 = $("#corpo-folha"); c2.scrollTop = c2.scrollHeight; const t = $("#t-chat-rota"); t.focus(); t.setSelectionRange(t.value.length, t.value.length); return; }
+    if (d.rap) { falarNaRota(d.rap); return; }
+    if (d.usar) { const m = (s.cartao.ia || []).find((y) => String(y.id) === d.usar); if (m) { s.abaFolha = "ficha"; editar({ [COLUNA[d.campo]]: m.texto }, "Colocado em " + CAMPOS[d.campo].rot.split(" ").slice(1).join(" ")); } return; }
+    if (d.copiarmsg) { const m = (s.cartao.ia || []).find((y) => String(y.id) === d.copiarmsg); if (m) copiar(m.texto); return; }
+    if (d.budst) { s.cartao = await chamar("alfy_budget", { p_rt: s.aberta, p_valor: $("[data-bud]")?.value || "", p_status: d.budst }); refolha(); await recarregar(); render(); return; }
+    if (d.irpauta) { const id = +d.irpauta; fechar(); s.aba = "pautas"; s.reuniao = null; abrirPauta(id); return; }
+    if (d.irreuniao) { fechar(); s.aba = "pautas"; s.pauta = null; s.reuniao = +d.irreuniao; render(); scrollTo(0, 0); return; }
+    if (d.cmd) { s.cmd = d.cmd; if (d.cmd === "perguntar" && !s.chatGeral) s.chatGeral = await chamar("alfy_ia_conversa", { p_escopo: "geral" }); if (d.cmd === "bomdia") FEED = await chamar("alfy_feed", { p_limite: 150 }); render(); if (matchMedia("(max-width:900px)").matches) setTimeout(() => $("#det-cmd")?.scrollIntoView({ behavior: "smooth" }), 30); return; }
+    if (d.alvo) { s.alvo = d.alvo; render(); return; }
+    if (d.col) { const k = $("#kanban"), w = k.querySelector(".coluna").offsetWidth + 10; k.scrollTo({ left: +d.col * w, behavior: "smooth" }); return; }
+    if (d.sug) {
+      const sg = (M.sugestoes || []).find((y) => String(y.id) === d.sug);
+      if (d.sugacao === "rota") { const [tit] = (sg.texto || "").split("\n"); novaRota({ titulo: tit, responsavel_id: pessoaPorNome(sg.quem) || eu().id, depois: async (rt) => { await chamar("alfy_sugestao", { p_id: sg.id, p_acao: "rota", p_rt: rt }); } }); return; }
+      await chamar("alfy_sugestao", { p_id: sg.id, p_acao: d.sugacao }); await recarregar(); render(); aviso(d.sugacao === "comentar" ? "Foi para a conversa da " + nomeRota(sg.rt) : "Descartado"); return;
+    }
+    if (d.desp) { usarItemDespejo(+d.desp); return; }
+    if (d.pvista) { s.pvista = d.pvista; render(); return; }
+    if (d.pauta) { s.reuniaoVolta = s.reuniao; s.reuniao = null; abrirPauta(+d.pauta); return; }
+    if (d.reuniao) { s.pauta = null; s.reuniao = +d.reuniao; render(); scrollTo(0, 0); return; }
+    if (d.rst) { await chamar("alfy_reuniao_salvar", { p_id: s.reuniao, p_campos: { status: d.rst } }); await recarregar(); render(); return; }
+    if (d.pst) { await chamar("alfy_pauta_salvar", { p_id: s.pauta, p_campos: { status: d.pst } }); await recarregar(); render(); return; }
+    if (d.opcao !== undefined) { const p = s.pautaDet; await chamar("alfy_pauta_salvar", { p_id: p.id, p_campos: { escolha: p.escolha === +d.opcao ? "" : String(+d.opcao) } }); await recarregar(); render(); return; }
+    if (d.levar !== undefined) { await chamar("alfy_pauta_salvar", { p_id: s.pauta, p_campos: { reuniao_id: d.levar === "0" ? "" : d.levar } }); await recarregar(); render(); aviso(d.levar === "0" ? "Tirada da reunião" : "Vai para a " + reuniaoDe(+d.levar)?.titulo); return; }
+    if (d.tmsg) { s.tipoMsg = d.tmsg; render(); setTimeout(() => $("#t-msg")?.focus(), 20); return; }
+    if (d.msgrota) { const m = s.pautaDet.conversa.find((y) => String(y.id) === d.msgrota), pid = s.pauta; novaRota({ titulo: m.texto.slice(0, 120), frente: s.pautaDet.frente, depois: async (rt) => { await chamar("alfy_pauta_msg_rota", { p_msg: m.id, p_rt: rt }); } }); return; }
+    if (d.iapauta) { const ch = "pauta:" + s.pauta; await pedir("ia", ch, { texto: d.iapauta }, ch); s.pautaDet = await chamar("alfy_pauta", { p_id: s.pauta }); render(); return; }
+    if (b.id === "f-venc") { s.venc = !s.venc; render(); return; }
+    if (b.id === "f-mais") { s.filtrosAbertos = !s.filtrosAbertos; render(); return; }
+    if (b.id === "fab" || d.acao === "nova") { novaRota(); return; }
+    const a = d.acao;
+    if (a === "fechar") { fechar(); return; }
+    if (a === "pautas-voltar") { const vinha = s.pauta ? s.reuniaoVolta : null; s.pauta = null; s.pautaDet = null; s.reuniao = vinha || null; s.reuniaoVolta = null; render(); scrollTo(0, 0); return; }
+    if (a === "nova-reuniao") { formReuniao(null); return; }
+    if (a === "editar-reuniao") { formReuniao(reuniaoDe(s.reuniao)); return; }
+    if (a === "nova-pauta") { formPauta(null); return; }
+    if (a === "nova-pauta-reuniao") { formPauta(null, { reuniao_id: s.reuniao }); return; }
+    if (a === "editar-pauta") { formPauta(s.pautaDet); return; }
+    if (a === "pauta-da-rota") { const r = s.cartao; formPauta(null, { titulo: r.titulo, frente: r.frente, detalhe: r.assist || "", rt: r.rt }); return; }
+    if (a === "nova-opcao") { abrirNovaOpcao(); return; }
+    if (a === "ata") { const ch = "ata:" + s.reuniao; await pedir("ata", "reuniao:" + s.reuniao, {}, ch); render(); return; }
+    if (a === "copiar-ata") { copiar(reuniaoDe(s.reuniao)?.ata || ""); return; }
+    if (a === "despejar") { despejar(); return; }
+    if (a === "gravar") { gravar(); return; }
+    if (a === "whatsapp" || a === "grupos") { await pedir("whatsapp", null, { horas: a === "whatsapp" ? 24 : 168 }); render(); aviso("Pedido na fila do robô"); return; }
+    if (a === "ronda" || a === "virada") { await pedir(a, null, {}); render(); aviso("Pedido na fila do robô"); return; }
+    if (a === "copiar-mapa") { const c = s.cmd, setor = FRENTES.includes(s.alvo); copiar((setor ? mapaSetor(s.alvo) : mapaPessoa(s.alvo, c === "cobrar")).txt); return; }
+    if (a === "sair") { sair(); return; }
+  } catch (er) { falhou(er); }
+});
+function abrirNovaOpcao() {
+  const alvo = document.querySelector('[data-acao="nova-opcao"]'); if (!alvo) return;
+  const f = document.createElement("form"); f.className = "linha-c"; f.style.cssText = "display:flex;gap:6px;width:100%;margin-top:6px";
+  f.innerHTML = `<input class="busca" id="t-opcao" placeholder="Escreva a opção" style="flex:1"><button class="btn turq peq" type="submit">Pôr</button>`;
+  alvo.replaceWith(f); $("#t-opcao").focus();
+  f.addEventListener("submit", async (ev) => { ev.preventDefault(); const t = $("#t-opcao").value.trim(); if (!t) return; const p = s.pautaDet; try { await chamar("alfy_pauta_salvar", { p_id: p.id, p_campos: { opcoes: [...(p.opcoes || []), t] } }); await recarregar(); render(); } catch (e) { falhou(e); } });
+}
+document.addEventListener("input", (e) => {
+  const t = e.target;
+  if (t.id === "busca") { s.busca = t.value; const pos = t.selectionStart; render(); const i = $("#busca"); i.focus(); i.setSelectionRange(pos, pos); }
+  if (t.id === "t-chat-rota") s.rascunhoRota = t.value;
+  if (t.id === "desp-txt") s.despejo.texto = t.value;
+  if (t.dataset.buscarota) { s.buscaRota = t.value; $("#res-busca-rota").innerHTML = resultadoBuscaRota(t.dataset.buscarota); }
+});
+document.addEventListener("change", async (e) => {
+  const t = e.target;
+  try {
+    if (t.id === "f-pessoa") { s.pessoa = t.value; render(); }
+    if (t.id === "f-frente") { s.frente = t.value; render(); }
+    if (t.id === "f-agrupar") { s.agrupar = t.value; render(); }
+    if (t.id === "desp-arq") { for (const f of [...t.files]) subirAnexo(f, f.name, f.type.startsWith("audio")); }
+    if (t.dataset.despdest) { s.despejo.itens[+t.dataset.despdest].destino = t.value; render(); }
+    if (t.dataset.prop && s.aberta) { const k = t.dataset.prop; editar({ [k]: k === "prazo" ? (t.value ? t.value + "T12:00:00-03:00" : "") : t.value }); }
+    if (t.dataset.bud && s.aberta) { s.cartao = await chamar("alfy_budget", { p_rt: s.aberta, p_valor: t.value, p_status: s.cartao.budget_status === "aprovado" || s.cartao.budget_status === "recusado" ? "aguardando aprovação" : s.cartao.budget_status === "sem custo" ? "a orçar" : s.cartao.budget_status }); refolha(); await recarregar(); render(); }
+    if (t.dataset.levarreuniao && t.value) { await chamar("alfy_reuniao_rota", { p_reuniao: +t.value, p_rt: s.aberta, p_ligar: true }); await recarregar(); await recarregarCartao(); refolha(); render(); aviso("Levada para a reunião"); }
+  } catch (er) { falhou(er); }
+});
+document.addEventListener("submit", async (e) => {
+  const f = e.target;
+  if (!["f-coment", "f-chat-rota", "f-msg", "f-chat", "form-entrada"].includes(f.id)) return;
+  e.preventDefault();
+  try {
+    if (f.id === "form-entrada") { entrar($("#codigo").value.trim()); return; }
+    if (f.id === "f-coment") { const t = $("#t-coment").value.trim(); if (!t) return; const tipo = e.submitter?.dataset.tipoc || "comentario"; s.cartao = await chamar("alfy_comentar", { p_rt: s.aberta, p_texto: t, p_tipo: tipo }); refolha(); aviso(tipo === "orientacao" ? "Orientação registrada" : "Comentário salvo"); await recarregar(); render(); }
+    if (f.id === "f-chat-rota") { falarNaRota($("#t-chat-rota").value); }
+    if (f.id === "f-msg") { const t = $("#t-msg").value.trim(); if (!t) return; s.pautaDet = await chamar("alfy_pauta_msg", { p_pauta: s.pauta, p_tipo: s.tipoMsg, p_texto: t }); await recarregar(); render(); setTimeout(() => $("#t-msg")?.focus(), 20); }
+    if (f.id === "f-chat") { const t = $("#t-chat").value.trim(); if (!t) return; await pedir("ia", "geral", { texto: t }, "geral"); s.chatGeral = await chamar("alfy_ia_conversa", { p_escopo: "geral" }); render(); setTimeout(() => $("#t-chat")?.focus(), 20); }
+  } catch (er) { falhou(er); }
+});
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && $("#veu")) fechar();
+  if (e.key === "Enter" && !e.shiftKey && e.target.id === "t-chat-rota") { e.preventDefault(); falarNaRota(e.target.value); }
+});
+document.addEventListener("focusout", () => { if (s.pendente) setTimeout(() => { if (!ativo()) { s.pendente = false; render(); } }, 150); });
+
+// ---------------------------------------------------------------- entrada e tempo real
+function sair() { guardar(null); token = null; M = null; location.hash = ""; location.reload(); }
+async function entrar(k) {
+  const erro = $("#erro-entrada");
+  if (!k) { erro.textContent = "Cole o seu código."; return; }
+  try {
+    token = k;
+    const m = await chamar("alfy_mapa");
+    if (!m) { erro.textContent = "Código não reconhecido. Confira o seu link pessoal."; token = null; return; }
+    guardar(k); M = m; versao = m.versao;
+    $("#tela-entrada").hidden = true; $("#tela-painel").hidden = false; $("#barra-baixo").hidden = false;
+    try { const g = JSON.parse(localStorage.getItem("alfy-vista") || "{}"); if (g.vista) s.vista = g.vista; if (g.agrupar) s.agrupar = g.agrupar; } catch (_) { /* privado */ }
+    render();
+    FEED = await chamar("alfy_feed", { p_limite: 150 }).catch(() => null);
+    vigiar();
+  } catch (e) { erro.textContent = e.message; token = null; }
+}
+let vigia = null;
+function vigiar() {
+  clearInterval(vigia);
+  const espera = () => (Object.keys(s.esperando).length || s.despejo.pedido || (M?.fila || []).some((q) => q.status === "fila" || q.status === "rodando") ? 3000 : 8000);
+  const passo = async () => {
+    if (document.hidden || !token) return agenda();
+    try {
+      const v = await chamar("alfy_versao");
+      if (v === null) { sair(); return; }
+      if (v !== versao) { await recarregar(); renderSeguro(); }
+    } catch (_) { /* sem rede: tenta de novo */ }
+    agenda();
+  };
+  const agenda = () => { vigia = setTimeout(passo, espera()); };
+  agenda();
+}
+document.addEventListener("visibilitychange", () => { if (!document.hidden && token) chamar("alfy_versao").then(async (v) => { if (v !== versao) { await recarregar(); renderSeguro(); } }).catch(() => {}); });
+let largAnt = innerWidth > 900;
+addEventListener("resize", () => { const l = innerWidth > 900; if (l !== largAnt) { largAnt = l; render(); } });
+addEventListener("hashchange", () => { const m = location.hash.match(/k=([0-9a-f]+)/); if (m) location.reload(); });
+
+(function inicio() {
+  const m = location.hash.match(/k=([0-9a-f]+)/);
+  if (m) { guardar(m[1]); history.replaceState(null, "", location.pathname); }
+  const k = (m && m[1]) || lerGuardado();
+  if (k) entrar(k).then(() => { if (!token) $("#tela-entrada").hidden = false; });
+  else $("#tela-entrada").hidden = false;
 })();
