@@ -1,4 +1,4 @@
-// ALFY · Mapa de Rotas · Ilha Tech · v2.4.2 · 04/11/2026 · Painel de Ferro · agenda e reuniões
+// ALFY · Mapa de Rotas · Ilha Tech · v2.5.0 · 04/11/2026 · Painel de Ferro · agenda e reuniões
 // Tudo passa pelas funções alfy_* do banco, sempre com a chave pessoal de quem está usando.
 // O banco decide o que cada pessoa vê; a tela só desenha o que voltou.
 // A IA e os comandos são pedidos numa fila (alfy.pedido) que o robô do Mac atende.
@@ -227,8 +227,22 @@ function metaLinha(r, semPessoa) {
   const pz = prazoInfo(r), b = r.budget_valor || r.budget_status !== "sem custo";
   return `<span class="meta2">${semPessoa ? "" : `<span>👤 ${esc(curto(nomeDe(r.responsavel_id)))}${r.co_responsavel_id ? " + " + esc(curto(nomeDe(r.co_responsavel_id))) : ""}</span>`}${r.repete ? `<span style="color:var(--turq)">🔁 ${{ diaria: "diária", semanal: "semanal", quinzenal: "quinzenal", mensal: "mensal" }[r.repete]}</span>` : ""}${r.prioridade ? `<span>${prioTxt(r.prioridade)}</span>` : ""}<span class="${pz.cls}">📅 ${pz.txt}</span>${r.natureza ? `<span>🧭 ${esc(semEmoji(r.natureza))}</span>` : ""}${r.tipo ? `<span>🏷️ ${esc(semEmoji(r.tipo))}</span>` : ""}${b && r.budget_status !== "sem custo" ? `<span class="bud ${r.budget_status === "aprovado" ? "ok" : ""}">💰 ${esc(r.budget_valor || "")} ${r.budget_status}</span>` : ""}${r.comentarios ? `<span style="color:var(--turq)">💬 ${r.comentarios}</span>` : ""}</span>`;
 }
+const podeMexer = (r) => manda() || r.responsavel_id === eu().id || r.co_responsavel_id === eu().id;
+function acoesLinha(r) {
+  if (!podeMexer(r)) return "";
+  const ab = ABERTOS.includes(r.status);
+  return `<span class="acoes-linha">${ab ? `<button class="ac ok" type="button" data-rapido="concluida" data-rrt="${r.rt}" title="Concluir">✓<span>Concluir</span></button>` : ""}${r.status === "rota" ? `<button class="ac" type="button" data-rapido="andamento" data-rrt="${r.rt}" title="Começar">▶<span>Começar</span></button>` : ""}<button class="ac ${s.linhaAberta === r.rt ? "on" : ""}" type="button" data-linhacaixa="${r.rt}" title="${comando() ? "Comentar ou pedir ao ALFY" : "Comentar"}">${comando() ? "🐙" : "💬"}<span>${comando() ? "ALFY" : "Comentar"}</span></button></span>`;
+}
+function caixaLinha(r) {
+  if (s.linhaAberta !== r.rt) return "";
+  const resp = s.respLinha?.[r.rt], rod = s.esperando["rota:" + r.rt];
+  return `<div class="caixa-linha"><form class="cl-form" data-clform="${r.rt}"><textarea class="busca" id="cl-${r.rt.replace(/\W/g, "")}" rows="2" placeholder="${comando() ? "Comente, ou peça ao ALFY: muda o dono para a Karol · P1 até sexta · faz a mensagem cobrando, sem pressionar · conclui" : "Escreva um retorno sobre esta rota"}">${esc(s.rascunhoLinha?.[r.rt] || "")}</textarea>
+    <span class="cl-bot"><button class="btn peq" type="submit" data-clmodo="comentar">💬 Comentar</button>${comando() ? '<button class="btn turq peq" type="submit" data-clmodo="alfy">🐙 Pedir ao ALFY</button>' : ""}</span></form>
+    ${rod ? '<div class="ia-saida pensando">🐙 o ALFY está fazendo… (alguns segundos)</div>' : ""}
+    ${resp ? `<div class="ia-saida">${esc(resp)}<div class="usar"><button class="mini" type="button" data-copiartxt="${r.rt}">Copiar</button><button class="mini" type="button" data-rt="${r.rt}">Abrir a rota</button></div></div>` : ""}</div>`;
+}
 function linha(r, semPessoa) {
-  return `<button type="button" class="linha2" data-rt="${r.rt}">${tag(r)}<span class="tt"><b>${esc(r.titulo)}</b>${r.assist && r.assist !== r.titulo ? `<span class="res">${esc(r.assist)}</span>` : ""}${metaLinha(r, semPessoa)}</span></button>`;
+  return `<div class="linha-wrap"><div role="button" tabindex="0" class="linha2" data-rt="${r.rt}">${tag(r)}<span class="tt"><b>${esc(r.titulo)}</b>${r.assist && r.assist !== r.titulo ? `<span class="res">${esc(r.assist)}</span>` : ""}${metaLinha(r, semPessoa)}</span>${acoesLinha(r)}</div>${caixaLinha(r)}</div>`;
 }
 function vistaLista() {
   let vs = filtradas();
@@ -952,6 +966,7 @@ async function recarregar() {
     delete s.esperando[escopo];
     if (q.status === "erro") aviso("O robô não conseguiu: " + (q.erro || "erro").slice(0, 120), true);
     if (escopo === "geral") s.chatGeral = await chamar("alfy_ia_conversa", { p_escopo: "geral" });
+    if (escopo.startsWith("rota:") && s.linhaAberta === escopo.slice(5)) { const conv = await chamar("alfy_ia_conversa", { p_escopo: escopo }); const ult = [...conv].reverse().find((m) => m.papel === "assistant"); if (ult) s.respLinha = { ...(s.respLinha || {}), [escopo.slice(5)]: ult.texto }; }
   }
   const d = s.despejo;
   if (d.pedido) {
@@ -992,7 +1007,7 @@ async function pedir(tipo, escopo, dados, chave) {
 async function falarNaRota(texto) {
   if (!texto.trim()) return;
   s.rascunhoRota = ""; s.abaFolha = "alfy";
-  await pedir("ia", "rota:" + s.aberta, { texto }, "rota:" + s.aberta);
+  await pedir("ia", "rota:" + s.aberta, { texto, agir: true }, "rota:" + s.aberta);
   refolha(); const c = $("#corpo-folha"); if (c) c.scrollTop = c.scrollHeight;
 }
 function pessoaPorNome(n) {
@@ -1107,6 +1122,9 @@ document.addEventListener("click", async (e) => {
     if (d.irreuniao) { fechar(); s.aba = "pautas"; s.pauta = null; s.reuniao = +d.irreuniao; render(); scrollTo(0, 0); return; }
     if (d.aprovar || d.recusar) { const id = +(d.aprovar || d.recusar), fr = $("#fa-frente-" + id)?.value; const r = await chamar("alfy_ficha_aprovar", { p_id: id, p_papel: $("#fa-papel-" + id)?.value || "colaborador", p_frentes: fr ? [fr] : [], p_nivel: $("#fa-nivel-" + id)?.value || "operacional", p_aprovar: !!d.aprovar }); s.aprovado = d.aprovar ? r : null; s.fichas = await chamar("alfy_fichas"); if (comando()) s.equipe = await chamar("alfy_equipe"); await recarregar(); render(); aviso(d.aprovar ? "Cadastrado na Nave ID e no ALFY" : "Ficha recusada"); return; }
     if (d.copiarmapa) { copiar(mapaPessoa(d.copiarmapa).txt); s.mapasCopiados = { ...(s.mapasCopiados || {}), [d.copiarmapa]: new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) }; render(); return; }
+    if (d.rapido) { const rt = d.rrt; await chamar("alfy_mover", { p_rt: rt, p_status: d.rapido }); aviso(d.rapido === "concluida" ? `✓ ${nomeRota(rt)} concluída` : `${nomeRota(rt)} em andamento`); await recarregar(); render(); return; }
+    if (d.linhacaixa) { s.linhaAberta = s.linhaAberta === d.linhacaixa ? null : d.linhacaixa; render(); setTimeout(() => $("#cl-" + d.linhacaixa.replace(/\W/g, ""))?.focus(), 30); return; }
+    if (d.copiartxt) { copiar(s.respLinha[d.copiartxt]); return; }
     if (d.convite) { const p = s.equipe.find((x) => x.id === d.convite); copiar(convite(p)); return; }
     if (d.cmd) { s.cmd = d.cmd; if (d.cmd === "equipe") s.equipe = await chamar("alfy_equipe"); if (d.cmd === "diario") s.diario = await chamar("alfy_diario", { p_dias: 3 }); if (d.cmd === "perguntar" && !s.chatGeral) s.chatGeral = await chamar("alfy_ia_conversa", { p_escopo: "geral" }); if (d.cmd === "bomdia") FEED = await chamar("alfy_feed", { p_limite: 150 }); render(); if (matchMedia("(max-width:900px)").matches) setTimeout(() => $("#det-cmd")?.scrollIntoView({ behavior: "smooth" }), 30); return; }
     if (d.alvo) { s.alvo = d.alvo; render(); return; }
@@ -1171,6 +1189,7 @@ document.addEventListener("input", (e) => {
   const t = e.target;
   if (t.id === "busca") { s.busca = t.value; const pos = t.selectionStart; render(); const i = $("#busca"); i.focus(); i.setSelectionRange(pos, pos); }
   if (t.id === "t-chat-rota") s.rascunhoRota = t.value;
+  if (t.closest && t.closest("[data-clform]")) { const rt = t.closest("[data-clform]").dataset.clform; s.rascunhoLinha = { ...(s.rascunhoLinha || {}), [rt]: t.value }; }
   if (t.id === "desp-txt") s.despejo.texto = t.value;
   if (t.dataset.buscarota) { s.buscaRota = t.value; $("#res-busca-rota").innerHTML = resultadoBuscaRota(t.dataset.buscarota); }
 });
@@ -1194,6 +1213,16 @@ document.addEventListener("change", async (e) => {
 });
 document.addEventListener("submit", async (e) => {
   const f = e.target;
+  if (f.dataset.clform) {
+    e.preventDefault();
+    const rt = f.dataset.clform, ta = f.querySelector("textarea"), t = ta.value.trim(), modo = e.submitter?.dataset.clmodo || "comentar";
+    if (!t) return;
+    try {
+      if (modo === "comentar") { await chamar("alfy_comentar", { p_rt: rt, p_texto: t, p_tipo: "comentario" }); s.rascunhoLinha = { ...(s.rascunhoLinha || {}), [rt]: "" }; aviso("Comentado na " + nomeRota(rt)); await recarregar(); render(); }
+      else { s.rascunhoLinha = { ...(s.rascunhoLinha || {}), [rt]: "" }; s.respLinha = { ...(s.respLinha || {}), [rt]: "" }; await pedir("ia", "rota:" + rt, { texto: t, agir: true }, "rota:" + rt); s.ultimaPerguntaLinha = rt; render(); }
+    } catch (er) { falhou(er); }
+    return;
+  }
   if (!["f-coment", "f-chat-rota", "f-msg", "f-chat", "form-entrada"].includes(f.id)) return;
   e.preventDefault();
   try {
@@ -1205,6 +1234,7 @@ document.addEventListener("submit", async (e) => {
   } catch (er) { falhou(er); }
 });
 document.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && e.target.classList?.contains("linha2")) { abrir(e.target.dataset.rt); return; }
   if (e.key === "Escape" && $("#veu")) fechar();
   if (e.key === "Enter" && !e.shiftKey && e.target.id === "t-chat-rota") { e.preventDefault(); falarNaRota(e.target.value); }
 });
