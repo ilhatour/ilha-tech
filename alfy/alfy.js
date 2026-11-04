@@ -1,4 +1,4 @@
-// ALFY · Mapa de Rotas · Ilha Tech · v2.10.2 · 04/11/2026 · Painel de Ferro · Passagem: o texto escrito vai junto ao passar
+// ALFY · Mapa de Rotas · Ilha Tech · v2.10.3 · 04/11/2026 · Painel de Ferro · Nova rota: o ALFY organiza o texto
 // Tudo passa pelas funções alfy_* do banco, sempre com a chave pessoal de quem está usando.
 // O banco decide o que cada pessoa vê; a tela só desenha o que voltou.
 // A IA e os comandos são pedidos numa fila (alfy.pedido) que o robô do Mac atende.
@@ -939,8 +939,9 @@ function novaRota(pre = {}) {
   $("#camada").innerHTML = `<div class="veu" id="veu"><section class="folha" role="dialog" aria-modal="true" aria-label="Nova rota">
     <div class="cab"><span class="tag nova"><small>ROTA</small><b>＋</b></span><h2>${st === "ideia" ? "Nova ideia" : "Nova rota"}</h2><button class="fechar" type="button" data-acao="fechar" aria-label="Fechar">${IC.x}</button></div>
     <form class="corpo" id="f-nova">
-      <label><p class="rotulo">Título</p><input id="n-tit" class="busca" style="width:100%" value="${esc(pre.titulo || "")}" placeholder="Ex.: Trocar a contabilidade" required></label>
-      <label><p class="rotulo">🎯 O que fazer · é o texto que vai no Mapa de Rotas</p><textarea id="n-assist" class="busca" rows="3" style="width:100%" placeholder="Na sua voz, falando com quem faz.">${esc(pre.assist || "")}</textarea></label>
+      <label><p class="rotulo">Título</p><input id="n-tit" class="busca" style="width:100%" value="${esc(pre.titulo || "")}" placeholder="Ex.: Trocar a contabilidade"></label>
+      <label><p class="rotulo">🎯 O que fazer · é o texto que vai no Mapa de Rotas</p><textarea id="n-assist" class="busca" rows="4" style="width:100%" placeholder="${comando() ? "Escreva do seu jeito, pode ser corrido: quem faz, o quê, até quando, contexto. O ALFY organiza." : "Na sua voz, falando com quem faz."}">${esc(pre.assist || "")}</textarea></label>
+      ${comando() ? `<label class="chip ia-org" style="cursor:pointer;align-self:flex-start;white-space:normal"><input type="checkbox" id="n-ia" ${pre.semIA ? "" : "checked"} style="margin-right:6px">🐙 O ALFY organiza: arruma o título e o O que fazer, preenche Instruções e Resultado e acerta dono, frente, prioridade e prazo pelo que você escreveu. Desmarque para salvar exatamente como está.</label>` : ""}
       <div class="form-linha"><label><p class="rotulo">🔁 Pontual ou recorrente?</p><select id="n-rep" class="busca" style="width:100%">${opc([["", "Pontual (uma vez só)"], ["diaria", "🔁 Diária"], ["semanal", "🔁 Semanal"], ["quinzenal", "🔁 Quinzenal"], ["mensal", "🔁 Mensal"]], pre.repete || "")}</select></label><div id="n-dias" hidden><p class="rotulo">Em quais dias</p><div class="dias-sem">${DIAS_SEM.map((n, i) => `<label><input type="checkbox" class="n-dia-sem" value="${i + 1}">${n}</label>`).join("")}</div></div></div>
       ${manda() ? `<div class="cadeia"><div class="elo"><small>🗺️ Frente</small><select id="n-frente">${opc(FRENTES.map((f) => [f, frenteCurta(f)]), pre.frente || (eu().frentes || [])[0] || "", "Sem frente")}</select></div><span class="seta">›</span>
         <div class="elo"><small>👤 Responsável</small><select id="n-resp">${opc(gente(), pre.responsavel_id || eu().id)}</select></div><span class="seta">›</span>
@@ -957,13 +958,19 @@ function novaRota(pre = {}) {
     const campos = { titulo: v("n-tit").trim(), assist: v("n-assist").trim(), frente: v("n-frente"), responsavel_id: v("n-resp"), co_responsavel_id: v("n-co"),
       prioridade: v("n-prio"), prazo: v("n-prazo") ? v("n-prazo") + "T12:00:00-03:00" : "", status: v("n-st") || "ideia", sensivel: !!$("#n-sens")?.checked,
       repete: v("n-rep"), repete_dias: [...document.querySelectorAll(".n-dia-sem:checked")].map((x) => x.value) };
+    const organizar = !!$("#n-ia")?.checked, tit0 = campos.titulo, txt0 = campos.assist;
+    if (!campos.titulo && !campos.assist) { aviso("Escreva o título ou o que fazer", true); return; }
+    if (!campos.titulo) campos.titulo = campos.assist.split("\n")[0].slice(0, 90);
     if (campos.repete && !campos.prazo) campos.prazo = hojeDia() + "T18:00:00-03:00";
     if ($("#n-comp")?.checked && v("n-dia")) Object.assign(campos, { inicio: `${v("n-dia")}T${v("n-hi") || "09:00"}:00-03:00`, fim: v("n-hf") ? `${v("n-dia")}T${v("n-hf")}:00-03:00` : "", onde: v("n-onde"), tipo: "📅 Compromisso", status: "rota", prioridade: campos.prioridade, frente: campos.frente || (comando() ? "🧍 Pessoal" : "") });
     try {
       const c = await chamar("alfy_nova_rota", { p_campos: campos });
       if (pre.depois) await pre.depois(c.rt);
       const voltar = s.aba === "agenda" ? "agenda" : "rotas";
-      await recarregar(); s.aba = voltar; if (voltar === "agenda") await carregarAgenda(); render(); aviso("Salvo"); abrir(c.rt);
+      if (organizar) {   // o ALFY reescreve e completa a rota a partir do texto como foi escrito
+        await pedir("ia", "rota:" + c.rt, { agir: true, texto: `Organize esta rota nova a partir do que eu escrevi. Título: «${tit0 || "(vazio)"}». Texto: «${txt0 || "(vazio)"}». Reescreva o título no formato "Pessoa: verbo + o quê", o O que fazer na minha voz falando com quem faz (1 ou 2 frases), e preencha Instruções e Resultado esperado só com o que o texto diz. Se o texto disser quem faz, junto com quem, frente, prioridade ou prazo, ajuste. Não invente nada.` }, "rota:" + c.rt);
+      }
+      await recarregar(); s.aba = voltar; if (voltar === "agenda") await carregarAgenda(); render(); aviso(organizar ? "Salvo. O ALFY está organizando a rota…" : "Salvo"); await abrir(c.rt); if (organizar) { s.abaFolha = "alfy"; refolha(); }
     } catch (e) { falhou(e); }
   });
 }
