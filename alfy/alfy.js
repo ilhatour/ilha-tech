@@ -1,4 +1,4 @@
-// ALFY · Mapa de Rotas · Ilha Tech · v2.4.1 · 04/11/2026 · Painel de Ferro · agenda e reuniões
+// ALFY · Mapa de Rotas · Ilha Tech · v2.4.2 · 04/11/2026 · Painel de Ferro · agenda e reuniões
 // Tudo passa pelas funções alfy_* do banco, sempre com a chave pessoal de quem está usando.
 // O banco decide o que cada pessoa vê; a tela só desenha o que voltou.
 // A IA e os comandos são pedidos numa fila (alfy.pedido) que o robô do Mac atende.
@@ -591,13 +591,20 @@ function detCmd(c) {
   if (c.k === "mapa" || c.k === "cobrar") {
     const pessoasAlvo = (M.pessoas || []).filter((p) => p.papel !== "comando" && p.nome !== "ALFY" && (M.rotas || []).some((r) => r.responsavel_id === p.id && mapeavel(r)));
     const setores = FRENTES.filter((f) => f !== "🧍 Pessoal" && (M.rotas || []).some((r) => r.frente === f && mapeavel(r)));
-    const modo = c.k === "cobrar" ? "pessoa" : s.mapaModo || "pessoa";
+    const modo = c.k === "cobrar" ? "pessoa" : s.mapaModo || "rapido";
     if (modo === "pessoa" && !pessoasAlvo.some((p) => p.id === s.alvo)) s.alvo = pessoasAlvo[0]?.id || null;
     if (modo === "setor" && !setores.includes(s.alvo)) s.alvo = setores[0] || null;
     s.grupo = (s.grupo || []).filter((id) => pessoasAlvo.some((p) => p.id === id));
+    if (modo === "rapido") {
+      const lista = pessoasAlvo.map((p) => { const rs = (M.rotas || []).filter((r) => mapeavel(r) && r.responsavel_id === p.id); return { p, n: rs.length, v: rs.filter(vencida).length }; }).sort((x, y) => y.v - x.v || y.n - x.n);
+      const env = s.mapasCopiados || {};
+      return `<div class="bloco">${h}<div class="alterna" role="group" style="margin-bottom:12px"><button type="button" data-mapamodo="rapido" aria-pressed="true">Todos</button><button type="button" data-mapamodo="pessoa" aria-pressed="false">Pessoa</button><button type="button" data-mapamodo="grupo" aria-pressed="false">Grupo</button><button type="button" data-mapamodo="setor" aria-pressed="false">Setor</button></div>
+        <p class="nota" style="margin:0 0 8px">Cada botão copia o Mapa de Rotas da pessoa, só com as rotas dela, no formato oficial. Cole no privado dela no WhatsApp.</p>
+        ${lista.map(({ p, n, v }) => `<div class="sugestao ${env[p.id] ? "feita" : ""}"><span class="avatar" style="width:30px;height:30px;font-size:12px">${ini(p.nome)}</span><div class="tx"><b>${esc(p.nome)}</b><small>${n} ${n === 1 ? "rota aberta" : "rotas abertas"}${v ? ` · <span style="color:#FF9A9C">${v} ${v === 1 ? "vencida" : "vencidas"}</span>` : ""}${env[p.id] ? " · copiado " + env[p.id] : ""}</small></div><button class="btn ${env[p.id] ? "" : "turq"} peq" type="button" data-copiarmapa="${p.id}">${env[p.id] ? "Copiar de novo" : "Copiar mapa"}</button></div>`).join("") || '<div class="vazio">Ninguém com rota aberta.</div>'}</div>`;
+    }
     const m = modo === "grupo" ? (s.grupo.length ? mapaGrupo(s.grupo) : { n: 0, txt: "Escolha as pessoas do grupo." }) : !s.alvo ? { n: 0, txt: "" } : modo === "setor" ? mapaSetor(s.alvo) : mapaPessoa(s.alvo, c.k === "cobrar");
     const chipsPessoa = (sel, attr) => pessoasAlvo.map((p) => `<button class="chip" type="button" ${attr}="${p.id}" aria-pressed="${sel(p.id)}">${esc(curto(p.nome))}${c.k === "cobrar" ? ` · ${(M.rotas || []).filter((r) => mapeavel(r) && r.responsavel_id === p.id && vencida(r)).length}` : ""}</button>`).join("");
-    return `<div class="bloco">${h}${c.k === "mapa" ? `<div class="alterna" role="group" style="margin-bottom:12px"><button type="button" data-mapamodo="pessoa" aria-pressed="${modo === "pessoa"}">Pessoa</button><button type="button" data-mapamodo="grupo" aria-pressed="${modo === "grupo"}">Grupo</button><button type="button" data-mapamodo="setor" aria-pressed="${modo === "setor"}">Setor</button></div>` : ""}
+    return `<div class="bloco">${h}${c.k === "mapa" ? `<div class="alterna" role="group" style="margin-bottom:12px"><button type="button" data-mapamodo="rapido" aria-pressed="${modo === "rapido"}">Todos</button><button type="button" data-mapamodo="pessoa" aria-pressed="${modo === "pessoa"}">Pessoa</button><button type="button" data-mapamodo="grupo" aria-pressed="${modo === "grupo"}">Grupo</button><button type="button" data-mapamodo="setor" aria-pressed="${modo === "setor"}">Setor</button></div>` : ""}
       ${modo === "pessoa" ? `<p class="rotulo">Só as rotas da pessoa</p><div class="alvos">${chipsPessoa((id) => s.alvo === id, "data-alvo")}</div>` : ""}
       ${modo === "grupo" ? `<p class="rotulo">Escolha quem entra (cada um com as rotas dele)</p><div class="alvos">${chipsPessoa((id) => s.grupo.includes(id), "data-grupo")}</div>` : ""}
       ${modo === "setor" ? `<p class="rotulo">Todas as rotas abertas da frente, por pessoa</p><div class="alvos">${setores.map((f) => `<button class="chip" type="button" data-alvo="${esc(f)}" aria-pressed="${s.alvo === f}">${esc(frenteCurta(f))}</button>`).join("")}</div>` : ""}
@@ -1099,6 +1106,7 @@ document.addEventListener("click", async (e) => {
     if (d.irpauta) { const id = +d.irpauta; fechar(); s.aba = "pautas"; s.reuniao = null; abrirPauta(id); return; }
     if (d.irreuniao) { fechar(); s.aba = "pautas"; s.pauta = null; s.reuniao = +d.irreuniao; render(); scrollTo(0, 0); return; }
     if (d.aprovar || d.recusar) { const id = +(d.aprovar || d.recusar), fr = $("#fa-frente-" + id)?.value; const r = await chamar("alfy_ficha_aprovar", { p_id: id, p_papel: $("#fa-papel-" + id)?.value || "colaborador", p_frentes: fr ? [fr] : [], p_nivel: $("#fa-nivel-" + id)?.value || "operacional", p_aprovar: !!d.aprovar }); s.aprovado = d.aprovar ? r : null; s.fichas = await chamar("alfy_fichas"); if (comando()) s.equipe = await chamar("alfy_equipe"); await recarregar(); render(); aviso(d.aprovar ? "Cadastrado na Nave ID e no ALFY" : "Ficha recusada"); return; }
+    if (d.copiarmapa) { copiar(mapaPessoa(d.copiarmapa).txt); s.mapasCopiados = { ...(s.mapasCopiados || {}), [d.copiarmapa]: new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) }; render(); return; }
     if (d.convite) { const p = s.equipe.find((x) => x.id === d.convite); copiar(convite(p)); return; }
     if (d.cmd) { s.cmd = d.cmd; if (d.cmd === "equipe") s.equipe = await chamar("alfy_equipe"); if (d.cmd === "diario") s.diario = await chamar("alfy_diario", { p_dias: 3 }); if (d.cmd === "perguntar" && !s.chatGeral) s.chatGeral = await chamar("alfy_ia_conversa", { p_escopo: "geral" }); if (d.cmd === "bomdia") FEED = await chamar("alfy_feed", { p_limite: 150 }); render(); if (matchMedia("(max-width:900px)").matches) setTimeout(() => $("#det-cmd")?.scrollIntoView({ behavior: "smooth" }), 30); return; }
     if (d.alvo) { s.alvo = d.alvo; render(); return; }
