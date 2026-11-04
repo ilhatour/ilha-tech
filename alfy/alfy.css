@@ -627,3 +627,14 @@ body{touch-action:manipulation}
 .prio-g h2 em{font-style:normal;font-size:13px;color:var(--verm);font-weight:600}
 .prio-g.prio-P1 > h2{color:#FF8A8D}
 .prio-g.prio-P2 > h2{color:var(--amber)}
+
+/* ---------- 2.9 · Nave ID na Equipe · Minha ordem ---------- */
+.nave-res{display:flex;flex-direction:column;gap:6px;margin-top:8px;max-height:420px;overflow-y:auto}
+.nave-res .sugestao{flex-wrap:wrap}
+.nave-form{flex:1 1 100%;align-items:end}
+.ordem-item{display:flex;gap:8px;align-items:stretch}
+.ordem-item > .linha-wrap{flex:1;min-width:0}
+.ordem-item .setas{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;flex:none}
+.ordem-item .setas b{font-family:var(--fd);font-size:13px;color:var(--aco)}
+.ordem-item .setas .ac{padding:5px 9px}
+.ordem-item .setas .ac:disabled{opacity:.3}

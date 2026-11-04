@@ -1,4 +1,4 @@
-// ALFY · Mapa de Rotas · Ilha Tech · v2.8.1 · 04/11/2026 · Painel de Ferro · 🧭 Rota a Rota · prioridade
+// ALFY · Mapa de Rotas · Ilha Tech · v2.9.0 · 04/11/2026 · Painel de Ferro · Nave ID na Equipe · Minha ordem
 // Tudo passa pelas funções alfy_* do banco, sempre com a chave pessoal de quem está usando.
 // O banco decide o que cada pessoa vê; a tela só desenha o que voltou.
 // A IA e os comandos são pedidos numa fila (alfy.pedido) que o robô do Mac atende.
@@ -194,7 +194,7 @@ function topo() {
     l1.innerHTML = `<h1>Rotas<small>${comando() ? "todas as frentes" : curto(eu().nome)}</small></h1>${alt}<span class="espaco"></span>${vivo}<button class="cta" type="button" data-acao="nova">＋ Nova rota</button>`;
     $("#alterna-cel").innerHTML = alt;
     fi.innerHTML = filtrosHTML(`<button class="chip alerta" type="button" id="f-venc" aria-pressed="${s.venc}">Só vencidas</button>` +
-      (s.vista === "lista" ? `<select class="sel" id="f-agrupar" aria-label="Agrupar">${opc([["prioridade", "Por prioridade"], ["frente", "Por frente e pessoa"], ["prazo", "Por prazo"]], s.agrupar)}</select>` : ""));
+      (s.vista === "lista" ? `<select class="sel" id="f-agrupar" aria-label="Agrupar">${opc([["prioridade", "Por prioridade"], ["minha", "Minha ordem"], ["frente", "Por frente e pessoa"], ["prazo", "Por prazo"]], s.agrupar)}</select>` : ""));
   } else if (s.aba === "feed") {
     l1.innerHTML = `<h1>Feed<small>últimas atualizações das rotas</small></h1><span class="espaco"></span>${vivo}`;
     $("#alterna-cel").innerHTML = "";
@@ -253,6 +253,11 @@ function vistaLista() {
   let vs = filtradas();
   vs = s.st === "abertas" ? vs.filter((r) => ABERTOS.includes(r.status)) : vs.filter((r) => r.status === s.st);
   if (!vs.length) return `<div class="vazio">Nenhuma rota aqui.${s.busca || s.pessoa || s.frente || s.venc ? " Limpe os filtros para ver mais." : ""}</div>`;
+  if (s.agrupar === "minha") {   // a ordem que a própria pessoa escolheu; o que ela ainda não ordenou entra no fim, por prioridade
+    const mi = minhaFila(vs);
+    if (!mi.length) return `<div class="vazio">Você não tem rota aberta com você.</div>`;
+    return `<section class="grupo"><h2>Minha ordem<span class="ct">${mi.length}</span><small class="nota" style="margin:0 0 0 8px;font-weight:500;letter-spacing:0;text-transform:none">use ↑ ↓ para pôr na ordem em que você vai fazer</small></h2><div class="lista">${mi.map((r, i) => `<div class="ordem-item"><span class="setas"><button type="button" class="ac" data-subir="${r.rt}" ${i ? "" : "disabled"} aria-label="Subir">↑</button><b>${i + 1}</b><button type="button" class="ac" data-descer="${r.rt}" ${i < mi.length - 1 ? "" : "disabled"} aria-label="Descer">↓</button></span>${linha(r)}</div>`).join("")}</div></section>`;
+  }
   if (s.agrupar === "prioridade") {   // o modelo da equipe: começa pelas mais urgentes
     const nomes = { P1: "🚨 P1 · fazer em 24h", P2: "⚡ P2 · em 72h", P3: "⏳ P3 · em 7 dias", P4: "💤 P4 · em 30 dias", P5: "⏸️ P5 · sem prazo", "": "Sem prioridade" };
     const porPrazo = (a, b) => (a.prazo || "9").localeCompare(b.prazo || "9") || a.rt.localeCompare(b.rt);
@@ -278,6 +283,17 @@ function vistaLista() {
       return `<div class="grupo-pessoa"><h3><span class="avatar">${ini(n)}</span>${ehMiguel(id) && !f.includes("Pessoal") ? "Comigo (Miguel)" : esc(n)}${ger && id === ger.id ? " <small>· gerente</small>" : ""}<small>· ${l.length}</small>${v ? `<em>· ${v} vencidas</em>` : ""}</h3><div class="lista">${l.map((r) => linha(r, true)).join("")}</div></div>`;
     }).join("")}</section>`;
   }).join("");
+}
+function minhaFila(vs) {
+  const meu = (vs || filtradas()).filter((r) => ABERTOS.includes(r.status) && (r.responsavel_id === eu().id || r.co_responsavel_id === eu().id));
+  const pos = new Map((M.minha_ordem || []).map((rt, i) => [rt, i]));
+  return meu.sort((a, b) => (pos.has(a.rt) ? pos.get(a.rt) : 1e6) - (pos.has(b.rt) ? pos.get(b.rt) : 1e6) || ordPrio(a, b));
+}
+async function moverOrdem(rt, passo) {
+  const l = minhaFila(M.rotas).map((r) => r.rt), i = l.indexOf(rt), j = i + passo;
+  if (i < 0 || j < 0 || j >= l.length) return;
+  [l[i], l[j]] = [l[j], l[i]]; M.minha_ordem = l; render();
+  try { M.minha_ordem = await chamar("alfy_minha_ordem", { p_rts: l }); } catch (e) { falhou(e); }
 }
 function cartaoK(r) {
   const pz = prazoInfo(r);
@@ -685,11 +701,35 @@ function equipeHTML(h) {
   const e = s.equipe;
   if (!e) return `<div class="bloco">${h}<div class="carregando">Carregando…</div></div>`;
   const papel = { comando: "Comando", gerente: "Gerente", colaborador: "Colaborador" };
-  return `<div class="bloco">${h}<p class="nota" style="margin:0 0 10px">O convite leva o link pessoal: quem tem o link entra. Mande só no privado de cada pessoa.</p>${e.filter((p) => p.papel !== "comando").map((p) => `<div class="sugestao"><div class="tx"><b>${esc(p.nome)}</b><small>${papel[p.papel]}${(p.frentes || []).length ? " · " + p.frentes.map(frenteCurta).join(", ") : ""} · ${p.rotas} rotas abertas · ${p.ultimo ? "usou " + quandoFoi(p.ultimo) : "ainda não usou"}${p.ativo ? "" : " · desligado"}</small></div>${p.ativo ? `<button class="btn turq peq" type="button" data-convite="${p.id}">Copiar convite</button>` : ""}</div>`).join("")}</div>`;
+  return `<div class="bloco">${h}<p class="nota" style="margin:0 0 10px">O convite leva o link pessoal: quem tem o link entra. Mande só no privado de cada pessoa.</p>${e.filter((p) => p.papel !== "comando").map((p) => `<div class="sugestao"><div class="tx"><b>${esc(p.nome)}</b><small>${p.nome_completo && p.nome_completo !== p.nome ? esc(p.nome_completo) + " · " : ""}${p.na_nave ? "" : "⚠️ sem Nave ID · "}${papel[p.papel]}${(p.frentes || []).length ? " · " + p.frentes.map(frenteCurta).join(", ") : ""} · ${p.rotas} rotas abertas · ${p.ultimo ? "usou " + quandoFoi(p.ultimo) : "ainda não usou"}${p.ativo ? "" : " · desligado"}</small></div>${p.ativo ? `<button class="btn turq peq" type="button" data-convite="${p.id}">Copiar convite</button>` : ""}</div>`).join("")}</div>`;
 }
 const LINK_FICHA = "https://ilhatech.io/alfy/ficha.html";
 const MSG_FICHA = `🐙 *Ficha de entrada · Grupo Ilha Tour*\n\nOi! Para te cadastrar nos nossos sistemas, preencha esta ficha (leva 2 minutos):\n\n${LINK_FICHA}\n\nDepois que a Gestão de Pessoas conferir, você recebe o seu acesso ao ALFY por aqui.`;
 const NIVEIS_NAVE = [["operacional", "Operacional"], ["tatico", "Tático"], ["gerente", "Gerente"], ["head", "Head"]];
+// pessoas vêm da Nave ID (fonte da verdade): buscar e trazer, ligar quem está sem par, ou cadastrar quem não está lá
+function naveHTML() {
+  const semNave = (M.pessoas || []).filter((p) => !p.na_nave && p.nome !== "ALFY");
+  const ligando = s.naveLigar ? pessoa(s.naveLigar) : null, res = s.naveRes;
+  const frs = opc(FRENTES.filter((x) => x !== "🧍 Pessoal").map((x) => [x, frenteCurta(x)]), "", "Nenhuma");
+  const papeis = opc([["colaborador", "Colaborador (vê as rotas dele)"], ["gerente", "Gerente (vê a frente)"]], "colaborador");
+  return `<div class="bloco"><h3>Pessoas da Nave ID</h3><p class="nota" style="margin:0 0 10px">A Nave ID é a fonte das pessoas: nome completo, WhatsApp e crachá vêm de lá. Busque quem já trabalha com a gente e traga para o ALFY.</p>
+    ${semNave.length ? `<p class="rotulo">No ALFY, mas sem cadastro na Nave ID · ${semNave.length}</p><div class="alvos" style="margin:0 0 12px">${semNave.map((p) => `<button class="chip" type="button" data-naveligar="${p.id}" aria-pressed="${s.naveLigar === p.id}">${esc(p.nome)}</button>`).join("")}</div>` : ""}
+    ${ligando ? `<div class="ia-painel" style="margin-bottom:10px"><div class="t">Ligando ${esc(ligando.nome)}: ache a pessoa na lista abaixo e toque em <b>É esta</b>. Se ela não estiver na Nave ID, <button class="mini ia" type="button" data-acao="nave-novo">cadastre aqui</button>.</div></div>` : ""}
+    <input class="busca" style="width:100%" id="nave-busca" placeholder="Buscar na Nave ID por nome ou função" value="${esc(s.naveBusca || "")}" autocomplete="off">
+    <div class="nave-res">${!res ? "" : res.length ? res.map((x) => `<div class="sugestao"><div class="tx"><b>${esc(x.nome)}</b><small>${esc(x.funcao || "sem função")}${x.tem_whatsapp ? " · WhatsApp ✓" : " · sem WhatsApp"}</small></div>
+      ${x.no_alfy ? `<span class="nota" style="margin:0">no ALFY como ${esc(x.no_alfy)}</span>` : ligando ? `<button class="btn turq peq" type="button" data-navetrazer="${x.colaborador_id}">É esta</button>`
+        : s.naveAbrir === x.colaborador_id ? `<div class="props nave-form"><div class="dado"><small>Chamar de</small><input id="nv-apelido" value="${esc(x.nome.split(" ")[0])}"></div><div class="dado"><small>Acesso</small><select id="nv-papel">${papeis}</select></div><div class="dado"><small>Frente (gerente)</small><select id="nv-frente">${frs}</select></div><button class="btn turq peq" type="button" data-navetrazer="${x.colaborador_id}">Trazer para o ALFY</button></div>`
+        : `<button class="btn peq" type="button" data-naveabrir="${x.colaborador_id}">＋ Trazer</button>`}</div>`).join("") : '<div class="vazio">Ninguém com esse nome na Nave ID.</div>'}</div>
+    ${s.naveNovo ? `<div class="campo" style="margin-top:10px"><p class="rotulo">Cadastrar na Nave ID e no ALFY</p><div class="props"><div class="dado"><small>Nome completo</small><input id="nn-nome" placeholder="Como está no documento"></div><div class="dado"><small>Chamar de</small><input id="nn-apelido" value="${esc(ligando?.nome || "")}"></div><div class="dado"><small>WhatsApp</small><input id="nn-zap" inputmode="tel" placeholder="(24) 99999-9999"></div><div class="dado"><small>Função</small><input id="nn-funcao"></div>
+      ${ligando ? "" : `<div class="dado"><small>Acesso</small><select id="nn-papel">${papeis}</select></div><div class="dado"><small>Frente (gerente)</small><select id="nn-frente">${frs}</select></div>`}</div>
+      <div style="display:flex;gap:8px;margin-top:8px"><button class="btn turq peq" type="button" data-acao="nave-salvar-novo">Cadastrar</button><button class="btn peq" type="button" data-acao="nave-cancelar">Cancelar</button></div></div>` : `<p class="nota">Não achou? <button class="mini" type="button" data-acao="nave-novo">Cadastrar pessoa nova</button> ou mande a ficha de entrada (abaixo).</p>`}
+    ${s.aprovado && s.aprovado.daNave ? `<div class="ia-painel" style="margin-top:10px"><div class="t">✅ ${esc(s.aprovado.nome)} está no ALFY</div><div class="zap"><div class="msg" style="max-width:none">${zap(convite({ nome: s.aprovado.nome, token: s.aprovado.token }))}</div></div><div><button class="btn turq" type="button" data-acao="copiar-aprovado">Copiar o convite</button></div></div>` : ""}</div>`;
+}
+async function naveBuscar(q) { s.naveBusca = q; try { s.naveRes = await chamar("alfy_nave_buscar", { p_q: q }); } catch (e) { falhou(e); } const el = document.querySelector(".nave-res"); if (el) { const pos = $("#nave-busca").selectionStart; render(); const i = $("#nave-busca"); i.focus(); i.setSelectionRange(pos, pos); } }
+async function naveDepois(r, msg) {
+  s.naveLigar = null; s.naveAbrir = null; s.naveNovo = false; s.aprovado = r.token ? { nome: r.nome, token: r.token, daNave: true } : null;
+  await recarregar(); if (comando()) s.equipe = await chamar("alfy_equipe"); s.naveRes = await chamar("alfy_nave_buscar", { p_q: s.naveBusca || "" }); render(); aviso(msg);
+}
 function vistaEquipe() {
   const f = s.fichas;
   const pend = (f || []).filter((x) => x.status === "pendente"), feitas = (f || []).filter((x) => x.status !== "pendente");
@@ -697,6 +737,7 @@ function vistaEquipe() {
     <div class="bloco"><h3>Ficha de entrada (link fixo e aberto)</h3><p style="margin:0 0 10px;color:var(--aco-2)">Mande este link para toda pessoa que entrar no grupo. Ela preenche nome, WhatsApp, CPF, nascimento e função. A ficha chega aqui para aprovar, e a aprovação cadastra a pessoa na Nave ID e no ALFY ao mesmo tempo.</p>
       <div class="zap"><div class="msg" style="max-width:none">${zap(MSG_FICHA)}</div></div>
       <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><button class="btn turq" type="button" data-acao="copiar-ficha">Copiar mensagem com o link</button><a class="btn" href="${LINK_FICHA}" target="_blank" rel="noopener" style="text-decoration:none">Ver a ficha</a></div></div>
+    ${naveHTML()}
     <div class="bloco"><h3>Fichas para aprovar <span class="ct">${pend.length}</span></h3>${!f ? '<div class="carregando">Carregando…</div>' : pend.map((x) => `<div class="campo" style="margin-bottom:10px"><div class="cab-campo"><b>${esc(x.nome_completo)}</b><span>${quandoFoi(x.criado_em)}</span></div>
         <p class="txt" style="font-size:14px">${esc(x.apelido ? "Chamar de " + x.apelido + " · " : "")}WhatsApp ${esc(x.whatsapp)}${x.email ? " · " + esc(x.email) : ""}${x.nascimento ? " · nasc. " + ddmm(x.nascimento + "T12:00:00-03:00") : ""}${x.tem_cpf ? " · CPF ✓" : " · sem CPF"}${x.funcao ? "<br>Função: " + esc(x.funcao) : ""}${x.empresa ? " · " + esc(x.empresa) : ""}${x.observacao ? "<br>" + esc(x.observacao) : ""}</p>
         <div class="props" style="margin-top:8px"><div class="dado"><small>Acesso no ALFY</small><select id="fa-papel-${x.id}">${opc([["colaborador", "Colaborador (vê as rotas dele)"], ["gerente", "Gerente (vê a frente)"]], "colaborador")}</select></div>
@@ -1236,7 +1277,7 @@ document.addEventListener("click", async (e) => {
   const d = b.dataset;
   try {
     if (b.id === "eu-av-cel") { s.aba = "eu"; render(); return; }
-    if (d.aba) { s.aba = d.aba; s.pauta = null; s.reuniao = null; if (d.aba === "agenda") { render(); await carregarAgenda(); } if (d.aba === "equipe") { s.aprovado = null; s.fichas = await chamar("alfy_fichas"); if (comando()) s.equipe = await chamar("alfy_equipe"); } if (d.aba === "feed") FEED = await chamar("alfy_feed", { p_limite: 150 }); if (d.aba === "comandos" && s.cmd === "perguntar" && !s.chatGeral) s.chatGeral = await chamar("alfy_ia_conversa", { p_escopo: "geral" }); render(); scrollTo(0, 0); return; }
+    if (d.aba) { s.aba = d.aba; s.pauta = null; s.reuniao = null; if (d.aba === "agenda") { render(); await carregarAgenda(); } if (d.aba === "equipe") { s.aprovado = null; s.naveRes = await chamar("alfy_nave_buscar", { p_q: s.naveBusca || "" }).catch(() => null); s.fichas = await chamar("alfy_fichas"); if (comando()) s.equipe = await chamar("alfy_equipe"); } if (d.aba === "feed") FEED = await chamar("alfy_feed", { p_limite: 150 }); if (d.aba === "comandos" && s.cmd === "perguntar" && !s.chatGeral) s.chatGeral = await chamar("alfy_ia_conversa", { p_escopo: "geral" }); render(); scrollTo(0, 0); return; }
     if (d.vista) { s.vista = d.vista; if (d.vista === "rar") await rrCarregar(); render(); return; }
     if (d.rrordem) { s.rr.ordem = d.rrordem; s.rr.foco = null; rrSalvar(); render(); return; }
     if (d.rrformato) { s.rr.formato = d.rrformato; rrSalvar(); render(); return; }
@@ -1251,6 +1292,7 @@ document.addEventListener("click", async (e) => {
     if (d.google !== undefined) { if (d.google) window.open(d.google, "_blank", "noopener"); else aviso("Compromisso do Google Agenda"); return; }
     if (d.atarota !== undefined) { const r = s.reuniaoDet.ata_json.rotas[+d.atarota], rid = s.reuniao; novaRota({ titulo: r.titulo, assist: r.o_que_fazer, responsavel_id: pessoaPorNome(r.responsavel) || eu().id, prazo: r.prazo || "", depois: async (rt) => { await chamar("alfy_reuniao_rota", { p_reuniao: rid, p_rt: rt, p_ligar: true }); } }); return; }
     if (d.st) { s.st = d.st; render(); return; }
+    if (d.subir || d.descer) { moverOrdem(d.subir || d.descer, d.subir ? -1 : 1); return; }
     if (d.prio) { s.prio = d.prio === "todas" ? "" : d.prio; if (s.prio && s.agrupar === "frente") s.agrupar = "prioridade"; render(); return; }
     if (d.ffeed) { s.fFeed = d.ffeed; render(); return; }
     if (d.ligar) { const rt = d.lrt; s.buscaRota = ""; if (d.ligar === "reuniao") await chamar("alfy_reuniao_rota", { p_reuniao: s.reuniao, p_rt: rt, p_ligar: true }); else await chamar("alfy_pauta_ligar", { p_pauta: s.pauta, p_rt: rt, p_ligar: true }); await recarregar(); render(); aviso(nomeRota(rt) + " ligada"); return; }
@@ -1267,6 +1309,9 @@ document.addEventListener("click", async (e) => {
     if (d.budst) { s.cartao = await chamar("alfy_budget", { p_rt: s.aberta, p_valor: $("[data-bud]")?.value || "", p_status: d.budst }); refolha(); await recarregar(); render(); return; }
     if (d.irpauta) { const id = +d.irpauta; fechar(); s.aba = "pautas"; s.reuniao = null; abrirPauta(id); return; }
     if (d.irreuniao) { fechar(); s.aba = "pautas"; s.pauta = null; s.reuniao = +d.irreuniao; render(); scrollTo(0, 0); return; }
+    if (d.naveligar) { s.naveLigar = s.naveLigar === d.naveligar ? null : d.naveligar; s.naveNovo = false; const n = pessoa(d.naveligar)?.nome || ""; if (s.naveLigar) await naveBuscar(n.split(" ")[0]); else render(); return; }
+    if (d.naveabrir) { s.naveAbrir = d.naveabrir; render(); return; }
+    if (d.navetrazer) { const fr = $("#nv-frente")?.value; const r = await chamar("alfy_nave_trazer", { p_colaborador: d.navetrazer, p_alfy: s.naveLigar || null, p_apelido: $("#nv-apelido")?.value || "", p_papel: $("#nv-papel")?.value || "colaborador", p_frentes: fr ? [fr] : null }); await naveDepois(s.naveLigar ? {} : r, s.naveLigar ? "Ligado à Nave ID" : `${r.nome} entrou no ALFY`); return; }
     if (d.aprovar || d.recusar) { const id = +(d.aprovar || d.recusar), fr = $("#fa-frente-" + id)?.value; const r = await chamar("alfy_ficha_aprovar", { p_id: id, p_papel: $("#fa-papel-" + id)?.value || "colaborador", p_frentes: fr ? [fr] : [], p_nivel: $("#fa-nivel-" + id)?.value || "operacional", p_aprovar: !!d.aprovar }); s.aprovado = d.aprovar ? r : null; s.fichas = await chamar("alfy_fichas"); if (comando()) s.equipe = await chamar("alfy_equipe"); await recarregar(); render(); aviso(d.aprovar ? "Cadastrado na Nave ID e no ALFY" : "Ficha recusada"); return; }
     if (d.copiarmapa) { copiar(mapaPessoa(d.copiarmapa).txt); s.mapasCopiados = { ...(s.mapasCopiados || {}), [d.copiarmapa]: new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) }; render(); return; }
     if (d.baixar) { aviso("Baixando…"); const x = await chamar("alfy_anexo_baixar", { p_id: +d.baixar }); const bin = atob(x.base64), u8 = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i); const url = URL.createObjectURL(new Blob([u8], { type: x.tipo || "application/octet-stream" })); const l = document.createElement("a"); l.href = url; l.download = x.nome; document.body.append(l); l.click(); l.remove(); setTimeout(() => URL.revokeObjectURL(url), 5000); return; }
@@ -1322,6 +1367,9 @@ document.addEventListener("click", async (e) => {
     if (a === "ronda") { await pedir(a, null, {}); render(); aviso("Pedido na fila do robô"); return; }
     if (a === "copiar-mapa") { const c = s.cmd, modo = c === "cobrar" ? "pessoa" : s.mapaModo || "pessoa"; copiar((modo === "grupo" ? mapaGrupo(s.grupo || []) : modo === "setor" ? mapaSetor(s.alvo) : mapaPessoa(s.alvo, c === "cobrar")).txt); return; }
     if (a === "sair") { sair(); return; }
+    if (a === "nave-novo") { s.naveNovo = true; render(); setTimeout(() => $("#nn-nome")?.focus(), 30); return; }
+    if (a === "nave-cancelar") { s.naveNovo = false; render(); return; }
+    if (a === "nave-salvar-novo") { const fr = $("#nn-frente")?.value, lig = s.naveLigar; const r = await chamar("alfy_pessoa_nova", { p_nome_completo: $("#nn-nome").value, p_apelido: $("#nn-apelido").value, p_whatsapp: $("#nn-zap").value, p_papel: $("#nn-papel")?.value || "colaborador", p_frentes: fr ? [fr] : null, p_funcao: $("#nn-funcao").value, p_alfy: lig || null }); await naveDepois(lig ? {} : r, lig ? "Cadastrado na Nave ID e ligado" : `${r.nome} cadastrado na Nave ID e no ALFY`); return; }
     if (a === "rr-passar") { await rrPassar(); return; }
     if (a === "rr-novfirst") { s.rr.novFirst = !s.rr.novFirst; s.rr.foco = null; rrSalvar(); render(); return; }
     if (a === "rr-voltar") { s.rr.depois = {}; rrSalvar(); render(); return; }
@@ -1350,6 +1398,7 @@ function abrirNovaOpcao() {
 }
 document.addEventListener("input", (e) => {
   const t = e.target;
+  if (t.id === "nave-busca") { clearTimeout(naveBuscar.t); const q = t.value; naveBuscar.t = setTimeout(() => naveBuscar(q), 250); return; }
   if (t.id === "busca") { s.busca = t.value; const pos = t.selectionStart; render(); const i = $("#busca"); i.focus(); i.setSelectionRange(pos, pos); }
   if (t.id === "t-chat-rota") s.rascunhoRota = t.value;
   if (t.closest && t.closest("[data-clform]")) { const rt = t.closest("[data-clform]").dataset.clform; s.rascunhoLinha = { ...(s.rascunhoLinha || {}), [rt]: t.value }; }
