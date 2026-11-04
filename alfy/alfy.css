@@ -444,3 +444,12 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 .estado-fila{font-size:13px;color:var(--amber);margin:8px 0 0}
 .folha .corpo label{display:block}
 @media (max-width:900px){.form-linha{grid-template-columns:1fr}}
+/* 2.1 */
+.budget{grid-template-columns:1fr}
+.budget .sts{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
+.budget .sts::-webkit-scrollbar{display:none}
+.budget .sts button{white-space:nowrap;flex:none}
+.pulso{display:flex;flex-wrap:wrap;gap:8px 18px;margin-bottom:14px;font-size:13px;color:var(--aco-2);background:var(--ferro-1);border:1px solid var(--linha);border-radius:12px;padding:10px 14px}
+.pulso span{display:inline-flex;align-items:center;gap:7px}
+.pulso i{width:8px;height:8px;border-radius:50%;flex:none}
+.tag .cadeado{position:absolute;top:-7px;left:-6px;font-size:12px}

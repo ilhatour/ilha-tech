@@ -1,4 +1,4 @@
-// ALFY · Mapa de Rotas · Ilha Tech · v2.0.0 · 04/11/2026 · Painel de Ferro
+// ALFY · Mapa de Rotas · Ilha Tech · v2.1.0 · 04/11/2026 · Painel de Ferro · sem Trello
 // Tudo passa pelas funções alfy_* do banco, sempre com a chave pessoal de quem está usando.
 // O banco decide o que cada pessoa vê; a tela só desenha o que voltou.
 // A IA e os comandos são pedidos numa fila (alfy.pedido) que o robô do Mac atende.
@@ -217,7 +217,7 @@ function medidores() {
 // ---------------------------------------------------------------- rotas
 function tag(r) {
   if (ehNova(r)) return `<span class="tag nova"><i class="dot" style="background:${ST[r.status].cor}"></i><small>ROTA</small><b>NOVA</b></span>`;
-  return `<span class="tag ${r.status === "ideia" ? "ideia" : ""}"><i class="dot" style="background:${ST[r.status].cor}"></i><small>${r.rt.startsWith("IDEIA-") ? "IDEIA" : "ROTA"}</small><b>${num(r.rt)}</b></span>`;
+  return `<span class="tag ${r.status === "ideia" ? "ideia" : ""}" ${r.sensivel ? 'title="Só o Miguel vê"' : ""}>${r.sensivel ? '<span class="cadeado">🔒</span>' : ""}<i class="dot" style="background:${ST[r.status].cor}"></i><small>${r.rt.startsWith("IDEIA-") ? "IDEIA" : "ROTA"}</small><b>${num(r.rt)}</b></span>`;
 }
 const semEmoji = (t) => (t || "").replace(/^\S+\s/, "");
 function metaLinha(r, semPessoa) {
@@ -363,7 +363,7 @@ function pautaDet() {
     <div class="bloco"><h3>Do que se trata</h3><p style="margin:0;font-size:15px;line-height:1.55;white-space:pre-wrap">${esc(p.detalhe || "Sem descrição.")}</p>
       ${ops.length || pode ? `<p class="rotulo" style="margin-top:14px">Opções na mesa</p><div class="alvos">${ops.map((o, i) => `<button class="chip" type="button" data-opcao="${i}" aria-pressed="${p.escolha === i}">${esc(o)}${pode ? `<span class="opcao-x" data-tiraopcao="${i}" role="button" aria-label="Tirar opção">✕</span>` : ""}</button>`).join("")}${pode ? '<button class="chip" type="button" data-acao="nova-opcao">＋ opção</button>' : ""}</div>` : ""}
       ${p.decisao ? `<div class="campo" style="margin-top:10px;border-color:#2A5A47"><div class="cab-campo"><b style="color:var(--foam)">✅ Decisão</b></div><p class="txt">${esc(p.decisao)}</p></div>` : ""}</div>
-    <div class="bloco"><h3>Reunião</h3><div class="alvos" style="margin:0">${(M.reunioes || []).filter((x) => x.status !== "encerrada").map((x) => `<button class="chip" type="button" data-levar="${x.id}" aria-pressed="${p.reuniao_id === x.id}" ${pode ? "" : "disabled"}>${esc(x.titulo)} · ${quandoReuniao(x)}</button>`).join("")}<button class="chip" type="button" data-levar="0" aria-pressed="${!p.reuniao_id}" ${pode ? "" : "disabled"}>Sem reunião</button></div></div>
+    <div class="bloco"><h3>Em qual reunião vai ser tratada</h3>${(M.reunioes || []).filter((x) => x.status !== "encerrada").length ? `<div class="alvos" style="margin:0">${(M.reunioes || []).filter((x) => x.status !== "encerrada").map((x) => `<button class="chip" type="button" data-levar="${p.reuniao_id === x.id ? 0 : x.id}" aria-pressed="${p.reuniao_id === x.id}" ${pode ? "" : "disabled"}>🗓️ ${esc(x.titulo)} · ${quandoReuniao(x)}</button>`).join("")}</div><p class="nota">Toque numa reunião para levar esta pauta para ela; toque de novo para tirar.</p>` : `<p style="margin:0 0 8px;color:var(--aco-2)">Nenhuma reunião marcada ainda.</p>`}${pode ? '<button class="btn peq" type="button" data-acao="nova-reuniao" style="margin-top:8px">＋ Marcar reunião</button>' : ""}</div>
     <div class="bloco"><h3>Rotas ligadas <span class="ct">${p.rotas.length}</span></h3><div class="lista">${p.rotas.map(rotaDe).filter(Boolean).map((r) => linha(r)).join("") || '<div class="vazio">Nenhuma rota. Pauta não precisa ter rota.</div>'}</div>${pode ? buscaRotaHTML("pauta") : ""}</div>
     <div class="bloco"><h3>Discussão <span class="ct">${p.conversa.length}</span></h3>
       <div>${p.conversa.map((m) => `<div class="topico"><span class="tk ${m.tipo === "partilha" ? "comentario" : m.tipo}">${MSG_TIPO[m.tipo]}</span><div class="c"><p style="white-space:pre-wrap">${esc(m.texto)}</p><small>${esc(curto(m.quem))} · ${quandoFoi(m.em)}${m.rt_gerada ? ` · virou <b>${esc(nomeRota(m.rt_gerada))}</b>` : ""}</small></div>${pode && !m.rt_gerada && m.tipo !== "comentario" ? `<button class="btn peq" type="button" data-msgrota="${m.id}">Virar rota</button>` : ""}</div>`).join("") || '<div class="vazio">Comece a discussão</div>'}</div>
@@ -394,15 +394,24 @@ function mapaPessoa(id, soVencidas) {
   const p = pessoa(id);
   let minhas = (M.rotas || []).filter((r) => mapeavel(r) && r.responsavel_id === id).sort(ordPrio);
   if (soVencidas) minhas = minhas.filter(vencida);
-  // gerente recebe também o que está com o time dele nas frentes que chefia (fora o Miguel)
-  let time = [];
-  if (!soVencidas && p?.papel === "gerente") time = (M.rotas || []).filter((r) => mapeavel(r) && (p.frentes || []).includes(r.frente) && r.responsavel_id && r.responsavel_id !== id && pessoa(r.responsavel_id)?.papel !== "comando").sort(ordPrio);
+  // 04/11 (Miguel): o mapa da pessoa traz só as rotas dela; o que é da equipe vai pelo mapa do grupo ou do setor
+  const time = [];
   const l = ["🗺️ *Mapa de Rotas*", "", `👤 *${p?.nome || ""}*`, `📅 ${dataHoje()} · ${contagem(minhas)}`, "", soVencidas ? "*SUAS ROTAS VENCIDAS:*" : "*SUAS ROTAS:*", ""];
   minhas.forEach((r) => l.push(blocoMapa(r), ""));
   if (!minhas.length) l.push(soVencidas ? "Nenhuma rota vencida com você agora." : "Nenhuma rota aberta com você agora.", "");
   if (time.length) { l.push("*DA SUA EQUIPE (para acompanhar e cobrar):*", ""); time.forEach((r) => l.push(blocoMapa(r, curto(nomeDe(r.responsavel_id))), "")); }
   l.push(LEGENDA(num((minhas[0] || time[0] || { rt: "RT-374" }).rt)));
   return { n: minhas.length + time.length, txt: l.join("\n") };
+}
+function mapaGrupo(ids) {
+  const rotas = (M.rotas || []).filter((r) => mapeavel(r) && ids.includes(r.responsavel_id));
+  const nomes = ids.map((id) => curto(nomeDe(id)));
+  const titulo = nomes.length > 1 ? nomes.slice(0, -1).join(", ") + " e " + nomes[nomes.length - 1] : nomes[0] || "";
+  const l = ["🗺️ *Mapa de Rotas*", "", `👥 *${titulo}*`, `📅 ${dataHoje()} · ${contagem(rotas)}`, ""];
+  ids.forEach((id) => { const rs = rotas.filter((r) => r.responsavel_id === id).sort(ordPrio); if (!rs.length) return; l.push(`👤 *${nomeDe(id)}*`, ""); rs.forEach((r) => l.push(blocoMapa(r), "")); });
+  if (!rotas.length) l.push("Nenhuma rota aberta com essas pessoas agora.", "");
+  l.push(LEGENDA(num((rotas[0] || { rt: "RT-374" }).rt)));
+  return { n: rotas.length, txt: l.join("\n") };
 }
 function mapaSetor(frente) {
   const rotas = (M.rotas || []).filter((r) => mapeavel(r) && r.frente === frente);
@@ -424,12 +433,12 @@ const CMDS = [
   { g: "Despejar", k: "despejo", n: "Despejo", faz: "Joga aqui o que vier na cabeça: texto, áudio gravado na hora, áudio ou arquivo. O ALFY separa em rota, pauta, arquivo ou lembrete.", quando: "quando você quiser", onde: "mac" },
   { g: "Ler", k: "whatsapp", n: "Ler o WhatsApp", faz: "Lê suas conversas das últimas 24 horas: quem respondeu rota (citou o número) e o que pode virar rota nova.", quando: "quando você pedir", onde: "mac" },
   { g: "Ler", k: "grupos", n: "Atualizar os grupos", faz: "A mesma leitura, olhando os últimos 7 dias de todas as conversas e grupos de trabalho.", quando: "quando você pedir", onde: "mac" },
-  { g: "Ler", k: "email", n: "Ler o e-mail", faz: "Lê a caixa miguel@ilha.tours e faz o mesmo que com o WhatsApp.", quando: "falta autorizar", onde: "nuvem" },
+  { g: "Ler", k: "email", n: "Ler o e-mail", faz: "Lê a caixa miguel@ilha.tours e faz o mesmo que com o WhatsApp: retorno de rota e o que pode virar rota.", quando: "a cada 15 min", onde: "mac" },
   { g: "Mandar", k: "mapa", n: "Lançar o Mapa de Rotas", faz: "A mensagem oficial do Mapa de Rotas de uma pessoa ou de um setor, pronta para colar no WhatsApp.", quando: "na hora", onde: "nuvem" },
   { g: "Mandar", k: "cobrar", n: "Cobrar as vencidas", faz: "Uma mensagem por pessoa só com as rotas vencidas dela.", quando: "na hora", onde: "nuvem" },
   { g: "Mandar", k: "bomdia", n: "Bom dia do Miguel", faz: "O seu dia numa tela: reuniões, o que vence hoje, o que venceu e quem respondeu.", quando: "na hora", onde: "nuvem" },
-  { g: "Organizar", k: "ronda", n: "Fazer a ronda agora", faz: "Roda o robô do Comando: prazos, pessoa e frente nos cartões, devoluções e espelhos nos quadros das frentes.", quando: "8h, 11h, 14h, 17h e 20h", onde: "mac" },
-  { g: "Organizar", k: "virada", n: "Virada da semana", faz: "Fecha a semana no Comando: arquiva o concluído e passa o que ficou para a semana seguinte.", quando: "domingo 12h", onde: "mac" },
+  { g: "Organizar", k: "ronda", n: "Fazer a ronda agora", faz: "Dá prazo para rota com prioridade e sem data, lê o WhatsApp das últimas 24 h e os e-mails novos.", quando: "8h, 11h, 14h, 17h e 20h", onde: "mac" },
+  { g: "Organizar", k: "diario", n: "Relatórios do ALFY", faz: "O Bom dia, o Relatório do dia e o 📡 Grupos hoje que as rotinas do ALFY escrevem.", quando: "8h (Bom dia) e de hora em hora", onde: "mac" },
   { g: "Pensar", k: "perguntar", n: "Perguntar ao ALFY", faz: "Pergunte qualquer coisa sobre as rotas e as pautas. O ALFY responde com os dados do painel.", quando: "quando você pedir", onde: "mac" },
 ];
 const filaRodando = (tipo, escopo) => (M.fila || []).find((q) => q.tipo === tipo && (escopo === undefined || q.escopo === escopo) && (q.status === "fila" || q.status === "rodando"));
@@ -443,7 +452,58 @@ function vistaComandos() {
   if (!comando()) return `<div class="vazio">Por enquanto os comandos são só do Miguel.</div>`;
   const c = CMDS.find((x) => x.k === s.cmd);
   const grupos = ["Despejar", "Ler", "Mandar", "Organizar", "Pensar"].map((g) => `<section class="cmd-grupo"><h2>${g}</h2><div class="cmd-grade">${CMDS.filter((x) => x.g === g).map((x) => `<button type="button" class="placa rebites comando2" data-cmd="${x.k}" aria-pressed="${s.cmd === x.k}"><span class="l1"><span class="ic">${IC[x.k]}</span><b>${x.n}</b></span><span class="faz">${x.faz}</span><span class="onde"><span class="selo">⏱ ${x.quando}</span><span class="selo ${x.onde}">${x.onde === "mac" ? "💻 precisa do Mac" : "☁️ direto"}</span>${x.k === "whatsapp" && (M.sugestoes || []).length ? `<span class="selo novo">${M.sugestoes.length}</span>` : ""}</span></button>`).join("")}</div></section>`).join("");
-  return `<div class="painel-cmd cmd2"><div>${grupos}</div><div class="det-cmd" id="det-cmd">${detCmd(c)}${filaHTML()}</div></div>`;
+  return `${pulsoHTML()}<div class="painel-cmd cmd2"><div>${grupos}</div><div class="det-cmd" id="det-cmd">${detCmd(c)}${filaHTML()}</div></div>`;
+}
+function pulsoHTML() {
+  const r = s.robo; if (!r) return "";
+  const vivo = r.visto_em && Date.now() - new Date(r.visto_em) < 5 * 60000;
+  return `<div class="pulso"><span><i style="background:${vivo ? "var(--foam)" : "var(--verm)"}"></i>💻 Robô do Mac: ${vivo ? "ligado" : "sem sinal" + (r.visto_em ? " desde " + quandoFoi(r.visto_em) : "") + " (o Mac do escritório está ligado?)"}</span>
+    <span><i style="background:${r.ia_ok ? "var(--foam)" : "var(--amber)"}"></i>🐙 IA: ${r.ia_ok ? "ligada" : esc(r.ia_msg || "desligada")}</span>
+    <span><i style="background:${r.email_em ? "var(--foam)" : "var(--aco)"}"></i>✉️ E-mail: ${r.email_em ? "recebido " + quandoFoi(r.email_em) : "ainda não ligado"}</span></div>`;
+}
+const SCRIPT_EMAIL = (chave) => `// ALFY · leitura do e-mail (só leitura). Cole no script.google.com, salve e rode alfyInstalar uma vez.
+const ALFY_URL = "https://tladwxithannxstbneon.supabase.co/rest/v1/rpc/alfy_email_receber";
+const ALFY_CHAVE_PUBLICA = "${CHAVE_PUBLICA}";
+const ALFY_SEGREDO = "${chave}";
+
+function alfyEnviarEmails() {
+  const props = PropertiesService.getScriptProperties();
+  const ultima = Number(props.getProperty("ultima") || 0) || Date.now() - 24 * 3600 * 1000;
+  const desde = Math.floor(ultima / 1000) - 120;
+  const threads = GmailApp.search("in:inbox -category:promotions -category:social -category:forums after:" + desde, 0, 60);
+  const lista = [];
+  threads.forEach(function (t) {
+    t.getMessages().forEach(function (m) {
+      if (m.getDate().getTime() < ultima - 120000) return;
+      lista.push({ id: m.getId(), conversa: t.getId(), de: m.getFrom(), para: m.getTo(), assunto: m.getSubject(),
+        quando: m.getDate().toISOString(), rotulos: t.getLabels().map(function (l) { return l.getName(); }).join(", "),
+        texto: m.getPlainBody().slice(0, 6000) });
+    });
+  });
+  UrlFetchApp.fetch(ALFY_URL, { method: "post", contentType: "application/json", headers: { apikey: ALFY_CHAVE_PUBLICA },
+    payload: JSON.stringify({ p_chave: ALFY_SEGREDO, p_emails: lista }), muteHttpExceptions: true });
+  props.setProperty("ultima", String(Date.now()));
+}
+
+function alfyInstalar() {
+  ScriptApp.getProjectTriggers().forEach(function (t) { ScriptApp.deleteTrigger(t); });
+  ScriptApp.newTrigger("alfyEnviarEmails").timeBased().everyMinutes(15).create();
+  alfyEnviarEmails();
+}
+`;
+function emailHTML(h) {
+  const r = s.robo || {};
+  return `<div class="bloco">${h}${r.email_em ? `<p style="margin:0 0 10px">✅ Ligado. Último envio do Google ${quandoFoi(r.email_em)} · ${r.emails || 0} e-mails recebidos, ${r.emails_novos || 0} esperando o robô. O que pede ação aparece em Ler o WhatsApp (Podem virar rota) e resposta sobre rota vai para Responderam rotas.</p>` : ""}
+    <p class="rotulo">${r.email_em ? "Para reinstalar" : "Para ligar (uma vez, 3 minutos)"}</p>
+    <ol style="margin:0 0 10px;padding-left:20px;line-height:1.6;color:var(--aco-2)"><li>Abra <a href="https://script.google.com/home/projects/create" target="_blank" rel="noopener" style="color:var(--turq)">script.google.com › Novo projeto</a> logado como miguel@ilha.tours.</li><li>Apague o que estiver lá, cole o script abaixo e salve (ícone do disquete). Dê o nome "ALFY e-mail".</li><li>No seletor de função, escolha <b>alfyInstalar</b> e clique em Executar.</li><li>O Google pede autorização: escolha sua conta, clique em Avançado › Acessar ALFY e-mail e Permitir. É o seu próprio script, por isso aparece o aviso de app não verificado.</li><li>Pronto: a cada 15 minutos ele manda os e-mails novos da caixa de entrada (sem propaganda) só para o ALFY.</li></ol>
+    ${s.emailChave ? `<div class="zap" style="background:var(--ferro-0)"><pre style="margin:0;white-space:pre-wrap;font-size:12px;color:var(--aco-2);max-height:220px;overflow:auto">${esc(SCRIPT_EMAIL(s.emailChave))}</pre></div><div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><button class="btn turq" type="button" data-acao="copiar-script">Copiar o script</button></div>` : '<button class="btn turq" type="button" data-acao="ver-script">Mostrar o script</button>'}
+    <p class="nota">O script só lê e manda para o banco do ALFY, que só você vê. Ninguém mais tem a chave. Para desligar: script.google.com › o projeto › Acionadores › apagar.</p></div>`;
+}
+function diarioHTML(h) {
+  const d = s.diario;
+  if (!d) return `<div class="bloco">${h}<div class="carregando">Carregando…</div></div>`;
+  const nomes = { bomdia: "☀️ Bom dia", relatorio: "📰 Relatório do dia", escuta: "📡 Grupos hoje" };
+  return `<div class="bloco">${h}${d.length ? d.slice(0, 30).map((x) => `<div class="campo" style="margin-bottom:8px"><div class="cab-campo"><b>${nomes[x.tipo] || x.tipo}</b><span>${ddmm(x.em)} ${hhmm(x.em)}</span></div><p class="txt">${esc(rotaTxt(x.texto))}</p></div>`).join("") : '<div class="vazio">As rotinas ainda não escreveram nada aqui. A Escuta grava de hora em hora e a Ronda das 8h grava o Bom dia, com o app do Claude aberto no Mac.</div>'}</div>`;
 }
 const DEST = { rota: "🗺️ Rota", pauta: "🗓️ Pauta", arquivo: "🗂️ Arquivo", lembrete: "⏰ Lembrete", descartar: "🗑️ Descartar" };
 function detCmd(c) {
@@ -464,15 +524,21 @@ function detCmd(c) {
       <p class="rotulo" style="margin-top:14px">Responderam rotas · ${ret.length}</p>${ret.map((x) => { const r = rotaDe(x.rt); return `<div class="retorno">${r ? tag(r) : ""}<div class="bal"><small><b style="color:var(--texto)">${esc(x.quem || "")}</b> · ${esc(x.quando || "")} · ${esc(x.conversa || "")}</small><br><p>${esc(rotaTxt(x.texto))}</p><br><span style="display:inline-flex;gap:6px;flex-wrap:wrap">${r ? `<button class="btn turq peq" type="button" data-sug="${x.id}" data-sugacao="comentar">Pôr na conversa da ${esc(nomeRota(x.rt))}</button><button class="btn peq" type="button" data-rt="${x.rt}">Abrir</button>` : ""}<button class="btn peq" type="button" data-sug="${x.id}" data-sugacao="descartar">Descartar</button></span></div></div>`; }).join("") || '<div class="vazio">Nenhum retorno novo</div>'}
       <p class="rotulo" style="margin-top:14px">Podem virar rota · ${nov.length}</p>${nov.map((x) => `<div class="sugestao"><div class="tx"><b style="white-space:pre-wrap">${esc(rotaTxt(x.texto))}</b><small>${esc(x.quem || "")}${x.conversa ? " · " + esc(x.conversa) : ""}${x.quando ? " · " + esc(x.quando) : ""}</small></div><button class="btn turq peq" type="button" data-sug="${x.id}" data-sugacao="rota">Virar rota</button><button class="btn peq" type="button" data-sug="${x.id}" data-sugacao="descartar">Descartar</button></div>`).join("") || '<div class="vazio">Nada novo</div>'}</div>`;
   }
-  if (c.k === "email") return `<div class="bloco">${h}<p style="margin:0 0 8px">Você aprovou ligar. Falta um passo seu: autorizar uma vez o ALFY a <b>ler</b> a caixa miguel@ilha.tours (só leitura, nada é enviado nem apagado). Assim que autorizar, a leitura entra aqui do mesmo jeito que o WhatsApp: resposta sobre rota vai para a conversa da rota e o que pede ação aparece como "Pode virar rota".</p></div>`;
+  if (c.k === "email") return emailHTML(h);
+  if (c.k === "diario") return diarioHTML(h);
   if (c.k === "mapa" || c.k === "cobrar") {
     const pessoasAlvo = (M.pessoas || []).filter((p) => p.papel !== "comando" && p.nome !== "ALFY" && (M.rotas || []).some((r) => r.responsavel_id === p.id && mapeavel(r)));
-    if (!s.alvo) s.alvo = pessoasAlvo[0]?.id || null;
     const setores = FRENTES.filter((f) => f !== "🧍 Pessoal" && (M.rotas || []).some((r) => r.frente === f && mapeavel(r)));
-    if (c.k === "cobrar" && setores.includes(s.alvo)) s.alvo = pessoasAlvo[0]?.id;
-    const m = !s.alvo ? { n: 0, txt: "" } : setores.includes(s.alvo) ? mapaSetor(s.alvo) : mapaPessoa(s.alvo, c.k === "cobrar");
-    return `<div class="bloco">${h}<p class="rotulo">Pessoa</p><div class="alvos">${pessoasAlvo.map((p) => `<button class="chip" type="button" data-alvo="${p.id}" aria-pressed="${s.alvo === p.id}">${esc(curto(p.nome))}${c.k === "cobrar" ? ` · ${(M.rotas || []).filter((r) => mapeavel(r) && r.responsavel_id === p.id && vencida(r)).length}` : ""}</button>`).join("")}</div>
-      ${c.k === "mapa" ? `<p class="rotulo">Setor</p><div class="alvos">${setores.map((f) => `<button class="chip" type="button" data-alvo="${esc(f)}" aria-pressed="${s.alvo === f}">${esc(frenteCurta(f))}</button>`).join("")}</div>` : ""}
+    const modo = c.k === "cobrar" ? "pessoa" : s.mapaModo || "pessoa";
+    if (modo === "pessoa" && !pessoasAlvo.some((p) => p.id === s.alvo)) s.alvo = pessoasAlvo[0]?.id || null;
+    if (modo === "setor" && !setores.includes(s.alvo)) s.alvo = setores[0] || null;
+    s.grupo = (s.grupo || []).filter((id) => pessoasAlvo.some((p) => p.id === id));
+    const m = modo === "grupo" ? (s.grupo.length ? mapaGrupo(s.grupo) : { n: 0, txt: "Escolha as pessoas do grupo." }) : !s.alvo ? { n: 0, txt: "" } : modo === "setor" ? mapaSetor(s.alvo) : mapaPessoa(s.alvo, c.k === "cobrar");
+    const chipsPessoa = (sel, attr) => pessoasAlvo.map((p) => `<button class="chip" type="button" ${attr}="${p.id}" aria-pressed="${sel(p.id)}">${esc(curto(p.nome))}${c.k === "cobrar" ? ` · ${(M.rotas || []).filter((r) => mapeavel(r) && r.responsavel_id === p.id && vencida(r)).length}` : ""}</button>`).join("");
+    return `<div class="bloco">${h}${c.k === "mapa" ? `<div class="alterna" role="group" style="margin-bottom:12px"><button type="button" data-mapamodo="pessoa" aria-pressed="${modo === "pessoa"}">Pessoa</button><button type="button" data-mapamodo="grupo" aria-pressed="${modo === "grupo"}">Grupo</button><button type="button" data-mapamodo="setor" aria-pressed="${modo === "setor"}">Setor</button></div>` : ""}
+      ${modo === "pessoa" ? `<p class="rotulo">Só as rotas da pessoa</p><div class="alvos">${chipsPessoa((id) => s.alvo === id, "data-alvo")}</div>` : ""}
+      ${modo === "grupo" ? `<p class="rotulo">Escolha quem entra (cada um com as rotas dele)</p><div class="alvos">${chipsPessoa((id) => s.grupo.includes(id), "data-grupo")}</div>` : ""}
+      ${modo === "setor" ? `<p class="rotulo">Todas as rotas abertas da frente, por pessoa</p><div class="alvos">${setores.map((f) => `<button class="chip" type="button" data-alvo="${esc(f)}" aria-pressed="${s.alvo === f}">${esc(frenteCurta(f))}</button>`).join("")}</div>` : ""}
       <div class="zap"><div class="msg" style="max-width:none">${zap(m.txt)}<small>prévia · ${m.n} rotas</small></div></div>
       <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap"><button class="btn turq" type="button" data-acao="copiar-mapa">Copiar para o WhatsApp</button></div>
       <p class="nota">Formato oficial do Mapa de Rotas. O texto de cada rota é o 🎯 O que fazer do cartão. Rota da frente Pessoal e rota concluída nunca entram.</p></div>`;
@@ -489,7 +555,7 @@ function detCmd(c) {
       <p class="rotulo" style="margin-top:14px">Budget esperando você · ${bud.length}</p><div class="lista">${bud.map((r) => linha(r)).join("") || '<p class="nota" style="margin:0">Nenhum</p>'}</div>
       <p class="rotulo" style="margin-top:14px">Responderam nas últimas 24 h · ${resp.length}</p>${resp.slice(0, 8).map((e) => `<button type="button" class="ev" data-rt="${e.rt}"><span class="ic-ev">${EV_IC[e.tipo]}</span><span class="c"><span class="l1"><b>${esc(curto(e.quem))}</b> · ${esc(nomeRota(e.rt))}</span><p>${esc((e.texto || "").slice(0, 200))}</p></span></button>`).join("") || '<p class="nota" style="margin:0">Ninguém</p>'}</div>`;
   }
-  if (c.k === "ronda" || c.k === "virada") { const rod = filaRodando(c.k); return `<div class="bloco">${h}<p style="margin:0 0 10px">${c.faz}</p><button class="btn turq" type="button" data-acao="${c.k}" ${rod ? "disabled" : ""}>${rod ? "Rodando…" : c.k === "ronda" ? "Rodar a ronda agora" : "Rodar a virada agora"}</button></div>`; }
+  if (c.k === "ronda") { const rod = filaRodando(c.k); return `<div class="bloco">${h}<p style="margin:0 0 10px">${c.faz}</p><button class="btn turq" type="button" data-acao="${c.k}" ${rod ? "disabled" : ""}>${rod ? "Rodando…" : "Rodar a ronda agora"}</button></div>`; }
   if (c.k === "perguntar") {
     const msgs = s.chatGeral || [], rod = s.esperando.geral;
     return `<div class="bloco">${h}<div class="chat" id="chat-geral">${msgs.map((m) => `<div class="m ${m.papel === "user" ? "eu" : "alfy"}">${esc(m.texto)}</div>`).join("") || `<div class="m alfy">🐙 Oi, Miguel. Pergunte sobre as rotas e as pautas. Ex.: "o que está vencido da Karoline?", "o que precisa de decisão minha?", "quais rotas têm budget esperando aprovação?"</div>`}${rod ? '<div class="m alfy">🐙 pensando…</div>' : ""}</div>
@@ -537,7 +603,7 @@ function folha() {
   $("#camada").innerHTML = `<div class="veu" id="veu"><section class="folha" role="dialog" aria-modal="true" aria-label="${esc(nomeRota(r.rt))}">
     <div class="cab">${tag(r)}<h2>${esc(r.titulo)}</h2><button class="fechar" type="button" data-acao="fechar" aria-label="Fechar">${IC.x}</button></div>
     <div class="corpo" id="corpo-folha">
-      ${ehNova(r) ? '<p class="nota" style="margin:0">Rota nova: o número sai em até 5 minutos, quando o robô sincroniza.</p>' : ""}
+      ${comando() ? `<div style="display:flex;justify-content:flex-end;margin-bottom:-6px"><button class="chip" type="button" data-acao="sensivel" aria-pressed="${!!r.sensivel}">🔒 ${r.sensivel ? "Só eu vejo" : "Marcar só eu vejo"}</button></div>` : ""}
       <div class="status5">${ORDEM.map((k) => `<button type="button" data-mover="${k}" aria-pressed="${r.status === k}"><i style="background:${ST[k].cor}"></i>${ST[k].um}</button>`).join("")}</div>
       <div><p class="rotulo">Cadeia de responsabilidade</p><div class="cadeia ${pode ? "" : "so-leitura"}">
         <div class="elo"><small>🗺️ Frente</small><select data-prop="frente">${opc(FRENTES.map((f) => [f, frenteCurta(f)]), r.frente, "Sem frente")}</select></div><span class="seta">›</span>
@@ -559,7 +625,6 @@ function folha() {
         ${pode ? `<button class="chip" type="button" data-acao="pauta-da-rota">＋ Criar pauta</button>${reus.length ? `<select class="sel" data-levarreuniao="1" style="font-size:13px;padding:5px 8px"><option value="">＋ Levar para reunião</option>${reus.filter((x) => !(r.reunioes || []).includes(x.id)).map((x) => `<option value="${x.id}">${esc(x.titulo)} · ${quandoReuniao(x)}</option>`).join("")}</select>` : ""}` : ""}</div></div>
       <div class="abas-folha" role="tablist">${abas.map(([k, n, c]) => `<button type="button" role="tab" data-afolha="${k}" aria-selected="${s.abaFolha === k}">${n}${c ? `<span class="n">${c}</span>` : ""}</button>`).join("")}</div>
       ${corpo}
-      ${r.trello_url ? `<p class="nota" style="margin:4px 0 0">Espelho no Trello: <a href="${esc(r.trello_url)}" target="_blank" rel="noopener" style="color:var(--turq)">abrir cartão</a></p>` : ""}
     </div></section></div>`;
 }
 function refolha() { const c = $("#corpo-folha"), y = c ? c.scrollTop : 0; folha(); const n = $("#corpo-folha"); if (n) n.scrollTop = y; }
@@ -582,7 +647,7 @@ function novaRota(pre = {}) {
       ${manda() ? `<div class="cadeia"><div class="elo"><small>🗺️ Frente</small><select id="n-frente">${opc(FRENTES.map((f) => [f, frenteCurta(f)]), pre.frente || (eu().frentes || [])[0] || "", "Sem frente")}</select></div><span class="seta">›</span>
         <div class="elo"><small>👤 Responsável</small><select id="n-resp">${opc(gente(), pre.responsavel_id || eu().id)}</select></div><span class="seta">›</span>
         <div class="elo"><small>🤝 Co-responsável</small><select id="n-co">${opc(gente(), "", "Ninguém")}</select></div></div>
-      <div class="props"><div class="dado"><small>Prioridade</small><select id="n-prio">${opc(PRIORIDADES, pre.prioridade || "⏳ P3 · 7 dias")}</select></div><div class="dado"><small>Prazo</small><input id="n-prazo" type="date" value="${esc(pre.prazo || "")}"></div><div class="dado"><small>Vai para</small><select id="n-st">${opc([["rota", "Rotas"], ["ideia", "Ideias"]], st)}</select></div></div>` : '<p class="nota" style="margin:0">Entra como ideia. Quem coordena a frente transforma em rota.</p>'}
+      <div class="props"><div class="dado"><small>Prioridade</small><select id="n-prio">${opc(PRIORIDADES, pre.prioridade || "⏳ P3 · 7 dias")}</select></div><div class="dado"><small>Prazo</small><input id="n-prazo" type="date" value="${esc(pre.prazo || "")}"></div><div class="dado"><small>Vai para</small><select id="n-st">${opc([["rota", "Rotas"], ["ideia", "Ideias"]], st)}</select></div></div>${comando() ? '<label class="chip" style="cursor:pointer;align-self:flex-start"><input type="checkbox" id="n-sens" style="margin-right:6px">🔒 Só eu vejo (processo, saúde, sócio, assunto sobre gerente)</label>' : ""}` : '<p class="nota" style="margin:0">Entra como ideia. Quem coordena a frente transforma em rota.</p>'}
       <p class="nota" style="margin:0">Depois de salvar, a rota abre para você completar Instruções, Resultado esperado e Budget.</p>
       <div><button class="cta" type="submit">Salvar</button></div></form></section></div>`;
   setTimeout(() => $("#n-tit")?.focus(), 50);
@@ -590,7 +655,7 @@ function novaRota(pre = {}) {
     ev.preventDefault();
     const v = (id) => $("#" + id)?.value || "";
     const campos = { titulo: v("n-tit").trim(), assist: v("n-assist").trim(), frente: v("n-frente"), responsavel_id: v("n-resp"), co_responsavel_id: v("n-co"),
-      prioridade: v("n-prio"), prazo: v("n-prazo") ? v("n-prazo") + "T12:00:00-03:00" : "", status: v("n-st") || "ideia" };
+      prioridade: v("n-prio"), prazo: v("n-prazo") ? v("n-prazo") + "T12:00:00-03:00" : "", status: v("n-st") || "ideia", sensivel: !!$("#n-sens")?.checked };
     try {
       const c = await chamar("alfy_nova_rota", { p_campos: campos });
       if (pre.depois) await pre.depois(c.rt);
@@ -676,6 +741,8 @@ async function recarregar() {
       else { d.itens = p.resultado?.itens || []; d.feitos = {}; d.transcricao = (p.resultado?.transcricao || []).map((t) => t.texto).join(" "); d.anexos = []; d.texto = ""; const rs = p.resultado?.resumo || ""; aviso(rs.startsWith("sem separar") ? rs.replace("sem separar: ", "Não separei: ") : "O ALFY separou o despejo", rs.startsWith("sem separar")); }
     }
   }
+  if (comando()) s.robo = await chamar("alfy_robo").catch(() => s.robo);
+  if (s.cmd === "diario" && s.aba === "comandos") s.diario = await chamar("alfy_diario", { p_dias: 3 }).catch(() => s.diario);
   if (s.aberta) { await recarregarCartao(); if (!ativoNaFolha()) refolha(); }
   if (s.pauta) s.pautaDet = await chamar("alfy_pauta", { p_id: s.pauta }).catch(() => s.pautaDet);
 }
@@ -684,7 +751,7 @@ const ativoNaFolha = () => { const a = document.activeElement; return a && $("#c
 // ---------------------------------------------------------------- ações
 async function mover(rt, st) {
   const r = rotaDe(rt) || s.cartao; if (!r || r.status === st) return;
-  try { await chamar("alfy_mover", { p_rt: rt, p_status: st }); aviso(`${nomeRota(rt)} foi para ${ST[st].nome}`); await recarregar(); render(); } catch (e) { falhou(e); }
+  try { const r2 = await chamar("alfy_mover", { p_rt: rt, p_status: st }); if (s.aberta === rt && r2?.rt) s.aberta = r2.rt; aviso(`${nomeRota(r2?.rt || rt)} foi para ${ST[st].nome}`); await recarregar(); render(); } catch (e) { falhou(e); }
 }
 async function editar(campos, msg) {
   try { s.cartao = await chamar("alfy_editar", { p_rt: s.aberta, p_campos: campos }); s.editando = null; aviso(msg || "Salvo"); refolha(); await recarregar(); render(); } catch (e) { falhou(e); }
@@ -808,8 +875,10 @@ document.addEventListener("click", async (e) => {
     if (d.budst) { s.cartao = await chamar("alfy_budget", { p_rt: s.aberta, p_valor: $("[data-bud]")?.value || "", p_status: d.budst }); refolha(); await recarregar(); render(); return; }
     if (d.irpauta) { const id = +d.irpauta; fechar(); s.aba = "pautas"; s.reuniao = null; abrirPauta(id); return; }
     if (d.irreuniao) { fechar(); s.aba = "pautas"; s.pauta = null; s.reuniao = +d.irreuniao; render(); scrollTo(0, 0); return; }
-    if (d.cmd) { s.cmd = d.cmd; if (d.cmd === "perguntar" && !s.chatGeral) s.chatGeral = await chamar("alfy_ia_conversa", { p_escopo: "geral" }); if (d.cmd === "bomdia") FEED = await chamar("alfy_feed", { p_limite: 150 }); render(); if (matchMedia("(max-width:900px)").matches) setTimeout(() => $("#det-cmd")?.scrollIntoView({ behavior: "smooth" }), 30); return; }
+    if (d.cmd) { s.cmd = d.cmd; if (d.cmd === "diario") s.diario = await chamar("alfy_diario", { p_dias: 3 }); if (d.cmd === "perguntar" && !s.chatGeral) s.chatGeral = await chamar("alfy_ia_conversa", { p_escopo: "geral" }); if (d.cmd === "bomdia") FEED = await chamar("alfy_feed", { p_limite: 150 }); render(); if (matchMedia("(max-width:900px)").matches) setTimeout(() => $("#det-cmd")?.scrollIntoView({ behavior: "smooth" }), 30); return; }
     if (d.alvo) { s.alvo = d.alvo; render(); return; }
+    if (d.mapamodo) { s.mapaModo = d.mapamodo; render(); return; }
+    if (d.grupo) { s.grupo = s.grupo || []; s.grupo = s.grupo.includes(d.grupo) ? s.grupo.filter((x) => x !== d.grupo) : [...s.grupo, d.grupo]; render(); return; }
     if (d.col) { const k = $("#kanban"), w = k.querySelector(".coluna").offsetWidth + 10; k.scrollTo({ left: +d.col * w, behavior: "smooth" }); return; }
     if (d.sug) {
       const sg = (M.sugestoes || []).find((y) => String(y.id) === d.sug);
@@ -823,7 +892,7 @@ document.addEventListener("click", async (e) => {
     if (d.rst) { await chamar("alfy_reuniao_salvar", { p_id: s.reuniao, p_campos: { status: d.rst } }); await recarregar(); render(); return; }
     if (d.pst) { await chamar("alfy_pauta_salvar", { p_id: s.pauta, p_campos: { status: d.pst } }); await recarregar(); render(); return; }
     if (d.opcao !== undefined) { const p = s.pautaDet; await chamar("alfy_pauta_salvar", { p_id: p.id, p_campos: { escolha: p.escolha === +d.opcao ? "" : String(+d.opcao) } }); await recarregar(); render(); return; }
-    if (d.levar !== undefined) { await chamar("alfy_pauta_salvar", { p_id: s.pauta, p_campos: { reuniao_id: d.levar === "0" ? "" : d.levar } }); await recarregar(); render(); aviso(d.levar === "0" ? "Tirada da reunião" : "Vai para a " + reuniaoDe(+d.levar)?.titulo); return; }
+    if (d.levar !== undefined) { await chamar("alfy_pauta_salvar", { p_id: s.pauta, p_campos: { reuniao_id: d.levar === "0" ? "" : d.levar } }); await recarregar(); render(); aviso(d.levar === "0" ? "Esta pauta saiu da reunião" : "Pauta levada para a " + reuniaoDe(+d.levar)?.titulo); return; }
     if (d.tmsg) { s.tipoMsg = d.tmsg; render(); setTimeout(() => $("#t-msg")?.focus(), 20); return; }
     if (d.msgrota) { const m = s.pautaDet.conversa.find((y) => String(y.id) === d.msgrota), pid = s.pauta; novaRota({ titulo: m.texto.slice(0, 120), frente: s.pautaDet.frente, depois: async (rt) => { await chamar("alfy_pauta_msg_rota", { p_msg: m.id, p_rt: rt }); } }); return; }
     if (d.iapauta) { const ch = "pauta:" + s.pauta; await pedir("ia", ch, { texto: d.iapauta }, ch); s.pautaDet = await chamar("alfy_pauta", { p_id: s.pauta }); render(); return; }
@@ -845,9 +914,12 @@ document.addEventListener("click", async (e) => {
     if (a === "despejar") { despejar(); return; }
     if (a === "gravar") { gravar(); return; }
     if (a === "whatsapp" || a === "grupos") { await pedir("whatsapp", null, { horas: a === "whatsapp" ? 24 : 168 }); render(); aviso("Pedido na fila do robô"); return; }
-    if (a === "ronda" || a === "virada") { await pedir(a, null, {}); render(); aviso("Pedido na fila do robô"); return; }
-    if (a === "copiar-mapa") { const c = s.cmd, setor = FRENTES.includes(s.alvo); copiar((setor ? mapaSetor(s.alvo) : mapaPessoa(s.alvo, c === "cobrar")).txt); return; }
+    if (a === "ronda") { await pedir(a, null, {}); render(); aviso("Pedido na fila do robô"); return; }
+    if (a === "copiar-mapa") { const c = s.cmd, modo = c === "cobrar" ? "pessoa" : s.mapaModo || "pessoa"; copiar((modo === "grupo" ? mapaGrupo(s.grupo || []) : modo === "setor" ? mapaSetor(s.alvo) : mapaPessoa(s.alvo, c === "cobrar")).txt); return; }
     if (a === "sair") { sair(); return; }
+    if (a === "ver-script") { s.emailChave = await chamar("alfy_email_chave"); render(); return; }
+    if (a === "copiar-script") { copiar(SCRIPT_EMAIL(s.emailChave)); return; }
+    if (a === "sensivel") { s.cartao = await chamar("alfy_sensivel", { p_rt: s.aberta, p_sensivel: !s.cartao.sensivel }); refolha(); await recarregar(); render(); aviso(s.cartao.sensivel ? "Agora só você vê esta rota" : "A rota voltou a ser vista pela equipe"); return; }
   } catch (er) { falhou(er); }
 });
 function abrirNovaOpcao() {
@@ -909,6 +981,7 @@ async function entrar(k) {
     try { const g = JSON.parse(localStorage.getItem("alfy-vista") || "{}"); if (g.vista) s.vista = g.vista; if (g.agrupar) s.agrupar = g.agrupar; } catch (_) { /* privado */ }
     render();
     FEED = await chamar("alfy_feed", { p_limite: 150 }).catch(() => null);
+    if (comando()) s.robo = await chamar("alfy_robo").catch(() => null);
     vigiar();
   } catch (e) { erro.textContent = e.message; token = null; }
 }
