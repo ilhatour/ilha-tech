@@ -1,4 +1,4 @@
-// ALFY · Mapa de Rotas · Ilha Tech · v2.5.0 · 04/11/2026 · Painel de Ferro · agenda e reuniões
+// ALFY · Mapa de Rotas · Ilha Tech · v2.5.1 · 04/11/2026 · Painel de Ferro · agenda e reuniões
 // Tudo passa pelas funções alfy_* do banco, sempre com a chave pessoal de quem está usando.
 // O banco decide o que cada pessoa vê; a tela só desenha o que voltou.
 // A IA e os comandos são pedidos numa fila (alfy.pedido) que o robô do Mac atende.
@@ -231,15 +231,15 @@ const podeMexer = (r) => manda() || r.responsavel_id === eu().id || r.co_respons
 function acoesLinha(r) {
   if (!podeMexer(r)) return "";
   const ab = ABERTOS.includes(r.status);
-  return `<span class="acoes-linha">${ab ? `<button class="ac ok" type="button" data-rapido="concluida" data-rrt="${r.rt}" title="Concluir">✓<span>Concluir</span></button>` : ""}${r.status === "rota" ? `<button class="ac" type="button" data-rapido="andamento" data-rrt="${r.rt}" title="Começar">▶<span>Começar</span></button>` : ""}<button class="ac ${s.linhaAberta === r.rt ? "on" : ""}" type="button" data-linhacaixa="${r.rt}" title="${comando() ? "Comentar ou pedir ao ALFY" : "Comentar"}">${comando() ? "🐙" : "💬"}<span>${comando() ? "ALFY" : "Comentar"}</span></button></span>`;
+  return `<span class="acoes-linha">${ab ? `<button class="ac ok" type="button" data-rapido="concluida" data-rrt="${r.rt}" title="Concluir">✓<span>Concluir</span></button>` : ""}${r.status === "rota" ? `<button class="ac" type="button" data-rapido="andamento" data-rrt="${r.rt}" title="Começar">▶<span>Começar</span></button>` : ""}${comando() && r.rt.startsWith("RT-") ? `<button class="ac" type="button" data-rastrear="${r.rt}" title="Rastrear: procura novidade desta rota no WhatsApp e no e-mail">📡<span>Rastrear</span></button>` : ""}<button class="ac ${s.linhaAberta === r.rt ? "on" : ""}" type="button" data-linhacaixa="${r.rt}" title="${comando() ? "Comentar ou pedir ao ALFY" : "Comentar"}">${comando() ? "🐙" : "💬"}<span>${comando() ? "ALFY" : "Comentar"}</span></button></span>`;
 }
 function caixaLinha(r) {
   if (s.linhaAberta !== r.rt) return "";
   const resp = s.respLinha?.[r.rt], rod = s.esperando["rota:" + r.rt];
   return `<div class="caixa-linha"><form class="cl-form" data-clform="${r.rt}"><textarea class="busca" id="cl-${r.rt.replace(/\W/g, "")}" rows="2" placeholder="${comando() ? "Comente, ou peça ao ALFY: muda o dono para a Karol · P1 até sexta · faz a mensagem cobrando, sem pressionar · conclui" : "Escreva um retorno sobre esta rota"}">${esc(s.rascunhoLinha?.[r.rt] || "")}</textarea>
     <span class="cl-bot"><button class="btn peq" type="submit" data-clmodo="comentar">💬 Comentar</button>${comando() ? '<button class="btn turq peq" type="submit" data-clmodo="alfy">🐙 Pedir ao ALFY</button>' : ""}</span></form>
-    ${rod ? '<div class="ia-saida pensando">🐙 o ALFY está fazendo… (alguns segundos)</div>' : ""}
-    ${resp ? `<div class="ia-saida">${esc(resp)}<div class="usar"><button class="mini" type="button" data-copiartxt="${r.rt}">Copiar</button><button class="mini" type="button" data-rt="${r.rt}">Abrir a rota</button></div></div>` : ""}</div>`;
+    ${rod ? `<div class="ia-saida pensando">${s.rastreando?.[r.rt] ? "📡 rastreando WhatsApp e e-mail desta rota… (até 1 minuto)" : "🐙 o ALFY está fazendo… (alguns segundos)"}</div>` : ""}
+    ${resp ? `<div class="ia-saida">${esc(resp)}<div class="usar">${s.sugLinha?.[r.rt] ? `<button class="mini ia" type="button" data-aplicarsug="${r.rt}">🐙 Aplicar a sugestão</button>` : ""}<button class="mini" type="button" data-copiartxt="${r.rt}">Copiar</button><button class="mini" type="button" data-rt="${r.rt}">Abrir a rota</button></div></div>` : ""}</div>`;
 }
 function linha(r, semPessoa) {
   return `<div class="linha-wrap"><div role="button" tabindex="0" class="linha2" data-rt="${r.rt}">${tag(r)}<span class="tt"><b>${esc(r.titulo)}</b>${r.assist && r.assist !== r.titulo ? `<span class="res">${esc(r.assist)}</span>` : ""}${metaLinha(r, semPessoa)}</span>${acoesLinha(r)}</div>${caixaLinha(r)}</div>`;
@@ -687,7 +687,7 @@ function folha() {
   $("#camada").innerHTML = `<div class="veu" id="veu"><section class="folha" role="dialog" aria-modal="true" aria-label="${esc(nomeRota(r.rt))}">
     <div class="cab">${tag(r)}<h2>${esc(r.titulo)}</h2><button class="fechar" type="button" data-acao="fechar" aria-label="Fechar">${IC.x}</button></div>
     <div class="corpo" id="corpo-folha">
-      ${comando() ? `<div style="display:flex;justify-content:flex-end;margin-bottom:-6px"><button class="chip" type="button" data-acao="sensivel" aria-pressed="${!!r.sensivel}">🔒 ${r.sensivel ? "Só eu vejo" : "Marcar só eu vejo"}</button></div>` : ""}
+      ${comando() ? `<div style="display:flex;justify-content:flex-end;margin-bottom:-6px">${r.rt.startsWith("RT-") ? `<button class="chip" type="button" data-acao="rastrear-cartao" style="margin-right:6px">📡 Rastrear</button>` : ""}<button class="chip" type="button" data-acao="sensivel" aria-pressed="${!!r.sensivel}">🔒 ${r.sensivel ? "Só eu vejo" : "Marcar só eu vejo"}</button></div>` : ""}
       <div class="status5">${ORDEM.map((k) => `<button type="button" data-mover="${k}" aria-pressed="${r.status === k}"><i style="background:${ST[k].cor}"></i>${ST[k].um}</button>`).join("")}</div>
       <div><p class="rotulo">Cadeia de responsabilidade</p><div class="cadeia ${pode ? "" : "so-leitura"}">
         <div class="elo"><small>🗺️ Frente</small><select data-prop="frente">${opc(FRENTES.map((f) => [f, frenteCurta(f)]), r.frente, "Sem frente")}</select></div><span class="seta">›</span>
@@ -966,6 +966,7 @@ async function recarregar() {
     delete s.esperando[escopo];
     if (q.status === "erro") aviso("O robô não conseguiu: " + (q.erro || "erro").slice(0, 120), true);
     if (escopo === "geral") s.chatGeral = await chamar("alfy_ia_conversa", { p_escopo: "geral" });
+    if (escopo.startsWith("rota:") && s.rastreando?.[escopo.slice(5)]) { const rt = escopo.slice(5); s.rastreando[rt] = false; const p = await chamar("alfy_pedido", { p_id: pid }); s.sugLinha = { ...(s.sugLinha || {}), [rt]: p?.resultado?.sugestao || "" }; }
     if (escopo.startsWith("rota:") && s.linhaAberta === escopo.slice(5)) { const conv = await chamar("alfy_ia_conversa", { p_escopo: escopo }); const ult = [...conv].reverse().find((m) => m.papel === "assistant"); if (ult) s.respLinha = { ...(s.respLinha || {}), [escopo.slice(5)]: ult.texto }; }
   }
   const d = s.despejo;
@@ -1123,6 +1124,8 @@ document.addEventListener("click", async (e) => {
     if (d.aprovar || d.recusar) { const id = +(d.aprovar || d.recusar), fr = $("#fa-frente-" + id)?.value; const r = await chamar("alfy_ficha_aprovar", { p_id: id, p_papel: $("#fa-papel-" + id)?.value || "colaborador", p_frentes: fr ? [fr] : [], p_nivel: $("#fa-nivel-" + id)?.value || "operacional", p_aprovar: !!d.aprovar }); s.aprovado = d.aprovar ? r : null; s.fichas = await chamar("alfy_fichas"); if (comando()) s.equipe = await chamar("alfy_equipe"); await recarregar(); render(); aviso(d.aprovar ? "Cadastrado na Nave ID e no ALFY" : "Ficha recusada"); return; }
     if (d.copiarmapa) { copiar(mapaPessoa(d.copiarmapa).txt); s.mapasCopiados = { ...(s.mapasCopiados || {}), [d.copiarmapa]: new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) }; render(); return; }
     if (d.rapido) { const rt = d.rrt; await chamar("alfy_mover", { p_rt: rt, p_status: d.rapido }); aviso(d.rapido === "concluida" ? `✓ ${nomeRota(rt)} concluída` : `${nomeRota(rt)} em andamento`); await recarregar(); render(); return; }
+    if (d.rastrear) { const rt = d.rastrear; s.linhaAberta = rt; s.respLinha = { ...(s.respLinha || {}), [rt]: "" }; s.sugLinha = { ...(s.sugLinha || {}), [rt]: "" }; s.rastreando = { ...(s.rastreando || {}), [rt]: true }; s.pedRastreio = { ...(s.pedRastreio || {}), [rt]: await pedir("rastrear", "rota:" + rt, {}, "rota:" + rt) }; render(); return; }
+    if (d.aplicarsug) { const rt = d.aplicarsug, t = s.sugLinha[rt]; s.sugLinha[rt] = ""; s.respLinha[rt] = ""; s.rastreando[rt] = false; await pedir("ia", "rota:" + rt, { texto: t, agir: true }, "rota:" + rt); render(); return; }
     if (d.linhacaixa) { s.linhaAberta = s.linhaAberta === d.linhacaixa ? null : d.linhacaixa; render(); setTimeout(() => $("#cl-" + d.linhacaixa.replace(/\W/g, ""))?.focus(), 30); return; }
     if (d.copiartxt) { copiar(s.respLinha[d.copiartxt]); return; }
     if (d.convite) { const p = s.equipe.find((x) => x.id === d.convite); copiar(convite(p)); return; }
@@ -1175,6 +1178,7 @@ document.addEventListener("click", async (e) => {
     if (a === "copiar-aprovado") { copiar(convite({ nome: s.aprovado.nome, token: s.aprovado.token })); return; }
     if (a === "ver-script") { s.emailChave = await chamar("alfy_email_chave"); render(); return; }
     if (a === "copiar-script") { copiar(SCRIPT_EMAIL(s.emailChave)); return; }
+    if (a === "rastrear-cartao") { await pedir("rastrear", "rota:" + s.aberta, {}, "rota:" + s.aberta); s.abaFolha = "alfy"; refolha(); aviso("📡 Rastreando… a resposta aparece na aba 🐙 ALFY"); return; }
     if (a === "sensivel") { s.cartao = await chamar("alfy_sensivel", { p_rt: s.aberta, p_sensivel: !s.cartao.sensivel }); refolha(); await recarregar(); render(); aviso(s.cartao.sensivel ? "Agora só você vê esta rota" : "A rota voltou a ser vista pela equipe"); return; }
   } catch (er) { falhou(er); }
 });
