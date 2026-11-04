@@ -1,4 +1,4 @@
-// ALFY · Mapa de Rotas · Ilha Tech · v2.1.0 · 04/11/2026 · Painel de Ferro · sem Trello
+// ALFY · Mapa de Rotas · Ilha Tech · v2.2.0 · 04/11/2026 · Painel de Ferro · agenda e reuniões
 // Tudo passa pelas funções alfy_* do banco, sempre com a chave pessoal de quem está usando.
 // O banco decide o que cada pessoa vê; a tela só desenha o que voltou.
 // A IA e os comandos são pedidos numa fila (alfy.pedido) que o robô do Mac atende.
@@ -24,7 +24,7 @@ const FRENTES = ["🔥💧 Ilha Tour · Fogo e Água", "🌬️ Ilha Tour · Ar"
   "⚓️ Vou de Barco", "🏨 Pousadas", "🌊 Buena Onda", "🏡 Cantinho da Ilha", "🏖️ Agência Ilha", "🚘 Ilha Go",
   "👾 Ilha Tech", "🌇 Agência Rio", "🧍 Pessoal"];
 const NATUREZAS = ["🔴 Sobrevivência", "🟡 Manutenção", "🔵 Desenvolvimento", "🟢 Crescimento"];
-const TIPOS = ["🛠️ Ação", "📞 Comunicação", "🧠 Decisão", "🛒 Compra"];
+const TIPOS = ["🛠️ Ação", "📞 Comunicação", "🧠 Decisão", "🛒 Compra", "📅 Compromisso"];
 const NIVEIS = ["Baixo", "Médio", "Alto"];
 const BUDGET_ST = ["sem custo", "a orçar", "aguardando aprovação", "aprovado", "recusado"];
 const CAMPOS = {
@@ -45,6 +45,7 @@ const IC = {
   feed: svg('<path d="M4 11a9 9 0 0 1 9 9M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1.4" fill="currentColor"/>'),
   pautas: svg('<rect x="4" y="4" width="16" height="17" rx="2"/><path d="M8 2v4M16 2v4M4 10h16M8 14h5M8 17h8"/>'),
   comandos: svg('<path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/>'),
+  agenda: svg('<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4M7 13h3v3H7z"/>'),
   eu: svg('<circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/>'),
   despejo: svg('<path d="M12 3v12M7 10l5 5 5-5"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/>'),
   whatsapp: svg('<path d="M21 12a9 9 0 0 1-13.4 7.8L3 21l1.3-4.4A9 9 0 1 1 21 12z"/><path d="M9 10h6M9 14h4"/>'),
@@ -155,7 +156,7 @@ const gente = () => (M?.pessoas || []).filter((p) => p.nome).map((p) => [p.id, p
 function navItens() {
   const abertas = (M?.rotas || []).filter((r) => ABERTOS.includes(r.status)).length;
   const pautas = (M?.pautas || []).filter((p) => p.status === "aberta").length;
-  const it = [["rotas", "Rotas", IC.rotas, abertas], ["feed", "Feed", IC.feed, ""], ["pautas", "Pautas", IC.pautas, pautas || ""]];
+  const it = [["rotas", "Rotas", IC.rotas, abertas], ["agenda", "Agenda", IC.agenda, ""], ["feed", "Feed", IC.feed, ""], ["pautas", "Pautas", IC.pautas, pautas || ""]];
   if (comando()) it.push(["comandos", "Comandos", IC.comandos, (M?.sugestoes || []).length || ""]);
   return it;
 }
@@ -168,7 +169,7 @@ function casca() {
   $("#eu-av").textContent = ini(p.nome); $("#eu-av-cel").textContent = ini(p.nome);
   $("#eu-nome").textContent = p.nome;
   $("#eu-papel").textContent = papelTxt();
-  $("#titulo-cel").textContent = { rotas: "Rotas", feed: "Feed", pautas: "Pautas", comandos: "Comandos", eu: "Eu" }[s.aba];
+  $("#titulo-cel").textContent = { rotas: "Rotas", agenda: "Agenda", feed: "Feed", pautas: "Pautas", comandos: "Comandos", eu: "Eu" }[s.aba];
   $("#fab").hidden = s.aba !== "rotas";
 }
 const papelTxt = () => comando() ? "Comando · vê tudo" : papel() === "gerente" ? "Gerente · " + (eu().frentes || []).map(frenteCurta).join(", ") : "Vê as rotas dele";
@@ -198,7 +199,7 @@ function topo() {
     const tipos = [["todos", "Tudo"], ["comentario", "Comentários"], ["orientacao", "Orientações"], ["whatsapp", "WhatsApp"], ["status", "Status"], ["editar", "Edições"], ["nova", "Rotas novas"], ["budget", "Budget"], ["pauta", "Pautas"]];
     fi.innerHTML = filtrosHTML() + `<div style="display:flex;gap:6px;overflow-x:auto;flex-basis:100%;scrollbar-width:none">${tipos.map(([k, n]) => `<button class="chip" type="button" data-ffeed="${k}" aria-pressed="${s.fFeed === k}">${n}</button>`).join("")}</div>`;
   } else {
-    const t = { pautas: "Pautas e reuniões", comandos: "Comandos do ALFY", eu: "Eu" }[s.aba];
+    const t = { pautas: "Pautas e reuniões", comandos: "Comandos do ALFY", agenda: "Agenda", eu: "Eu" }[s.aba];
     l1.innerHTML = `<h1>${t}</h1><span class="espaco"></span>${vivo}${s.aba === "pautas" && manda() ? '<button class="btn" type="button" data-acao="nova-pauta">＋ Nova pauta</button><button class="cta" type="button" data-acao="nova-reuniao">＋ Nova reunião</button>' : ""}`;
     fi.innerHTML = ""; $("#alterna-cel").innerHTML = "";
   }
@@ -343,15 +344,14 @@ function reuniaoDet(re) {
   if (!re) { s.reuniao = null; return vistaPautas(); }
   const pautas = (M.pautas || []).filter((p) => p.reuniao_id === re.id);
   const rotas = re.rotas.map(rotaDe).filter(Boolean);
-  const pode = manda();
+  const pode = manda(), participa = comando() || re.gente.includes(eu().id), det = s.reuniaoDet && s.reuniaoDet.id === re.id ? s.reuniaoDet : null;
+  if (!det && !s.carregandoReuniao) { s.carregandoReuniao = true; carregarReuniao().then(() => { s.carregandoReuniao = false; renderSeguro(); }); }
   return `<div class="pd" style="max-width:900px"><div class="placa rebites cab-p"><button class="btn peq" type="button" data-acao="pautas-voltar">‹ Reuniões</button>
-      <h2>${esc(re.titulo)}</h2><div class="q">${quandoReuniao(re)}${re.onde ? " · " + esc(re.onde) : ""} · ${re.gente.map((g) => esc(curto(nomeDe(g)))).join(", ")}</div>
+      <h2>${esc(re.titulo)}</h2><div class="q">${quandoReuniao(re)}${re.onde ? " · " + esc(re.onde) : ""}</div><div class="alvos" style="margin:8px 0 0">${re.gente.map((g) => `<span class="chip">👤 ${esc(nomeDe(g))}</span>`).join("")}</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><div class="st3">${Object.entries(RST).map(([k, n]) => `<button type="button" data-rst="${k}" aria-pressed="${re.status === k}" ${pode ? "" : "disabled"}>${n}</button>`).join("")}</div>${pode ? '<button class="btn peq" type="button" data-acao="editar-reuniao" style="margin-top:10px">Editar</button>' : ""}</div></div>
     <div class="bloco"><h3>Rotas da reunião <span class="ct">${rotas.length}</span></h3><div class="lista">${rotas.map((r) => linha(r)).join("") || '<div class="vazio">Nenhuma rota ligada</div>'}</div>${pode ? buscaRotaHTML("reuniao") : ""}</div>
-    <div class="bloco"><h3>Pautas da reunião <span class="ct">${pautas.length}</span></h3><div class="lista">${pautas.map(linhaPauta).join("") || '<div class="vazio">Nenhuma pauta ainda</div>'}</div>${pode ? '<div style="margin-top:10px"><button class="btn" type="button" data-acao="nova-pauta-reuniao">＋ Nova pauta nesta reunião</button></div>' : ""}</div>
-    ${comando() ? `<div class="ia-painel"><div class="t">🐙 Ata com o ALFY</div><div style="font-size:14px;color:#9ED9D2">No fim, o ALFY escreve a ata: o que foi tratado em cada pauta e rota, as decisões, quem faz o quê e o que ficou em aberto.</div>
-      ${re.ata ? `<div class="ia-saida">${esc(re.ata)}</div>` : ""}${s.esperando["ata:" + re.id] ? '<div class="ia-saida pensando">🐙 escrevendo a ata… (o robô do Mac pega em segundos)</div>' : ""}
-      <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn turq" type="button" data-acao="ata">🐙 ${re.ata ? "Escrever de novo" : "Montar a ata"}</button>${re.ata ? '<button class="btn" type="button" data-acao="copiar-ata">Copiar</button>' : ""}</div></div>` : re.ata ? `<div class="bloco"><h3>Ata</h3><div class="ia-saida">${esc(re.ata)}</div></div>` : ""}</div>`;
+    <div class="bloco"><h3>Pautas da reunião <span class="ct">${pautas.length}</span></h3><div class="lista">${pautas.map(linhaPauta).join("") || '<div class="vazio">Nenhuma pauta ainda. Qualquer participante pode lançar.</div>'}</div>${participa ? '<div style="margin-top:10px"><button class="btn" type="button" data-acao="nova-pauta-reuniao">＋ Lançar pauta nesta reunião</button></div>' : ""}</div>
+    ${participa ? ataHTML(re, det) : ""}</div>`;
 }
 function pautaDet() {
   const p = s.pautaDet;
@@ -388,7 +388,7 @@ function blocoMapa(r, quem) {
   return partes.join(" · ") + "\n" + t;
 }
 const contagem = (l) => { const v = l.filter(vencida).length, n = l.length; return `${n} rota${n !== 1 ? "s" : ""} aberta${n !== 1 ? "s" : ""}` + (v ? `, ${v} vencida${v !== 1 ? "s" : ""}` : ""); };
-const mapeavel = (r) => ABERTOS.includes(r.status) && !ehNova(r) && !r.rt.startsWith("IDEIA-") && r.frente !== "🧍 Pessoal" && !/\b[Rr]otina\b/.test(r.titulo);
+const mapeavel = (r) => ABERTOS.includes(r.status) && !ehNova(r) && !r.rt.startsWith("IDEIA-") && r.frente !== "🧍 Pessoal" && r.tipo !== "📅 Compromisso" && !r.inicio && !/\b[Rr]otina\b/.test(r.titulo);
 const dataHoje = () => new Date().toLocaleDateString("pt-BR", { timeZone: FUSO });
 function mapaPessoa(id, soVencidas) {
   const p = pessoa(id);
@@ -433,7 +433,7 @@ const CMDS = [
   { g: "Despejar", k: "despejo", n: "Despejo", faz: "Joga aqui o que vier na cabeça: texto, áudio gravado na hora, áudio ou arquivo. O ALFY separa em rota, pauta, arquivo ou lembrete.", quando: "quando você quiser", onde: "mac" },
   { g: "Ler", k: "whatsapp", n: "Ler o WhatsApp", faz: "Lê suas conversas das últimas 24 horas: quem respondeu rota (citou o número) e o que pode virar rota nova.", quando: "quando você pedir", onde: "mac" },
   { g: "Ler", k: "grupos", n: "Atualizar os grupos", faz: "A mesma leitura, olhando os últimos 7 dias de todas as conversas e grupos de trabalho.", quando: "quando você pedir", onde: "mac" },
-  { g: "Ler", k: "email", n: "Ler o e-mail", faz: "Lê a caixa miguel@ilha.tours e faz o mesmo que com o WhatsApp: retorno de rota e o que pode virar rota.", quando: "a cada 15 min", onde: "mac" },
+  { g: "Ler", k: "email", n: "Ler o e-mail e a agenda", faz: "Lê a caixa miguel@ilha.tours e faz o mesmo que com o WhatsApp: retorno de rota e o que pode virar rota.", quando: "a cada 15 min", onde: "mac" },
   { g: "Mandar", k: "mapa", n: "Lançar o Mapa de Rotas", faz: "A mensagem oficial do Mapa de Rotas de uma pessoa ou de um setor, pronta para colar no WhatsApp.", quando: "na hora", onde: "nuvem" },
   { g: "Mandar", k: "cobrar", n: "Cobrar as vencidas", faz: "Uma mensagem por pessoa só com as rotas vencidas dela.", quando: "na hora", onde: "nuvem" },
   { g: "Mandar", k: "bomdia", n: "Bom dia do Miguel", faz: "O seu dia numa tela: reuniões, o que vence hoje, o que venceu e quem respondeu.", quando: "na hora", onde: "nuvem" },
@@ -461,7 +461,7 @@ function pulsoHTML() {
     <span><i style="background:${r.ia_ok ? "var(--foam)" : "var(--amber)"}"></i>🐙 IA: ${r.ia_ok ? "ligada" : esc(r.ia_msg || "desligada")}</span>
     <span><i style="background:${r.email_em ? "var(--foam)" : "var(--aco)"}"></i>✉️ E-mail: ${r.email_em ? "recebido " + quandoFoi(r.email_em) : "ainda não ligado"}</span></div>`;
 }
-const SCRIPT_EMAIL = (chave) => `// ALFY · leitura do e-mail (só leitura). Cole no script.google.com, salve e rode alfyInstalar uma vez.
+const SCRIPT_EMAIL = (chave) => `// ALFY · e-mail (só leitura) e Google Agenda (nos dois sentidos). Cole no script.google.com, salve e rode alfyInstalar uma vez.
 const ALFY_URL = "https://tladwxithannxstbneon.supabase.co/rest/v1/rpc/alfy_email_receber";
 const ALFY_CHAVE_PUBLICA = "${CHAVE_PUBLICA}";
 const ALFY_SEGREDO = "${chave}";
@@ -485,17 +485,49 @@ function alfyEnviarEmails() {
   props.setProperty("ultima", String(Date.now()));
 }
 
+function alfyRpc(fn, corpo) {
+  const r = UrlFetchApp.fetch(ALFY_URL.replace("alfy_email_receber", fn), { method: "post", contentType: "application/json",
+    headers: { apikey: ALFY_CHAVE_PUBLICA }, payload: JSON.stringify(corpo), muteHttpExceptions: true });
+  return JSON.parse(r.getContentText() || "null");
+}
+
+// Google Agenda nos dois sentidos: traz os seus eventos e leva os compromissos e reuniões do ALFY
+function alfyAgenda() {
+  const cal = CalendarApp.getDefaultCalendar();
+  const de = new Date(Date.now() - 7 * 864e5), ate = new Date(Date.now() + 62 * 864e5);
+  const eventos = cal.getEvents(de, ate).filter(function (e) { return (e.getDescription() || "").indexOf("ALFY ·") < 0; }).map(function (e) {
+    return { id: e.getId(), titulo: e.getTitle(), inicio: e.getStartTime().toISOString(), fim: e.getEndTime().toISOString(),
+      dia_todo: e.isAllDayEvent(), onde: e.getLocation(), link: "https://calendar.google.com/calendar/r/week/" + Utilities.formatDate(e.getStartTime(), "America/Sao_Paulo", "yyyy/MM/dd") };
+  });
+  alfyRpc("alfy_agenda_receber", { p_chave: ALFY_SEGREDO, p_de: de.toISOString(), p_ate: ate.toISOString(), p_eventos: eventos });
+  const x = alfyRpc("alfy_agenda_exportar", { p_chave: ALFY_SEGREDO });
+  if (!x || !x.itens) return;
+  const feitos = [], removidos = [];
+  x.itens.forEach(function (it) {
+    if (it.google_id && it.marca === it.marca_atual) return;
+    let ev = it.google_id ? cal.getEventById(it.google_id) : null;
+    const ini = new Date(it.inicio), fim = new Date(it.fim);
+    if (ev) { ev.setTitle(it.titulo); ev.setTime(ini, fim); ev.setLocation(it.onde || ""); ev.setDescription(it.descricao || "ALFY ·"); }
+    else ev = cal.createEvent(it.titulo, ini, fim, { location: it.onde || "", description: it.descricao || "ALFY ·" });
+    feitos.push({ origem: it.origem, google_id: ev.getId(), marca: it.marca });
+  });
+  x.remover.forEach(function (r) { try { const ev = cal.getEventById(r.google_id); if (ev) ev.deleteEvent(); } catch (e) {} removidos.push(r.origem); });
+  if (feitos.length || removidos.length) alfyRpc("alfy_agenda_marcar", { p_chave: ALFY_SEGREDO, p_feitos: feitos, p_removidos: removidos });
+}
+
+function alfyTudo() { alfyEnviarEmails(); alfyAgenda(); }
+
 function alfyInstalar() {
   ScriptApp.getProjectTriggers().forEach(function (t) { ScriptApp.deleteTrigger(t); });
-  ScriptApp.newTrigger("alfyEnviarEmails").timeBased().everyMinutes(15).create();
-  alfyEnviarEmails();
+  ScriptApp.newTrigger("alfyTudo").timeBased().everyMinutes(15).create();
+  alfyTudo();
 }
 `;
 function emailHTML(h) {
   const r = s.robo || {};
   return `<div class="bloco">${h}${r.email_em ? `<p style="margin:0 0 10px">✅ Ligado. Último envio do Google ${quandoFoi(r.email_em)} · ${r.emails || 0} e-mails recebidos, ${r.emails_novos || 0} esperando o robô. O que pede ação aparece em Ler o WhatsApp (Podem virar rota) e resposta sobre rota vai para Responderam rotas.</p>` : ""}
     <p class="rotulo">${r.email_em ? "Para reinstalar" : "Para ligar (uma vez, 3 minutos)"}</p>
-    <ol style="margin:0 0 10px;padding-left:20px;line-height:1.6;color:var(--aco-2)"><li>Abra <a href="https://script.google.com/home/projects/create" target="_blank" rel="noopener" style="color:var(--turq)">script.google.com › Novo projeto</a> logado como miguel@ilha.tours.</li><li>Apague o que estiver lá, cole o script abaixo e salve (ícone do disquete). Dê o nome "ALFY e-mail".</li><li>No seletor de função, escolha <b>alfyInstalar</b> e clique em Executar.</li><li>O Google pede autorização: escolha sua conta, clique em Avançado › Acessar ALFY e-mail e Permitir. É o seu próprio script, por isso aparece o aviso de app não verificado.</li><li>Pronto: a cada 15 minutos ele manda os e-mails novos da caixa de entrada (sem propaganda) só para o ALFY.</li></ol>
+    <ol style="margin:0 0 10px;padding-left:20px;line-height:1.6;color:var(--aco-2)"><li>Abra <a href="https://script.google.com/home/projects/create" target="_blank" rel="noopener" style="color:var(--turq)">script.google.com › Novo projeto</a> logado como miguel@ilha.tours.</li><li>Apague o que estiver lá, cole o script abaixo e salve (ícone do disquete). Dê o nome "ALFY e-mail".</li><li>No seletor de função, escolha <b>alfyInstalar</b> e clique em Executar.</li><li>O Google pede autorização: escolha sua conta, clique em Avançado › Acessar ALFY e-mail e Permitir. É o seu próprio script, por isso aparece o aviso de app não verificado.</li><li>Pronto: a cada 15 minutos ele manda os e-mails novos da caixa de entrada (sem propaganda) para o ALFY, traz o seu Google Agenda para a Agenda do ALFY e leva para o Google os compromissos e reuniões que você marcar no ALFY.</li><li>Se você já tinha instalado a versão só de e-mail, cole este script de novo e rode alfyInstalar: o Google pede para liberar também a agenda.</li></ol>
     ${s.emailChave ? `<div class="zap" style="background:var(--ferro-0)"><pre style="margin:0;white-space:pre-wrap;font-size:12px;color:var(--aco-2);max-height:220px;overflow:auto">${esc(SCRIPT_EMAIL(s.emailChave))}</pre></div><div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><button class="btn turq" type="button" data-acao="copiar-script">Copiar o script</button></div>` : '<button class="btn turq" type="button" data-acao="ver-script">Mostrar o script</button>'}
     <p class="nota">O script só lê e manda para o banco do ALFY, que só você vê. Ninguém mais tem a chave. Para desligar: script.google.com › o projeto › Acionadores › apagar.</p></div>`;
 }
@@ -618,6 +650,10 @@ function folha() {
         <div class="dado"><small>Impacto</small><select data-prop="impacto">${opc(NIVEIS, r.impacto, "Sem")}</select></div>
         <div class="dado"><small>Esforço</small><select data-prop="esforco">${opc(NIVEIS, r.esforco, "Sem")}</select></div>
       </div>
+      <div class="quando ${pode ? "" : "so-leitura"}"><div class="dado"><small>📅 Compromisso (dia e hora)</small><div class="q3"><input type="date" id="q-dia" data-quando="1" value="${r.inicio ? dia(r.inicio) : ""}"><input type="time" id="q-ini" data-quando="1" value="${r.inicio ? hhmm(r.inicio) : ""}"><span>às</span><input type="time" id="q-fim" data-quando="1" value="${r.fim ? hhmm(r.fim) : ""}"></div></div>
+        <div class="dado"><small>Onde</small><input data-prop="onde" value="${esc(r.onde || "")}" placeholder="Local ou link"></div>
+        <div class="dado"><small>🔁 Repete</small><select data-prop="repete">${opc(REPETE, r.repete || "")}</select>${r.repete === "semanal" ? `<div class="dias-sem">${DIAS_SEM.map((n, i) => `<label><input type="checkbox" data-repetedia="1" value="${i + 1}" ${(r.repete_dias || []).includes(i + 1) ? "checked" : ""}>${n}</label>`).join("")}</div>` : ""}</div></div>
+      ${r.repete ? `<p class="nota" style="margin:-6px 0 0">🔁 Rota que se repete: quando concluir, o ALFY abre a próxima${r.repete_de ? " (série da " + esc(nomeRota(r.repete_de)) + ")" : ""}.</p>` : ""}
       <div class="budget ${pode ? "" : "so-leitura"}"><div><div class="rot">💰 Budget</div><input data-bud="1" value="${esc(r.budget_valor || "")}" placeholder="Valor ou estimativa"></div>
         <div class="sts">${BUDGET_ST.map((x) => `<button type="button" data-budst="${x}" class="${x === "aprovado" ? "ok" : x === "recusado" ? "rec" : ""}" aria-pressed="${r.budget_status === x}" ${(x === "aprovado" || x === "recusado") && !comando() ? "disabled" : ""}>${x}</button>`).join("")}</div>
         ${r.budget_por ? `<div class="por">${r.budget_status === "recusado" ? "Recusado" : "Aprovado"} por ${esc(nomeDe(r.budget_por))}${r.budget_em ? " em " + ddmm(r.budget_em) : ""}</div>` : ""}</div>
@@ -648,6 +684,9 @@ function novaRota(pre = {}) {
         <div class="elo"><small>👤 Responsável</small><select id="n-resp">${opc(gente(), pre.responsavel_id || eu().id)}</select></div><span class="seta">›</span>
         <div class="elo"><small>🤝 Co-responsável</small><select id="n-co">${opc(gente(), "", "Ninguém")}</select></div></div>
       <div class="props"><div class="dado"><small>Prioridade</small><select id="n-prio">${opc(PRIORIDADES, pre.prioridade || "⏳ P3 · 7 dias")}</select></div><div class="dado"><small>Prazo</small><input id="n-prazo" type="date" value="${esc(pre.prazo || "")}"></div><div class="dado"><small>Vai para</small><select id="n-st">${opc([["rota", "Rotas"], ["ideia", "Ideias"]], st)}</select></div></div>${comando() ? '<label class="chip" style="cursor:pointer;align-self:flex-start"><input type="checkbox" id="n-sens" style="margin-right:6px">🔒 Só eu vejo (processo, saúde, sócio, assunto sobre gerente)</label>' : ""}` : '<p class="nota" style="margin:0">Entra como ideia. Quem coordena a frente transforma em rota.</p>'}
+      <label class="chip" style="cursor:pointer;align-self:flex-start"><input type="checkbox" id="n-comp" ${pre.compromisso ? "checked" : ""} style="margin-right:6px">📅 É compromisso com dia e hora (vai para a agenda, não entra no Mapa de Rotas)</label>
+      <div id="n-quando" ${pre.compromisso ? "" : "hidden"} class="form-linha"><label><p class="rotulo">Dia</p><input id="n-dia" type="date" class="busca" style="width:100%" value="${esc(pre.dia || hojeDia())}"></label><label><p class="rotulo">Das · às</p><span style="display:flex;gap:6px"><input id="n-hi" type="time" class="busca" style="flex:1" value="09:00"><input id="n-hf" type="time" class="busca" style="flex:1" value="10:00"></span></label><label style="grid-column:1/-1"><p class="rotulo">Onde</p><input id="n-onde" class="busca" style="width:100%" placeholder="Local ou link"></label></div>
+      <div class="form-linha"><label><p class="rotulo">🔁 Repete</p><select id="n-rep" class="busca" style="width:100%">${opc(REPETE, pre.repete || "")}</select></label><div id="n-dias" hidden><p class="rotulo">Dias</p><div class="dias-sem">${DIAS_SEM.map((n, i) => `<label><input type="checkbox" class="n-dia-sem" value="${i + 1}">${n}</label>`).join("")}</div></div></div>
       <p class="nota" style="margin:0">Depois de salvar, a rota abre para você completar Instruções, Resultado esperado e Budget.</p>
       <div><button class="cta" type="submit">Salvar</button></div></form></section></div>`;
   setTimeout(() => $("#n-tit")?.focus(), 50);
@@ -655,11 +694,14 @@ function novaRota(pre = {}) {
     ev.preventDefault();
     const v = (id) => $("#" + id)?.value || "";
     const campos = { titulo: v("n-tit").trim(), assist: v("n-assist").trim(), frente: v("n-frente"), responsavel_id: v("n-resp"), co_responsavel_id: v("n-co"),
-      prioridade: v("n-prio"), prazo: v("n-prazo") ? v("n-prazo") + "T12:00:00-03:00" : "", status: v("n-st") || "ideia", sensivel: !!$("#n-sens")?.checked };
+      prioridade: v("n-prio"), prazo: v("n-prazo") ? v("n-prazo") + "T12:00:00-03:00" : "", status: v("n-st") || "ideia", sensivel: !!$("#n-sens")?.checked,
+      repete: v("n-rep"), repete_dias: [...document.querySelectorAll(".n-dia-sem:checked")].map((x) => x.value) };
+    if ($("#n-comp")?.checked && v("n-dia")) Object.assign(campos, { inicio: `${v("n-dia")}T${v("n-hi") || "09:00"}:00-03:00`, fim: v("n-hf") ? `${v("n-dia")}T${v("n-hf")}:00-03:00` : "", onde: v("n-onde"), tipo: "📅 Compromisso", status: "rota", prioridade: campos.prioridade, frente: campos.frente || (comando() ? "🧍 Pessoal" : "") });
     try {
       const c = await chamar("alfy_nova_rota", { p_campos: campos });
       if (pre.depois) await pre.depois(c.rt);
-      await recarregar(); s.aba = "rotas"; render(); aviso("Salvo"); abrir(c.rt);
+      const voltar = s.aba === "agenda" ? "agenda" : "rotas";
+      await recarregar(); s.aba = voltar; if (voltar === "agenda") await carregarAgenda(); render(); aviso("Salvo"); abrir(c.rt);
     } catch (e) { falhou(e); }
   });
 }
@@ -703,13 +745,154 @@ function formPauta(p, pre = {}) {
 }
 async function abrirPauta(id) { s.pauta = id; s.pautaDet = null; render(); try { s.pautaDet = await chamar("alfy_pauta", { p_id: id }); } catch (e) { falhou(e); } render(); scrollTo(0, 0); }
 
+
+// ---------------------------------------------------------------- agenda (semana em kanban e mês)
+const REPETE = [["", "Não se repete"], ["diaria", "Todo dia"], ["semanal", "Toda semana"], ["quinzenal", "A cada 15 dias"], ["mensal", "Todo mês"]];
+const DIAS_SEM = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
+const ehCompromisso = (r) => !!r.inicio || r.tipo === "📅 Compromisso";
+const segundaDe = (d) => { const x = new Date(d.toLocaleDateString("en-CA", { timeZone: FUSO }) + "T12:00:00-03:00"); const dw = (x.getDay() + 6) % 7; x.setDate(x.getDate() - dw); return x; };
+const diaISO = (d) => d.toLocaleDateString("en-CA", { timeZone: FUSO });
+function proximaJS(d, repete, dias) {
+  const x = new Date(d);
+  if (repete === "diaria") { x.setDate(x.getDate() + 1); return x; }
+  if (repete === "quinzenal") { x.setDate(x.getDate() + 14); return x; }
+  if (repete === "mensal") { x.setMonth(x.getMonth() + 1); return x; }
+  if (!dias || !dias.length) { x.setDate(x.getDate() + 7); return x; }
+  for (let i = 1; i <= 7; i++) { const y = new Date(d); y.setDate(y.getDate() + i); const iso = ((y.getDay() + 6) % 7) + 1; if (dias.includes(iso)) return y; }
+  x.setDate(x.getDate() + 7); return x;
+}
+function intervaloAgenda() {
+  const base = s.agBase || segundaDe(new Date());
+  if (s.agVista === "mes") { const m = new Date(base); const ini = new Date(m.getFullYear(), m.getMonth(), 1, 12); const de = segundaDe(ini); const ate = new Date(de); ate.setDate(ate.getDate() + 42); return { de, ate, mes: m.getMonth() }; }
+  const ate = new Date(base); ate.setDate(ate.getDate() + 7); return { de: base, ate };
+}
+async function carregarAgenda() {
+  const { de, ate } = intervaloAgenda();
+  const de0 = new Date(de); de0.setHours(0, 0, 0, 0); de0.setHours(de0.getHours() - 3);
+  s.agDados = await chamar("alfy_agenda", { p_de: de0.toISOString(), p_ate: new Date(ate.getTime() + 3 * 3600e3).toISOString() }).catch((e) => { falhou(e); return null; });
+}
+function itensAgenda() {
+  const d = s.agDados; if (!d) return {};
+  const { de, ate } = intervaloAgenda(), por = {};
+  const por0 = (iso, it) => { const k = dia(iso); (por[k] = por[k] || []).push(it); };
+  for (const r of d.rotas || []) {
+    const comp = ehCompromisso(r), base = r.inicio || r.prazo;
+    if (!base) continue;
+    if (!comp && !s.agPrazos && !r.repete) continue;
+    const it = (quando, virtual) => ({ k: "rota", quando, hora: comp ? hhmm(quando) : "", titulo: r.titulo, rt: r.rt, st: r.status, virtual, repete: r.repete, comp, prazo: !comp });
+    const b = new Date(base);
+    if (b >= de && b < ate) por0(base, it(base, false));
+    if (r.repete && ABERTOS.includes(r.status)) {   // próximas da série, só para ver (a rota de verdade abre quando a anterior conclui)
+      let x = new Date(b);
+      for (let i = 0; i < 60; i++) { x = proximaJS(x, r.repete, r.repete_dias); if (x >= ate) break; if (x >= de) por0(x.toISOString(), it(x.toISOString(), true)); }
+    }
+  }
+  for (const re of d.reunioes || []) por0(re.quando, { k: "reuniao", quando: re.quando, hora: hhmm(re.quando), titulo: re.titulo, id: re.id });
+  for (const g of d.google || []) por0(g.inicio, { k: "google", quando: g.inicio, hora: g.dia_todo ? "" : hhmm(g.inicio), titulo: g.titulo, link: g.link, onde: g.onde });
+  for (const k in por) por[k].sort((a, b) => (a.hora || "00:00").localeCompare(b.hora || "00:00"));
+  return por;
+}
+function itemAgendaHTML(it) {
+  const ic = it.k === "reuniao" ? "🗓️" : it.k === "google" ? "📆" : it.repete ? "🔁" : it.comp ? "📅" : "📍";
+  const attr = it.k === "rota" ? `data-rt="${it.rt}"` : it.k === "reuniao" ? `data-irreuniao="${it.id}"` : `data-google="${esc(it.link || "")}"`;
+  return `<button type="button" class="ag-it ${it.k} ${it.virtual ? "virtual" : ""} ${it.st === "concluida" ? "feito" : ""}" ${attr}><span class="h">${it.hora || (it.prazo ? "prazo" : "dia")}</span><span class="t">${ic} ${esc(it.titulo)}</span></button>`;
+}
+function vistaAgenda() {
+  const { de, mes } = intervaloAgenda(), por = itensAgenda(), hoje = hojeDia();
+  const titulo = s.agVista === "mes" ? new Date((s.agBase || new Date()).getTime() + 6 * 864e5).toLocaleDateString("pt-BR", { month: "long", year: "numeric", timeZone: FUSO }).replace(/^./, (c) => c.toUpperCase()).replace(" De ", " de ")
+    : `${ddmm(de.toISOString())} a ${ddmm(new Date(de.getTime() + 6 * 864e5).toISOString())}`;
+  const g = s.agDados?.google_em;
+  const barra = `<div class="ag-barra"><div class="alterna" role="group"><button type="button" data-agvista="semana" aria-pressed="${s.agVista !== "mes"}">Semana</button><button type="button" data-agvista="mes" aria-pressed="${s.agVista === "mes"}">Mês</button></div>
+    <div class="ag-nav"><button class="btn peq" type="button" data-agnav="-1" aria-label="Anterior">‹</button><button class="btn peq" type="button" data-agnav="0">Hoje</button><button class="btn peq" type="button" data-agnav="1" aria-label="Próxima">›</button><b>${esc(titulo)}</b></div>
+    <span class="espaco"></span><button class="chip" type="button" data-acao="ag-prazos" aria-pressed="${!!s.agPrazos}">📍 Prazos das minhas rotas</button><button class="cta" type="button" data-acao="novo-compromisso">＋ Compromisso</button></div>
+    <p class="nota ag-leg" style="margin:0 0 10px">📅 compromisso · 🔁 rotina (a pontilhada é a próxima da série) · 🗓️ reunião${comando() ? ` · 📆 Google Agenda${g ? " (atualizado " + quandoFoi(g) + ")" : " (ainda não ligado: Comandos › Ler o e-mail e a agenda)"}` : ""}</p>`;
+  if (!s.agDados) return barra + `<div class="carregando">Carregando a agenda…</div>`;
+  if (s.agVista === "mes") {
+    const dias = Array.from({ length: 42 }, (_, i) => { const x = new Date(de); x.setDate(x.getDate() + i); return x; });
+    return barra + `<div class="ag-mes">${DIAS_SEM.map((n) => `<div class="ag-cab">${n}</div>`).join("")}${dias.map((x) => { const k = diaISO(x), l = por[k] || []; return `<div class="ag-dia ${x.getMonth() !== mes ? "fora" : ""} ${k === hoje ? "hoje" : ""}"><span class="n">${x.getDate()}</span>${l.slice(0, 4).map(itemAgendaHTML).join("")}${l.length > 4 ? `<button class="ag-mais" type="button" data-agdia="${k}">+${l.length - 4}</button>` : ""}</div>`; }).join("")}</div>`;
+  }
+  const dias = Array.from({ length: 7 }, (_, i) => { const x = new Date(de); x.setDate(x.getDate() + i); return x; });
+  return barra + `<div class="kanban ag-semana" id="ag-semana">${dias.map((x, i) => { const k = diaISO(x), l = por[k] || []; return `<section class="coluna ${k === hoje ? "hoje" : ""}" data-agcoldia="${k}"><header><b>${DIAS_SEM[i]}</b><span>${ddmm(x.toISOString())}</span></header><div class="cartoes">${l.map(itemAgendaHTML).join("") || '<div class="vazio">Livre</div>'}</div></section>`; }).join("")}</div>`;
+}
+
+// ---------------------------------------------------------------- gravação de reunião (PCM 16 kHz mono, sobe em pedaços enquanto grava)
+const grav = { ctx: null, proc: null, fonte: null, stream: null, buf: [], amostras: 0, anexo: null, inicio: 0, fila: Promise.resolve(), relogio: null, trava: null };
+function pcm16(f32, de) {
+  const r = de / 16000, n = Math.floor(f32.length / r), out = new Int16Array(n);
+  for (let i = 0; i < n; i++) { const v = f32[Math.floor(i * r)]; out[i] = Math.max(-1, Math.min(1, v)) * 0x7fff; }
+  return out;
+}
+function enviarPedacoGravacao(final) {
+  if (!grav.buf.length) return grav.fila;
+  const total = grav.buf.reduce((n, b) => n + b.length, 0), junto = new Int16Array(total); let o = 0;
+  grav.buf.forEach((b) => { junto.set(b, o); o += b.length; }); grav.buf = [];
+  const blob = new Blob([junto.buffer]);
+  grav.fila = grav.fila.then(async () => {
+    const b64 = await base64(blob);
+    if (!grav.anexo) grav.anexo = (await chamar("alfy_anexar", { p_nome: `gravação ${new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}.pcm`, p_tipo: "audio/pcm16", p_base64: b64 })).id;
+    else await chamar("alfy_anexar_parte", { p_id: grav.anexo, p_base64: b64 });
+  }).catch((e) => aviso("Falhou ao subir um pedaço da gravação: " + e.message, true));
+  return grav.fila;
+}
+async function gravarReuniao() {
+  if (grav.ctx) { pararReuniao(); return; }
+  try {
+    grav.stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
+    grav.ctx = new (window.AudioContext || window.webkitAudioContext)();
+    grav.fonte = grav.ctx.createMediaStreamSource(grav.stream);
+    grav.proc = grav.ctx.createScriptProcessor(4096, 1, 1);
+    grav.proc.onaudioprocess = (e) => { const p = pcm16(e.inputBuffer.getChannelData(0), grav.ctx.sampleRate); grav.buf.push(p); grav.amostras += p.length; if (grav.amostras - (grav.enviadas || 0) > 16000 * 30) { grav.enviadas = grav.amostras; enviarPedacoGravacao(); } };
+    grav.fonte.connect(grav.proc); grav.proc.connect(grav.ctx.destination);
+    grav.inicio = Date.now(); grav.reuniao = s.reuniao; grav.anexo = null; grav.amostras = 0; grav.enviadas = 0;
+    try { grav.trava = await navigator.wakeLock?.request("screen"); } catch (_) { /* sem trava de tela */ }
+    grav.relogio = setInterval(() => { const el = $("#grav-tempo"); if (el) { const sg = Math.floor((Date.now() - grav.inicio) / 1000); el.textContent = `${Math.floor(sg / 60)}:${String(sg % 60).padStart(2, "0")}`; } }, 1000);
+    render();
+  } catch (_) { aviso("Não consegui usar o microfone. Libere o acesso no navegador.", true); }
+}
+async function pararReuniao() {
+  clearInterval(grav.relogio);
+  try { grav.proc.disconnect(); grav.fonte.disconnect(); grav.stream.getTracks().forEach((t) => t.stop()); grav.ctx.close(); } catch (_) { /* já parado */ }
+  try { grav.trava?.release(); } catch (_) { /* */ }
+  grav.ctx = null; aviso("Subindo a gravação…");
+  await enviarPedacoGravacao(true);
+  if (grav.anexo) { await chamar("alfy_reuniao_anexo", { p_reuniao: grav.reuniao, p_anexo: grav.anexo }); aviso("Gravação guardada. O ALFY vai transcrever e escrever a ata."); }
+  grav.anexo = null; await recarregar(); await carregarReuniao(); render();
+}
+async function subirGrande(file) {
+  const parte = 4 * 1024 * 1024; let id = null;
+  for (let i = 0; i < file.size; i += parte) {
+    const b64 = await base64(file.slice(i, i + parte));
+    if (!id) id = (await chamar("alfy_anexar", { p_nome: file.name, p_tipo: file.type || "application/octet-stream", p_base64: b64 })).id;
+    else await chamar("alfy_anexar_parte", { p_id: id, p_base64: b64 });
+    const el = $("#plaud-prog"); if (el) el.textContent = `subindo ${Math.min(100, Math.round(((i + parte) / file.size) * 100))}%`;
+  }
+  return id;
+}
+async function carregarReuniao() { if (s.reuniao) s.reuniaoDet = await chamar("alfy_reuniao", { p_id: s.reuniao }).catch(() => s.reuniaoDet); }
+function ataHTML(re, det) {
+  const j = det?.ata_json, ped = det?.pedido, rodando = ped && (ped.status === "fila" || ped.status === "rodando");
+  const lista = (t, l, cls) => (l && l.length ? `<p class="rotulo" style="margin-top:12px">${t}</p><ul class="ata-l ${cls || ""}">${l.map((x) => `<li>${esc(rotaTxt(x))}</li>`).join("")}</ul>` : "");
+  const ligadas = new Set(re.rotas || []);
+  const rotasHTML = j?.rotas?.length ? `<p class="rotulo" style="margin-top:12px">Rotas que saem da reunião</p>${j.rotas.map((r, i) => { const feita = (M.rotas || []).find((x) => ligadas.has(x.rt) && x.titulo === r.titulo); return `<div class="sugestao ${feita ? "feita" : ""}"><div class="tx"><b>${esc(r.titulo)}</b><small>${esc(r.responsavel || "sem responsável")}${r.prazo ? " · até " + ddmm(r.prazo + "T12:00:00-03:00") : ""}</small></div>${feita ? `<small style="color:var(--aco)">virou ${esc(nomeRota(feita.rt))}</small>` : manda() ? `<button class="btn turq peq" type="button" data-atarota="${i}">Criar rota</button>` : ""}</div>`; }).join("")}` : "";
+  return `<div class="ia-painel"><div class="t">🐙 Ata da reunião</div>
+    ${rodando ? '<div class="ia-saida pensando">🐙 O ALFY está transcrevendo e escrevendo a ata. Uma reunião de 1 hora leva uns 15 minutos no Mac.</div>' : ""}
+    ${ped?.status === "erro" ? `<div class="ia-saida" style="border-color:var(--verm)">Não deu: ${esc(ped.erro || "")}</div>` : ""}
+    ${j ? `<div class="ata">${j.resumo ? `<p style="margin:0">${esc(rotaTxt(j.resumo))}</p>` : ""}${lista("✅ Decisões", j.decisoes)}${rotasHTML}${lista("💡 Conclusões", j.conclusoes)}${lista("⏳ Pendências", j.pendencias)}</div>` : re.ata ? `<div class="ia-saida">${esc(re.ata)}</div>` : '<p style="margin:0;color:#9ED9D2;font-size:14px">Grave a reunião aqui ou anexe a gravação ou o texto do PLAUD. No fim, o ALFY escreve a ata com decisões, rotas, conclusões e pendências.</p>'}
+    <div style="display:flex;gap:8px;flex-wrap:wrap">${grav.ctx && grav.reuniao === re.id ? `<button class="btn" type="button" data-acao="gravar-reuniao" style="border-color:var(--verm)">⏹ Parar · <span id="grav-tempo">0:00</span></button>` : `<button class="btn turq" type="button" data-acao="gravar-reuniao">🎙️ Gravar reunião</button>`}
+      <label class="btn" style="cursor:pointer">📎 Anexar do PLAUD<input type="file" id="plaud-arq" hidden accept="audio/*,.txt,.md,.srt,.vtt"></label>
+      <button class="btn" type="button" data-acao="ata" ${rodando ? "disabled" : ""}>🐙 ${re.ata ? "Escrever a ata de novo" : "Escrever a ata"}</button>${re.ata ? '<button class="btn" type="button" data-acao="copiar-ata">Copiar a ata</button>' : ""}<span id="plaud-prog" class="nota" style="align-self:center"></span></div>
+    ${det?.transcricao ? `<details><summary style="cursor:pointer;color:#9ED9D2;font-size:13px">Ver a transcrição</summary><div class="ia-saida" style="margin-top:6px;max-height:260px;overflow:auto">${esc(det.transcricao)}</div></details>` : ""}
+    <p class="nota" style="margin:0">Na gravação, deixe a tela ligada. O áudio sobe a cada 30 segundos e, no fim, vai para o Drive 🗂️ ALFY · Arquivos › 00 Entrada.</p></div>`;
+}
+
 // ---------------------------------------------------------------- desenhar
 function render() {
   if (!M) return;
   casca(); topo(); medidores();
   const c = $("#conteudo");
-  c.innerHTML = { rotas: () => (s.vista === "lista" ? vistaLista() : vistaKanban()), feed: vistaFeed, pautas: vistaPautas, comandos: vistaComandos, eu: vistaEu }[s.aba]();
+  c.innerHTML = { rotas: () => (s.vista === "lista" ? vistaLista() : vistaKanban()), feed: vistaFeed, agenda: vistaAgenda, pautas: vistaPautas, comandos: vistaComandos, eu: vistaEu }[s.aba]();
   if (s.aba === "rotas" && s.vista === "kanban") ligarKanban();
+  if (s.aba === "agenda") { const k = $("#ag-semana"), h = k && k.querySelector(".coluna.hoje"); if (k && h && !s.agRolou) { k.scrollLeft = h.offsetLeft - k.offsetLeft - 8; s.agRolou = true; } }
   try { localStorage.setItem("alfy-vista", JSON.stringify({ vista: s.vista, agrupar: s.agrupar })); } catch (_) { /* privado */ }
 }
 // não redesenha o que a pessoa está digitando: espera ela sair do campo
@@ -743,6 +926,8 @@ async function recarregar() {
   }
   if (comando()) s.robo = await chamar("alfy_robo").catch(() => s.robo);
   if (s.cmd === "diario" && s.aba === "comandos") s.diario = await chamar("alfy_diario", { p_dias: 3 }).catch(() => s.diario);
+  if (s.aba === "agenda") await carregarAgenda();
+  if (s.reuniao) await carregarReuniao();
   if (s.aberta) { await recarregarCartao(); if (!ativoNaFolha()) refolha(); }
   if (s.pauta) s.pautaDet = await chamar("alfy_pauta", { p_id: s.pauta }).catch(() => s.pautaDet);
 }
@@ -857,8 +1042,13 @@ document.addEventListener("click", async (e) => {
   const d = b.dataset;
   try {
     if (b.id === "eu-av-cel") { s.aba = "eu"; render(); return; }
-    if (d.aba) { s.aba = d.aba; s.pauta = null; s.reuniao = null; if (d.aba === "feed") FEED = await chamar("alfy_feed", { p_limite: 150 }); if (d.aba === "comandos" && s.cmd === "perguntar" && !s.chatGeral) s.chatGeral = await chamar("alfy_ia_conversa", { p_escopo: "geral" }); render(); scrollTo(0, 0); return; }
+    if (d.aba) { s.aba = d.aba; s.pauta = null; s.reuniao = null; if (d.aba === "agenda") { render(); await carregarAgenda(); } if (d.aba === "feed") FEED = await chamar("alfy_feed", { p_limite: 150 }); if (d.aba === "comandos" && s.cmd === "perguntar" && !s.chatGeral) s.chatGeral = await chamar("alfy_ia_conversa", { p_escopo: "geral" }); render(); scrollTo(0, 0); return; }
     if (d.vista) { s.vista = d.vista; render(); return; }
+    if (d.agvista) { s.agVista = d.agvista; s.agDados = null; render(); await carregarAgenda(); render(); return; }
+    if (d.agnav !== undefined) { const n = +d.agnav, b = s.agBase || segundaDe(new Date()); if (n === 0) s.agBase = segundaDe(new Date()); else if (s.agVista === "mes") { const m = new Date(b.getTime() + 6 * 864e5); m.setMonth(m.getMonth() + n, 1); s.agBase = segundaDe(m); } else { const x = new Date(b); x.setDate(x.getDate() + 7 * n); s.agBase = x; } s.agDados = null; s.agRolou = n !== 0; render(); await carregarAgenda(); render(); return; }
+    if (d.agdia) { s.agVista = "semana"; s.agBase = segundaDe(new Date(d.agdia + "T12:00:00-03:00")); s.agDados = null; render(); await carregarAgenda(); render(); return; }
+    if (d.google !== undefined) { if (d.google) window.open(d.google, "_blank", "noopener"); else aviso("Compromisso do Google Agenda"); return; }
+    if (d.atarota !== undefined) { const r = s.reuniaoDet.ata_json.rotas[+d.atarota], rid = s.reuniao; novaRota({ titulo: r.titulo, assist: r.o_que_fazer, responsavel_id: pessoaPorNome(r.responsavel) || eu().id, prazo: r.prazo || "", depois: async (rt) => { await chamar("alfy_reuniao_rota", { p_reuniao: rid, p_rt: rt, p_ligar: true }); } }); return; }
     if (d.st) { s.st = d.st; render(); return; }
     if (d.ffeed) { s.fFeed = d.ffeed; render(); return; }
     if (d.ligar) { const rt = d.lrt; s.buscaRota = ""; if (d.ligar === "reuniao") await chamar("alfy_reuniao_rota", { p_reuniao: s.reuniao, p_rt: rt, p_ligar: true }); else await chamar("alfy_pauta_ligar", { p_pauta: s.pauta, p_rt: rt, p_ligar: true }); await recarregar(); render(); aviso(nomeRota(rt) + " ligada"); return; }
@@ -909,6 +1099,9 @@ document.addEventListener("click", async (e) => {
     if (a === "editar-pauta") { formPauta(s.pautaDet); return; }
     if (a === "pauta-da-rota") { const r = s.cartao; formPauta(null, { titulo: r.titulo, frente: r.frente, detalhe: r.assist || "", rt: r.rt }); return; }
     if (a === "nova-opcao") { abrirNovaOpcao(); return; }
+    if (a === "ag-prazos") { s.agPrazos = !s.agPrazos; render(); return; }
+    if (a === "novo-compromisso") { novaRota({ compromisso: true }); return; }
+    if (a === "gravar-reuniao") { gravarReuniao(); return; }
     if (a === "ata") { const ch = "ata:" + s.reuniao; await pedir("ata", "reuniao:" + s.reuniao, {}, ch); render(); return; }
     if (a === "copiar-ata") { copiar(reuniaoDe(s.reuniao)?.ata || ""); return; }
     if (a === "despejar") { despejar(); return; }
@@ -942,9 +1135,14 @@ document.addEventListener("change", async (e) => {
     if (t.id === "f-pessoa") { s.pessoa = t.value; render(); }
     if (t.id === "f-frente") { s.frente = t.value; render(); }
     if (t.id === "f-agrupar") { s.agrupar = t.value; render(); }
+    if (t.id === "plaud-arq" && t.files[0]) { const f = t.files[0], rid = s.reuniao; aviso("Subindo " + f.name + "…"); const id = await subirGrande(f); await chamar("alfy_reuniao_anexo", { p_reuniao: rid, p_anexo: id }); aviso("Anexado. O ALFY vai ler e escrever a ata."); await recarregar(); await carregarReuniao(); render(); }
+    if (t.dataset.repetedia && s.aberta) { const dias = [...document.querySelectorAll("[data-repetedia]:checked")].map((x) => +x.value); editar({ repete_dias: dias }); }
+    if (t.id === "n-comp") { $("#n-quando").hidden = !t.checked; }
+    if (t.id === "n-rep") { $("#n-dias").hidden = t.value !== "semanal"; }
     if (t.id === "desp-arq") { for (const f of [...t.files]) subirAnexo(f, f.name, f.type.startsWith("audio")); }
     if (t.dataset.despdest) { s.despejo.itens[+t.dataset.despdest].destino = t.value; render(); }
     if (t.dataset.prop && s.aberta) { const k = t.dataset.prop; editar({ [k]: k === "prazo" ? (t.value ? t.value + "T12:00:00-03:00" : "") : t.value }); }
+    if (t.dataset.quando && s.aberta) { const dd = $("#q-dia").value, hi = $("#q-ini").value, hf = $("#q-fim").value; editar({ inicio: dd ? `${dd}T${hi || "09:00"}:00-03:00` : "", fim: dd && hf ? `${dd}T${hf}:00-03:00` : "", tipo: dd ? "📅 Compromisso" : s.cartao.tipo || "" }); }
     if (t.dataset.bud && s.aberta) { s.cartao = await chamar("alfy_budget", { p_rt: s.aberta, p_valor: t.value, p_status: s.cartao.budget_status === "aprovado" || s.cartao.budget_status === "recusado" ? "aguardando aprovação" : s.cartao.budget_status === "sem custo" ? "a orçar" : s.cartao.budget_status }); refolha(); await recarregar(); render(); }
     if (t.dataset.levarreuniao && t.value) { await chamar("alfy_reuniao_rota", { p_reuniao: +t.value, p_rt: s.aberta, p_ligar: true }); await recarregar(); await recarregarCartao(); refolha(); render(); aviso("Levada para a reunião"); }
   } catch (er) { falhou(er); }
