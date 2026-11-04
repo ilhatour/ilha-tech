@@ -1,4 +1,4 @@
-// ALFY · Mapa de Rotas · Ilha Tech · v2.8.0 · 04/11/2026 · Painel de Ferro · 🧭 Rota a Rota
+// ALFY · Mapa de Rotas · Ilha Tech · v2.8.1 · 04/11/2026 · Painel de Ferro · 🧭 Rota a Rota · prioridade
 // Tudo passa pelas funções alfy_* do banco, sempre com a chave pessoal de quem está usando.
 // O banco decide o que cada pessoa vê; a tela só desenha o que voltou.
 // A IA e os comandos são pedidos numa fila (alfy.pedido) que o robô do Mac atende.
@@ -64,7 +64,7 @@ const IC = {
 // ---------------------------------------------------------------- estado
 let token = null, M = null, versao = null, FEED = null;
 const s = {
-  aba: "rotas", vista: "lista", agrupar: "frente", st: "abertas", busca: "", pessoa: "", frente: "", venc: false, filtrosAbertos: false,
+  aba: "rotas", vista: "lista", agrupar: "frente", st: "abertas", prio: "", busca: "", pessoa: "", frente: "", venc: false, filtrosAbertos: false,
   aberta: null, cartao: null, abaFolha: "ficha", editando: null, colMovel: 0,
   fFeed: "todos", pvista: "reunioes", reuniao: null, pauta: null, pautaDet: null, tipoMsg: "comentario",
   cmd: "despejo", alvo: null, despejo: { texto: "", anexos: [], pedido: null, itens: null, feitos: {} },
@@ -146,7 +146,7 @@ function filtradas() {
   return (M?.rotas || []).filter((r) =>
     (!q || [r.titulo, nomeRota(r.rt), r.rt, r.assist, instrDe(r)].join(" ").toLowerCase().includes(q)) &&
     (!s.pessoa || r.responsavel_id === s.pessoa || r.co_responsavel_id === s.pessoa) &&
-    (!s.frente || r.frente === s.frente) && (!s.venc || vencida(r)));
+    (!s.frente || r.frente === s.frente) && (!s.venc || vencida(r)) && (!s.prio || pcod(r.prioridade) === s.prio || (s.prio === "sem" && !pcod(r.prioridade))));
 }
 const ativo = () => { const a = document.activeElement; return a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName) && a.id !== "busca"; };
 const opc = (lista, atual, vazio) => (vazio !== undefined ? `<option value="">${vazio}</option>` : "") +
@@ -194,7 +194,7 @@ function topo() {
     l1.innerHTML = `<h1>Rotas<small>${comando() ? "todas as frentes" : curto(eu().nome)}</small></h1>${alt}<span class="espaco"></span>${vivo}<button class="cta" type="button" data-acao="nova">＋ Nova rota</button>`;
     $("#alterna-cel").innerHTML = alt;
     fi.innerHTML = filtrosHTML(`<button class="chip alerta" type="button" id="f-venc" aria-pressed="${s.venc}">Só vencidas</button>` +
-      (s.vista === "lista" ? `<select class="sel" id="f-agrupar" aria-label="Agrupar">${opc([["frente", "Por frente e pessoa"], ["prazo", "Por prazo"]], s.agrupar)}</select>` : ""));
+      (s.vista === "lista" ? `<select class="sel" id="f-agrupar" aria-label="Agrupar">${opc([["prioridade", "Por prioridade"], ["frente", "Por frente e pessoa"], ["prazo", "Por prazo"]], s.agrupar)}</select>` : ""));
   } else if (s.aba === "feed") {
     l1.innerHTML = `<h1>Feed<small>últimas atualizações das rotas</small></h1><span class="espaco"></span>${vivo}`;
     $("#alterna-cel").innerHTML = "";
@@ -209,12 +209,17 @@ function topo() {
 }
 function medidores() {
   const m = $("#medidores");
-  if (s.aba !== "rotas" || s.vista !== "lista") { m.innerHTML = ""; m.hidden = true; return; }
+  if (s.aba !== "rotas" || s.vista !== "lista") { m.innerHTML = ""; m.hidden = true; $("#prio-faixa").hidden = true; return; }
   m.hidden = false;
   const vs = filtradas(), venc = vs.filter(vencida).length;
   const its = [["abertas", "Todas abertas", vs.filter((r) => ABERTOS.includes(r.status)).length, "#E9EDEF", venc]].concat(ORDEM.map((k) => [k, ST[k].nome, vs.filter((r) => r.status === k).length, ST[k].cor]));
   m.innerHTML = its.map(([k, n, c, cor, v]) => `<button type="button" class="placa medidor" data-st="${k}" aria-pressed="${s.st === k}"><i class="barra-st" style="background:${cor}"></i><span>${n}</span><b>${c}</b>${v ? `<em>${v} vencidas</em>` : `<em style="color:transparent">.</em>`}</button>`).join("");
   m.style.gridTemplateColumns = `repeat(${its.length},minmax(0,1fr))`;
+  const sp = s.prio; s.prio = "";   // os números de cada prioridade não dependem da que está escolhida
+  const base = filtradas().filter((r) => ABERTOS.includes(r.status)); s.prio = sp;
+  const ps = [["", "Todas", base.length]].concat(["P1", "P2", "P3", "P4", "P5"].map((p) => [p, `${PRIO_IC[p]} ${p}`, base.filter((r) => pcod(r.prioridade) === p).length])).filter(([k, , c]) => !k || c || s.prio === k);
+  const pf = $("#prio-faixa"); pf.hidden = false;
+  pf.innerHTML = (`<div class="prio-filtro" role="group" aria-label="Prioridade">${ps.map(([k, n, c]) => `<button type="button" class="chip prio-${k || "todas"}" data-prio="${k || "todas"}" aria-pressed="${s.prio === k}">${n} <b>${c}</b></button>`).join("")}</div>`);
 }
 
 // ---------------------------------------------------------------- rotas
@@ -248,6 +253,12 @@ function vistaLista() {
   let vs = filtradas();
   vs = s.st === "abertas" ? vs.filter((r) => ABERTOS.includes(r.status)) : vs.filter((r) => r.status === s.st);
   if (!vs.length) return `<div class="vazio">Nenhuma rota aqui.${s.busca || s.pessoa || s.frente || s.venc ? " Limpe os filtros para ver mais." : ""}</div>`;
+  if (s.agrupar === "prioridade") {   // o modelo da equipe: começa pelas mais urgentes
+    const nomes = { P1: "🚨 P1 · fazer em 24h", P2: "⚡ P2 · em 72h", P3: "⏳ P3 · em 7 dias", P4: "💤 P4 · em 30 dias", P5: "⏸️ P5 · sem prazo", "": "Sem prioridade" };
+    const porPrazo = (a, b) => (a.prazo || "9").localeCompare(b.prazo || "9") || a.rt.localeCompare(b.rt);
+    return Object.keys(nomes).map((p) => [p, vs.filter((r) => pcod(r.prioridade) === p).sort(porPrazo)]).filter(([, l]) => l.length)
+      .map(([p, l]) => `<section class="grupo prio-g prio-${p || "sem"}"><h2>${nomes[p]}<span class="ct">${l.length}</span>${l.filter(vencida).length ? `<em>· ${l.filter(vencida).length} vencidas</em>` : ""}</h2><div class="lista">${l.map((r) => linha(r)).join("")}</div></section>`).join("");
+  }
   if (s.agrupar === "prazo") {
     const g = { vencidas: [], hoje: [], semana: [], depois: [], sem: [] };
     vs.forEach((r) => { if (!r.prazo || pcod(r.prioridade) === "P5") g.sem.push(r); else { const n = dias(r.prazo); if (n < 0 && ABERTOS.includes(r.status)) g.vencidas.push(r); else if (n <= 0) g.hoje.push(r); else if (n <= 7) g.semana.push(r); else g.depois.push(r); } });
@@ -1070,7 +1081,7 @@ function render() {
   c.innerHTML = { rotas: () => (s.vista === "rar" && comando() ? vistaRotaARota() : s.vista === "kanban" ? vistaKanban() : vistaLista()), feed: vistaFeed, agenda: vistaAgenda, equipe: vistaEquipe, pautas: vistaPautas, comandos: vistaComandos, eu: vistaEu }[s.aba]();
   if (s.aba === "rotas" && s.vista === "kanban") ligarKanban();
   if (s.aba === "agenda") { const k = $("#ag-semana"), h = k && k.querySelector(".coluna.hoje"); if (k && h && !s.agRolou) { k.scrollLeft = h.offsetLeft - k.offsetLeft - 8; s.agRolou = true; } }
-  try { localStorage.setItem("alfy-vista", JSON.stringify({ vista: s.vista, agrupar: s.agrupar })); } catch (_) { /* privado */ }
+  try { localStorage.setItem("alfy-vista", JSON.stringify({ vista: s.vista, agrupar: s.agrupar, v28: true })); } catch (_) { /* privado */ }
 }
 // não redesenha o que a pessoa está digitando: espera ela sair do campo
 function renderSeguro() {
@@ -1240,6 +1251,7 @@ document.addEventListener("click", async (e) => {
     if (d.google !== undefined) { if (d.google) window.open(d.google, "_blank", "noopener"); else aviso("Compromisso do Google Agenda"); return; }
     if (d.atarota !== undefined) { const r = s.reuniaoDet.ata_json.rotas[+d.atarota], rid = s.reuniao; novaRota({ titulo: r.titulo, assist: r.o_que_fazer, responsavel_id: pessoaPorNome(r.responsavel) || eu().id, prazo: r.prazo || "", depois: async (rt) => { await chamar("alfy_reuniao_rota", { p_reuniao: rid, p_rt: rt, p_ligar: true }); } }); return; }
     if (d.st) { s.st = d.st; render(); return; }
+    if (d.prio) { s.prio = d.prio === "todas" ? "" : d.prio; if (s.prio && s.agrupar === "frente") s.agrupar = "prioridade"; render(); return; }
     if (d.ffeed) { s.fFeed = d.ffeed; render(); return; }
     if (d.ligar) { const rt = d.lrt; s.buscaRota = ""; if (d.ligar === "reuniao") await chamar("alfy_reuniao_rota", { p_reuniao: s.reuniao, p_rt: rt, p_ligar: true }); else await chamar("alfy_pauta_ligar", { p_pauta: s.pauta, p_rt: rt, p_ligar: true }); await recarregar(); render(); aviso(nomeRota(rt) + " ligada"); return; }
     if (d.rt && !d.acao) { abrir(d.rt); return; }
@@ -1404,7 +1416,7 @@ async function entrar(k) {
     if (!m) { erro.textContent = "Código não reconhecido. Confira o seu link pessoal."; token = null; return; }
     guardar(k); M = m; versao = m.versao;
     $("#tela-entrada").hidden = true; $("#tela-painel").hidden = false; $("#barra-baixo").hidden = false;
-    try { const g = JSON.parse(localStorage.getItem("alfy-vista") || "{}"); if (g.vista) s.vista = g.vista; if (g.agrupar) s.agrupar = g.agrupar; } catch (_) { /* privado */ }
+    try { const g = JSON.parse(localStorage.getItem("alfy-vista") || "{}"); if (g.vista) s.vista = g.vista; if (g.agrupar && g.v28) s.agrupar = g.agrupar; else if (!comando()) s.agrupar = "prioridade"; } catch (_) { /* privado */ }
     rrLer(); if (comando() && s.rr.lote) await rrCarregar();
     render();
     FEED = await chamar("alfy_feed", { p_limite: 150 }).catch(() => null);

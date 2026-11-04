@@ -611,3 +611,19 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 .rr-l1 .cta:disabled{opacity:.55;cursor:wait}
 @media (max-width:900px){ #alterna-cel .alterna button{padding-left:9px;padding-right:9px} }
 @media (max-width:900px){ .topo-cel:has(#alterna-cel .alterna) .titulo{display:none} }
+
+/* ---------- 2.8.1 · jeito de aplicativo no celular + prioridade ---------- */
+html,body{overflow-x:clip;overscroll-behavior-x:none;max-width:100%}
+body{touch-action:manipulation}
+@media (max-width:900px){ input,select,textarea{font-size:16px!important} }
+.prio-faixa{padding-block:10px 0;padding-left:max(24px,env(safe-area-inset-left,0px));padding-right:max(24px,env(safe-area-inset-right,0px))}
+@media (max-width:900px){.prio-faixa{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}}
+.prio-filtro{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
+.prio-filtro::-webkit-scrollbar{display:none}
+.prio-filtro .chip b{font-family:var(--fd);margin-left:2px}
+.prio-filtro .chip.prio-P1[aria-pressed="true"]{background:var(--verm);border-color:var(--verm);color:#fff}
+.prio-filtro .chip.prio-P2[aria-pressed="true"]{background:var(--amber);border-color:var(--amber);color:#2A1A02}
+.prio-g h2{display:flex;align-items:center;gap:8px}
+.prio-g h2 em{font-style:normal;font-size:13px;color:var(--verm);font-weight:600}
+.prio-g.prio-P1 > h2{color:#FF8A8D}
+.prio-g.prio-P2 > h2{color:var(--amber)}
