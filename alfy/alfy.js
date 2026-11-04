@@ -1,4 +1,4 @@
-// ALFY · Mapa de Rotas · Ilha Tech · v2.2.1 · 04/11/2026 · Painel de Ferro · agenda e reuniões
+// ALFY · Mapa de Rotas · Ilha Tech · v2.3.0 · 04/11/2026 · Painel de Ferro · agenda e reuniões
 // Tudo passa pelas funções alfy_* do banco, sempre com a chave pessoal de quem está usando.
 // O banco decide o que cada pessoa vê; a tela só desenha o que voltou.
 // A IA e os comandos são pedidos numa fila (alfy.pedido) que o robô do Mac atende.
@@ -438,6 +438,7 @@ const CMDS = [
   { g: "Mandar", k: "cobrar", n: "Cobrar as vencidas", faz: "Uma mensagem por pessoa só com as rotas vencidas dela.", quando: "na hora", onde: "nuvem" },
   { g: "Mandar", k: "bomdia", n: "Bom dia do Miguel", faz: "O seu dia numa tela: reuniões, o que vence hoje, o que venceu e quem respondeu.", quando: "na hora", onde: "nuvem" },
   { g: "Organizar", k: "ronda", n: "Fazer a ronda agora", faz: "Dá prazo para rota com prioridade e sem data, lê o WhatsApp das últimas 24 h e os e-mails novos.", quando: "8h, 11h, 14h, 17h e 20h", onde: "mac" },
+  { g: "Organizar", k: "equipe", n: "Equipe e acessos", faz: "Quem tem acesso ao ALFY, o papel de cada um e o convite com o link pessoal, pronto para mandar no WhatsApp.", quando: "na hora", onde: "nuvem" },
   { g: "Organizar", k: "diario", n: "Relatórios do ALFY", faz: "O Bom dia, o Relatório do dia e o 📡 Grupos hoje que as rotinas do ALFY escrevem.", quando: "8h (Bom dia) e de hora em hora", onde: "mac" },
   { g: "Pensar", k: "perguntar", n: "Perguntar ao ALFY", faz: "Pergunte qualquer coisa sobre as rotas e as pautas. O ALFY responde com os dados do painel.", quando: "quando você pedir", onde: "mac" },
 ];
@@ -531,6 +532,13 @@ function emailHTML(h) {
     ${s.emailChave ? `<div class="zap" style="background:var(--ferro-0)"><pre style="margin:0;white-space:pre-wrap;font-size:12px;color:var(--aco-2);max-height:220px;overflow:auto">${esc(SCRIPT_EMAIL(s.emailChave))}</pre></div><div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><button class="btn turq" type="button" data-acao="copiar-script">Copiar o script</button></div>` : '<button class="btn turq" type="button" data-acao="ver-script">Mostrar o script</button>'}
     <p class="nota">O script só lê e manda para o banco do ALFY, que só você vê. Ninguém mais tem a chave. Para desligar: script.google.com › o projeto › Acionadores › apagar.</p></div>`;
 }
+const convite = (p) => `🐙 *ALFY · seu Mapa de Rotas*\n\nOi, ${p.nome.split(" ")[0]}! A partir de agora as suas rotas ficam no ALFY. Abra pelo link abaixo (é só seu, não repasse):\n\nhttps://ilhatech.io/alfy/#k=${p.token}\n\nNo celular, salve na tela de início para usar como app. Lá você vê suas rotas, muda o status, comenta e responde.`;
+function equipeHTML(h) {
+  const e = s.equipe;
+  if (!e) return `<div class="bloco">${h}<div class="carregando">Carregando…</div></div>`;
+  const papel = { comando: "Comando", gerente: "Gerente", colaborador: "Colaborador" };
+  return `<div class="bloco">${h}<p class="nota" style="margin:0 0 10px">O convite leva o link pessoal: quem tem o link entra. Mande só no privado de cada pessoa.</p>${e.filter((p) => p.papel !== "comando").map((p) => `<div class="sugestao"><div class="tx"><b>${esc(p.nome)}</b><small>${papel[p.papel]}${(p.frentes || []).length ? " · " + p.frentes.map(frenteCurta).join(", ") : ""} · ${p.rotas} rotas abertas · ${p.ultimo ? "usou " + quandoFoi(p.ultimo) : "ainda não usou"}${p.ativo ? "" : " · desligado"}</small></div>${p.ativo ? `<button class="btn turq peq" type="button" data-convite="${p.id}">Copiar convite</button>` : ""}</div>`).join("")}</div>`;
+}
 function diarioHTML(h) {
   const d = s.diario;
   if (!d) return `<div class="bloco">${h}<div class="carregando">Carregando…</div></div>`;
@@ -558,6 +566,7 @@ function detCmd(c) {
   }
   if (c.k === "email") return emailHTML(h);
   if (c.k === "diario") return diarioHTML(h);
+  if (c.k === "equipe") return equipeHTML(h);
   if (c.k === "mapa" || c.k === "cobrar") {
     const pessoasAlvo = (M.pessoas || []).filter((p) => p.papel !== "comando" && p.nome !== "ALFY" && (M.rotas || []).some((r) => r.responsavel_id === p.id && mapeavel(r)));
     const setores = FRENTES.filter((f) => f !== "🧍 Pessoal" && (M.rotas || []).some((r) => r.frente === f && mapeavel(r)));
@@ -1066,7 +1075,8 @@ document.addEventListener("click", async (e) => {
     if (d.budst) { s.cartao = await chamar("alfy_budget", { p_rt: s.aberta, p_valor: $("[data-bud]")?.value || "", p_status: d.budst }); refolha(); await recarregar(); render(); return; }
     if (d.irpauta) { const id = +d.irpauta; fechar(); s.aba = "pautas"; s.reuniao = null; abrirPauta(id); return; }
     if (d.irreuniao) { fechar(); s.aba = "pautas"; s.pauta = null; s.reuniao = +d.irreuniao; render(); scrollTo(0, 0); return; }
-    if (d.cmd) { s.cmd = d.cmd; if (d.cmd === "diario") s.diario = await chamar("alfy_diario", { p_dias: 3 }); if (d.cmd === "perguntar" && !s.chatGeral) s.chatGeral = await chamar("alfy_ia_conversa", { p_escopo: "geral" }); if (d.cmd === "bomdia") FEED = await chamar("alfy_feed", { p_limite: 150 }); render(); if (matchMedia("(max-width:900px)").matches) setTimeout(() => $("#det-cmd")?.scrollIntoView({ behavior: "smooth" }), 30); return; }
+    if (d.convite) { const p = s.equipe.find((x) => x.id === d.convite); copiar(convite(p)); return; }
+    if (d.cmd) { s.cmd = d.cmd; if (d.cmd === "equipe") s.equipe = await chamar("alfy_equipe"); if (d.cmd === "diario") s.diario = await chamar("alfy_diario", { p_dias: 3 }); if (d.cmd === "perguntar" && !s.chatGeral) s.chatGeral = await chamar("alfy_ia_conversa", { p_escopo: "geral" }); if (d.cmd === "bomdia") FEED = await chamar("alfy_feed", { p_limite: 150 }); render(); if (matchMedia("(max-width:900px)").matches) setTimeout(() => $("#det-cmd")?.scrollIntoView({ behavior: "smooth" }), 30); return; }
     if (d.alvo) { s.alvo = d.alvo; render(); return; }
     if (d.mapamodo) { s.mapaModo = d.mapamodo; render(); return; }
     if (d.grupo) { s.grupo = s.grupo || []; s.grupo = s.grupo.includes(d.grupo) ? s.grupo.filter((x) => x !== d.grupo) : [...s.grupo, d.grupo]; render(); return; }
