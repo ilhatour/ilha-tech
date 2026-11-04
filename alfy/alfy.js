@@ -1,4 +1,4 @@
-// ALFY · Mapa de Rotas · Ilha Tech · v2.5.1 · 04/11/2026 · Painel de Ferro · agenda e reuniões
+// ALFY · Mapa de Rotas · Ilha Tech · v2.6.0 · 04/11/2026 · Painel de Ferro · agenda e reuniões
 // Tudo passa pelas funções alfy_* do banco, sempre com a chave pessoal de quem está usando.
 // O banco decide o que cada pessoa vê; a tela só desenha o que voltou.
 // A IA e os comandos são pedidos numa fila (alfy.pedido) que o robô do Mac atende.
@@ -35,7 +35,7 @@ const CAMPOS = {
 };
 const COLUNA = { assist: "assist", instr: "instrucoes", resultado: "resultado", como_esta: "como_esta" };
 const PTIPO = { decidir: "🧠 Para decidir", conversar: "💬 Para conversar", compartilhar: "📎 Para compartilhar" };
-const PST = { aberta: "Em discussão", decidida: "Decidida", tratada: "Tratada", arquivada: "Arquivada" };
+const PST = { aberta: "Em discussão", decidida: "Decidida", tratada: "Encerrada", arquivada: "Arquivada" };
 const MSG_TIPO = { comentario: "💬 Comentário", ideia: "💡 Ideia", pergunta: "❓ Pergunta", partilha: "📎 Compartilhar", decisao: "✅ Decisão" };
 const RST = { marcada: "Marcada", acontecendo: "Acontecendo", encerrada: "Encerrada" };
 
@@ -335,12 +335,19 @@ function linhaPauta(p) {
 }
 function vistaPautas() {
   if (s.pauta) return pautaDet();
-  if (s.reuniao) return reuniaoDet(reuniaoDe(s.reuniao));
+  if (s.reuniao) {
+    const base = reuniaoDe(s.reuniao) || (s.reuniaoDet && s.reuniaoDet.id === s.reuniao ? { ...s.reuniaoDet, rotas: s.reuniaoDet.rotas || [] } : null);
+    if (!base) { if (!s.carregandoReuniao) { s.carregandoReuniao = true; carregarReuniao().then(() => { s.carregandoReuniao = false; if (!s.reuniaoDet || s.reuniaoDet.id !== s.reuniao) s.reuniao = null; renderSeguro(); }); } return '<div class="carregando">Abrindo a reunião…</div>'; }
+    return reuniaoDet(base);
+  }
   const seg = `<div class="alterna" role="group" style="margin-bottom:14px"><button type="button" data-pvista="reunioes" aria-pressed="${s.pvista === "reunioes"}">Reuniões · ${(M.reunioes || []).filter((x) => x.status !== "encerrada").length}</button><button type="button" data-pvista="pautas" aria-pressed="${s.pvista === "pautas"}">Pautas · ${(M.pautas || []).filter((x) => x.status === "aberta").length}</button></div>`;
   if (s.pvista === "reunioes") {
-    const rs = M.reunioes || [];
+    const rs = (M.reunioes || []).filter((x) => x.status !== "encerrada");
+    if (!s.histReunioes && !s.carregandoHist) { s.carregandoHist = true; chamar("alfy_reunioes_historico").then((h) => { s.histReunioes = h || []; s.carregandoHist = false; renderSeguro(); }); }
+    const hist = s.histReunioes || [];
     const soltas = (M.pautas || []).filter((p) => !p.reuniao_id && p.status === "aberta");
     return seg + `<div class="pl" style="max-width:860px">${rs.map((re) => { const np = (M.pautas || []).filter((p) => p.reuniao_id === re.id).length; return `<button type="button" class="placa rebites" data-reuniao="${re.id}"><b>${esc(re.titulo)}</b><span>${quandoReuniao(re)}${re.onde ? " · " + esc(re.onde) : ""} · ${RST[re.status]} · ${re.rotas.length} rotas · ${np} pautas</span></button>`; }).join("") || '<div class="vazio">Nenhuma reunião marcada. Use ＋ Nova reunião.</div>'}
+      ${hist.length ? `<section class="grupo" style="margin-top:18px"><h2>📚 Histórico de reuniões<span class="ct">${hist.length}</span></h2><div class="pl">${hist.map((re) => `<button type="button" class="placa" data-reuniao="${re.id}" style="opacity:.92"><b>🏁 ${esc(re.titulo)}</b><span>${quandoReuniao(re)}${re.onde ? " · " + esc(re.onde) : ""} · ${re.tem_ata ? `ata com ${re.decisoes} ${re.decisoes === 1 ? "decisão" : "decisões"}` : "sem ata"}</span>${re.resumo ? `<span style="display:block;margin-top:4px;color:var(--aco-2)">${esc(re.resumo).slice(0, 220)}</span>` : ""}</button>`).join("")}</div></section>` : ""}
       ${soltas.length ? `<section class="grupo" style="margin-top:18px"><h2>Pautas esperando reunião<span class="ct">${soltas.length}</span></h2><div class="lista">${soltas.map(linhaPauta).join("")}</div></section>` : ""}
       <p class="nota">Uma reunião trata rotas e pautas. Pauta é um tópico para decidir, conversar ou compartilhar, como "qual motor comprar". Ela pode ter rotas ligadas, mas não precisa.</p></div>`;
   }
@@ -364,7 +371,8 @@ function reuniaoDet(re) {
   if (!det && !s.carregandoReuniao) { s.carregandoReuniao = true; carregarReuniao().then(() => { s.carregandoReuniao = false; renderSeguro(); }); }
   return `<div class="pd" style="max-width:900px"><div class="placa rebites cab-p"><button class="btn peq" type="button" data-acao="pautas-voltar">‹ Reuniões</button>
       <h2>${esc(re.titulo)}</h2><div class="q">${quandoReuniao(re)}${re.onde ? " · " + esc(re.onde) : ""}</div><div class="alvos" style="margin:8px 0 0">${re.gente.map((g) => `<span class="chip">👤 ${esc(nomeDe(g))}</span>`).join("")}</div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><div class="st3">${Object.entries(RST).map(([k, n]) => `<button type="button" data-rst="${k}" aria-pressed="${re.status === k}" ${pode ? "" : "disabled"}>${n}</button>`).join("")}</div>${pode ? '<button class="btn peq" type="button" data-acao="editar-reuniao" style="margin-top:10px">Editar</button>' : ""}</div></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">${re.status === "encerrada" ? `<span class="chip" aria-pressed="true" style="margin-top:10px">🏁 Encerrada${det?.encerrada_em || re.encerrada_em ? " em " + ddmm(det?.encerrada_em || re.encerrada_em) : ""}</span>` : `<div class="st3">${[["marcada", "Marcada"], ["acontecendo", "Acontecendo"]].map(([k, n]) => `<button type="button" data-rst="${k}" aria-pressed="${re.status === k}" ${pode ? "" : "disabled"}>${n}</button>`).join("")}</div>${pode ? `<button class="btn turq peq" type="button" data-acao="encerrar-reuniao" style="margin-top:10px">🏁 Encerrar reunião</button><button class="btn peq" type="button" data-acao="editar-reuniao" style="margin-top:10px">Editar</button>` : ""}`}</div>
+      ${s.confirmaEncerrar === re.id ? (() => { const ps = (M.pautas || []).filter((p) => p.reuniao_id === re.id), dec = ps.filter((p) => p.status === "decidida" || p.status === "tratada").length, aberta = ps.filter((p) => p.status === "aberta").length; return `<div class="campo" style="margin-top:12px;border-color:var(--turq)"><p class="txt" style="font-size:15px">Ao encerrar: ${dec} ${dec === 1 ? "pauta decidida fica encerrada" : "pautas decididas ficam encerradas"}${aberta ? ` e ${aberta} ainda em discussão ${aberta === 1 ? "volta" : "voltam"} para a próxima reunião` : ""}. A reunião vai para o histórico.</p><label style="display:flex;gap:8px;align-items:center;margin:8px 0;font-size:14px"><input type="checkbox" id="enc-ata" ${re.ata ? "" : "checked"}> 🐙 O ALFY escreve a ata (com a gravação, se houver)</label><div style="display:flex;gap:8px"><button class="btn turq peq" type="button" data-acao="confirmar-encerrar">Encerrar agora</button><button class="btn peq" type="button" data-acao="cancelar-encerrar">Cancelar</button></div></div>`; })() : ""}</div>
     <div class="bloco"><h3>Rotas da reunião <span class="ct">${rotas.length}</span></h3><div class="lista">${rotas.map((r) => linha(r)).join("") || '<div class="vazio">Nenhuma rota ligada</div>'}</div>${pode ? buscaRotaHTML("reuniao") : ""}</div>
     <div class="bloco"><h3>Pautas da reunião <span class="ct">${pautas.length}</span></h3><div class="lista">${pautas.map(linhaPauta).join("") || '<div class="vazio">Nenhuma pauta ainda. Qualquer participante pode lançar.</div>'}</div>${participa ? '<div style="margin-top:10px"><button class="btn" type="button" data-acao="nova-pauta-reuniao">＋ Lançar pauta nesta reunião</button></div>' : ""}</div>
     ${participa ? ataHTML(re, det) : ""}</div>`;
@@ -375,7 +383,8 @@ function pautaDet() {
   const pode = manda(), ops = p.opcoes || [];
   return `<div class="pd" style="max-width:900px"><div class="placa rebites cab-p"><button class="btn peq" type="button" data-acao="pautas-voltar">‹ Voltar</button>
       <h2>${esc(p.titulo)}</h2><div class="q">${PTIPO[p.tipo]} · trazida por ${esc(curto(nomeDe(p.criado_por)))}${p.frente ? " · " + esc(frenteCurta(p.frente)) : ""}</div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><div class="st3">${Object.entries(PST).map(([k, n]) => `<button type="button" data-pst="${k}" aria-pressed="${p.status === k}" ${pode ? "" : "disabled"}>${n}</button>`).join("")}</div>${pode ? '<button class="btn peq" type="button" data-acao="editar-pauta" style="margin-top:10px">Editar</button>' : ""}</div></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">${p.status === "tratada" ? `<span class="chip" aria-pressed="true" style="margin-top:10px">✅ Encerrada${p.encerrada_em ? " em " + ddmm(p.encerrada_em) : ""}</span>${pode ? '<button class="btn peq" type="button" data-acao="reabrir-pauta" style="margin-top:10px">Reabrir</button>' : ""}` : `<div class="st3">${[["aberta", "Em discussão"], ["decidida", "Decidida"]].map(([k, n]) => `<button type="button" data-pst="${k}" aria-pressed="${p.status === k}" ${pode ? "" : "disabled"}>${n}</button>`).join("")}</div>${pode ? '<button class="btn turq peq" type="button" data-acao="encerrar-pauta" style="margin-top:10px">✅ Encerrar pauta</button><button class="btn peq" type="button" data-acao="editar-pauta" style="margin-top:10px">Editar</button><button class="btn peq" type="button" data-pst="arquivada" style="margin-top:10px">Arquivar</button>' : ""}`}</div>
+      ${s.encerrandoPauta === p.id ? `<div class="campo" style="margin-top:12px;border-color:var(--turq)"><div class="cab-campo"><b>Como terminou</b></div><textarea id="pauta-fim" rows="3" placeholder="A decisão ou a conclusão. Ex.: fechamos o motor 300; o Rafael compra até sexta.">${esc(p.decisao || "")}</textarea><div style="display:flex;gap:8px;margin-top:8px"><button class="btn turq peq" type="button" data-acao="confirmar-pauta">Encerrar pauta</button><button class="btn peq" type="button" data-acao="cancelar-pauta">Cancelar</button></div></div>` : ""}</div>
     <div class="bloco"><h3>Do que se trata</h3><p style="margin:0;font-size:15px;line-height:1.55;white-space:pre-wrap">${esc(p.detalhe || "Sem descrição.")}</p>
       ${ops.length || pode ? `<p class="rotulo" style="margin-top:14px">Opções na mesa</p><div class="alvos">${ops.map((o, i) => `<button class="chip" type="button" data-opcao="${i}" aria-pressed="${p.escolha === i}">${esc(o)}${pode ? `<span class="opcao-x" data-tiraopcao="${i}" role="button" aria-label="Tirar opção">✕</span>` : ""}</button>`).join("")}${pode ? '<button class="chip" type="button" data-acao="nova-opcao">＋ opção</button>' : ""}</div>` : ""}
       ${p.decisao ? `<div class="campo" style="margin-top:10px;border-color:#2A5A47"><div class="cab-campo"><b style="color:var(--foam)">✅ Decisão</b></div><p class="txt">${esc(p.decisao)}</p></div>` : ""}</div>
@@ -1178,6 +1187,13 @@ document.addEventListener("click", async (e) => {
     if (a === "copiar-aprovado") { copiar(convite({ nome: s.aprovado.nome, token: s.aprovado.token })); return; }
     if (a === "ver-script") { s.emailChave = await chamar("alfy_email_chave"); render(); return; }
     if (a === "copiar-script") { copiar(SCRIPT_EMAIL(s.emailChave)); return; }
+    if (a === "encerrar-reuniao") { s.confirmaEncerrar = s.reuniao; render(); return; }
+    if (a === "cancelar-encerrar") { s.confirmaEncerrar = null; render(); return; }
+    if (a === "confirmar-encerrar") { const r = await chamar("alfy_reuniao_encerrar", { p_id: s.reuniao, p_ata: !!$("#enc-ata")?.checked }); s.confirmaEncerrar = null; s.histReunioes = null; await recarregar(); await carregarReuniao(); render(); aviso(`🏁 Reunião encerrada · ${r.tratadas} pautas encerradas${r.voltaram ? ` · ${r.voltaram} para a próxima` : ""}`); return; }
+    if (a === "encerrar-pauta") { s.encerrandoPauta = s.pauta; render(); setTimeout(() => $("#pauta-fim")?.focus(), 30); return; }
+    if (a === "cancelar-pauta") { s.encerrandoPauta = null; render(); return; }
+    if (a === "confirmar-pauta") { s.pautaDet = await chamar("alfy_pauta_encerrar", { p_id: s.pauta, p_conclusao: $("#pauta-fim").value }); s.encerrandoPauta = null; await recarregar(); render(); aviso("✅ Pauta encerrada"); return; }
+    if (a === "reabrir-pauta") { s.pautaDet = await chamar("alfy_pauta_reabrir", { p_id: s.pauta }); await recarregar(); render(); return; }
     if (a === "rastrear-cartao") { await pedir("rastrear", "rota:" + s.aberta, {}, "rota:" + s.aberta); s.abaFolha = "alfy"; refolha(); aviso("📡 Rastreando… a resposta aparece na aba 🐙 ALFY"); return; }
     if (a === "sensivel") { s.cartao = await chamar("alfy_sensivel", { p_rt: s.aberta, p_sensivel: !s.cartao.sensivel }); refolha(); await recarregar(); render(); aviso(s.cartao.sensivel ? "Agora só você vê esta rota" : "A rota voltou a ser vista pela equipe"); return; }
   } catch (er) { falhou(er); }
