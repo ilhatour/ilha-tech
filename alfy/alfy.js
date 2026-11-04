@@ -1,4 +1,4 @@
-// ALFY · Mapa de Rotas · Ilha Tech · v2.9.0 · 04/11/2026 · Painel de Ferro · Nave ID na Equipe · Minha ordem
+// ALFY · Mapa de Rotas · Ilha Tech · v2.9.1 · 04/11/2026 · Painel de Ferro · comentário que o ALFY entende · Passagem de Rotas
 // Tudo passa pelas funções alfy_* do banco, sempre com a chave pessoal de quem está usando.
 // O banco decide o que cada pessoa vê; a tela só desenha o que voltou.
 // A IA e os comandos são pedidos numa fila (alfy.pedido) que o robô do Mac atende.
@@ -190,7 +190,7 @@ function topo() {
   fi.className = "filtros" + (s.filtrosAbertos ? " aberto" : "");
   const vivo = `<span class="ao-vivo"><i></i>ao vivo</span>`;
   if (s.aba === "rotas") {
-    const alt = `<div class="alterna" role="group" aria-label="Visão"><button type="button" data-vista="lista" aria-pressed="${s.vista === "lista"}">Lista</button><button type="button" data-vista="kanban" aria-pressed="${s.vista === "kanban"}">Kanban</button>${comando() ? `<button type="button" data-vista="rar" aria-pressed="${s.vista === "rar"}" title="Rota a Rota">🧭<span class="rr-txt"> Rota a Rota</span></button>` : ""}</div>`;
+    const alt = `<div class="alterna" role="group" aria-label="Visão"><button type="button" data-vista="lista" aria-pressed="${s.vista === "lista"}">Lista</button><button type="button" data-vista="kanban" aria-pressed="${s.vista === "kanban"}">Kanban</button>${comando() ? `<button type="button" data-vista="rar" aria-pressed="${s.vista === "rar"}" title="Passagem de Rotas">🧭<span class="rr-txt"> Passagem</span></button>` : ""}</div>`;
     l1.innerHTML = `<h1>Rotas<small>${comando() ? "todas as frentes" : curto(eu().nome)}</small></h1>${alt}<span class="espaco"></span>${vivo}<button class="cta" type="button" data-acao="nova">＋ Nova rota</button>`;
     $("#alterna-cel").innerHTML = alt;
     fi.innerHTML = filtrosHTML(`<button class="chip alerta" type="button" id="f-venc" aria-pressed="${s.venc}">Só vencidas</button>` +
@@ -241,9 +241,9 @@ function acoesLinha(r) {
 function caixaLinha(r, forcar) {
   if (!forcar && !s.linhasAbertas?.[r.rt]) return "";
   const resp = s.respLinha?.[r.rt], rod = s.esperando["rota:" + r.rt];
-  return `<div class="caixa-linha"><form class="cl-form" data-clform="${r.rt}"><textarea class="busca" id="cl-${r.rt.replace(/\W/g, "")}" rows="2" placeholder="${comando() ? "Comente, ou peça ao ALFY: muda o dono para a Karol · P1 até sexta · faz a mensagem cobrando, sem pressionar · conclui" : "Escreva um retorno sobre esta rota"}">${esc(s.rascunhoLinha?.[r.rt] || "")}</textarea>
+  return `<div class="caixa-linha"><form class="cl-form" data-clform="${r.rt}"><textarea class="busca" id="cl-${r.rt.replace(/\W/g, "")}" rows="2" placeholder="${comando() ? "Comente o que aconteceu ou o próximo passo (o ALFY atualiza a rota), ou peça: muda o dono para a Karol · P1 até sexta · faz a mensagem cobrando" : "Conte como está ou o próximo passo. O ALFY atualiza a rota."}">${esc(s.rascunhoLinha?.[r.rt] || "")}</textarea>
     <span class="cl-bot"><button class="btn peq" type="submit" data-clmodo="comentar">💬 Comentar</button>${comando() ? '<button class="btn turq peq" type="submit" data-clmodo="alfy">🐙 Pedir ao ALFY</button>' : ""}</span></form>
-    ${rod ? `<div class="ia-saida pensando">${s.rastreando?.[r.rt] ? "📡 rastreando WhatsApp e e-mail desta rota… (até 1 minuto)" : "🐙 o ALFY está fazendo… (alguns segundos)"}</div>` : ""}
+    ${rod ? `<div class="ia-saida pensando">${s.rastreando?.[r.rt] ? "📡 rastreando WhatsApp e e-mail desta rota… (até 1 minuto)" : "🐙 o ALFY está lendo e atualizando a rota… (uns 10 segundos)"}</div>` : ""}
     ${resp ? `<div class="ia-saida">${esc(resp)}<div class="usar">${s.sugLinha?.[r.rt] ? `<button class="mini ia" type="button" data-aplicarsug="${r.rt}">🐙 Aplicar a sugestão</button>` : ""}<button class="mini" type="button" data-copiartxt="${r.rt}">Copiar</button><button class="mini" type="button" data-rt="${r.rt}">Abrir a rota</button></div></div>` : ""}</div>`;
 }
 function linha(r, semPessoa) {
@@ -318,7 +318,7 @@ function ligarKanban() {
   k.addEventListener("scroll", () => { const w = k.querySelector(".coluna").offsetWidth + 10, i = Math.round(k.scrollLeft / w); if (i !== s.colMovel) { s.colMovel = i; document.querySelectorAll(".abas-col .chip").forEach((b, j) => b.setAttribute("aria-pressed", j === i)); } }, { passive: true });
 }
 
-// ---------------------------------------------------------------- 🧭 Rota a Rota
+// ---------------------------------------------------------------- 🧭 Passagem de Rotas
 // banco de trabalho: o robô rastreia todas as rotas abertas de uma vez (WhatsApp, e-mail, Drive e o próprio ALFY)
 // e o Miguel passa uma a uma, na ordem que escolheu; o que ele já viu ou deixou para depois sai da fila
 const RR_ORDENS = [["franquia", "Franquia"], ["prioridade", "Prioridade"], ["prazo", "Prazo"], ["vencimento", "Vencimento"]];
@@ -405,7 +405,7 @@ function vistaRotaARota() {
   // a carta da passada: cada rota é um ponto da rota; vista, para depois ou a da vez
   const pontos = todas.map((x) => `<i class="${r.feitas[x.rt] ? "ok" : r.depois[x.rt] ? "dep" : x.rt === foco ? "agora" : rrTem(x.rt) ? "nov" : ""}" title="${esc(nomeRota(x.rt))}"></i>`).join("");
   const painel = `<section class="placa rebites rr-painel">
-    <div class="rr-l1"><div><h2>🧭 Rota a Rota</h2><p class="rr-estado">${estado}</p></div>
+    <div class="rr-l1"><div><h2>🧭 Passagem de Rotas</h2><p class="rr-estado">${estado}</p></div>
       <button class="cta" type="button" data-acao="rr-passar" ${rrRodando() ? "disabled" : ""}>📡 ${r.lote ? "Atualizar de novo" : "Atualizar todas"}</button></div>
     <div class="rr-l2"><span class="rr-rot">Ordem</span>${RR_ORDENS.map(([k, n]) => `<button class="chip" type="button" data-rrordem="${k}" aria-pressed="${r.ordem === k}">${n}</button>`).join("")}
       <button class="chip" type="button" data-acao="rr-novfirst" aria-pressed="${r.novFirst}">Novidade primeiro</button><span class="espaco"></span>
@@ -1143,6 +1143,7 @@ async function recarregar() {
     if (q.status === "erro") aviso("O robô não conseguiu: " + (q.erro || "erro").slice(0, 120), true);
     if (escopo === "geral") s.chatGeral = await chamar("alfy_ia_conversa", { p_escopo: "geral" });
     if (escopo.startsWith("rota:") && s.rastreando?.[escopo.slice(5)]) { const rt = escopo.slice(5); s.rastreando[rt] = false; const p = await chamar("alfy_pedido", { p_id: pid }); s.sugLinha = { ...(s.sugLinha || {}), [rt]: p?.resultado?.sugestao || "" }; }
+    if (escopo.startsWith("rota:") && q.tipo === "entender" && !String(q.resumo || "").startsWith("entendeu")) { s.respLinha = { ...(s.respLinha || {}), [escopo.slice(5)]: "🐙 Li o comentário. Não tinha nada para mudar na rota." }; continue; }
     if (escopo.startsWith("rota:")) {   // cada rota guarda a sua resposta, mesmo com a caixa fechada ou outra aberta
       const rt = escopo.slice(5), conv = await chamar("alfy_ia_conversa", { p_escopo: escopo }), ult = [...conv].reverse().find((m) => m.papel === "assistant");
       if (ult) { s.respLinha = { ...(s.respLinha || {}), [rt]: ult.texto }; if (s.aba === "rotas" && s.aberta !== rt) aviso(`🐙 ${nomeRota(rt)}: pronto`); }
@@ -1176,6 +1177,8 @@ async function mover(rt, st) {
 async function editar(campos, msg) {
   try { s.cartao = await chamar("alfy_editar", { p_rt: s.aberta, p_campos: campos }); s.editando = null; aviso(msg || "Salvo"); refolha(); await recarregar(); render(); } catch (e) { falhou(e); }
 }
+// o comentário vira um pedido "entender" no banco; a tela acompanha para mostrar o que o ALFY mudou
+function esperarEntender(rt) { const q = (M.fila || []).find((x) => x.tipo === "entender" && x.escopo === "rota:" + rt && (x.status === "fila" || x.status === "rodando")); if (q) { s.esperando["rota:" + rt] = q.id; s.respLinha = { ...(s.respLinha || {}), [rt]: "" }; } }
 async function pedir(tipo, escopo, dados, chave) {
   try {
     const r = await chamar("alfy_pedir", { p_tipo: tipo, p_escopo: escopo || null, p_dados: dados || {} });
@@ -1431,7 +1434,7 @@ document.addEventListener("submit", async (e) => {
     const rt = f.dataset.clform, ta = f.querySelector("textarea"), t = ta.value.trim(), modo = e.submitter?.dataset.clmodo || "comentar";
     if (!t) return;
     try {
-      if (modo === "comentar") { await chamar("alfy_comentar", { p_rt: rt, p_texto: t, p_tipo: "comentario" }); s.rascunhoLinha = { ...(s.rascunhoLinha || {}), [rt]: "" }; aviso("Comentado na " + nomeRota(rt)); await recarregar(); render(); }
+      if (modo === "comentar") { await chamar("alfy_comentar", { p_rt: rt, p_texto: t, p_tipo: "comentario" }); s.rascunhoLinha = { ...(s.rascunhoLinha || {}), [rt]: "" }; aviso("Comentado. O ALFY está lendo para atualizar a rota"); await recarregar(); esperarEntender(rt); render(); }
       else { s.rascunhoLinha = { ...(s.rascunhoLinha || {}), [rt]: "" }; s.respLinha = { ...(s.respLinha || {}), [rt]: "" }; await pedir("ia", "rota:" + rt, { texto: t, agir: true }, "rota:" + rt); s.ultimaPerguntaLinha = rt; render(); }
     } catch (er) { falhou(er); }
     return;
@@ -1440,7 +1443,7 @@ document.addEventListener("submit", async (e) => {
   e.preventDefault();
   try {
     if (f.id === "form-entrada") { entrar($("#codigo").value.trim()); return; }
-    if (f.id === "f-coment") { const t = $("#t-coment").value.trim(); if (!t) return; const tipo = e.submitter?.dataset.tipoc || "comentario"; s.cartao = await chamar("alfy_comentar", { p_rt: s.aberta, p_texto: t, p_tipo: tipo }); refolha(); aviso(tipo === "orientacao" ? "Orientação registrada" : "Comentário salvo"); await recarregar(); render(); }
+    if (f.id === "f-coment") { const t = $("#t-coment").value.trim(); if (!t) return; const tipo = e.submitter?.dataset.tipoc || "comentario"; s.cartao = await chamar("alfy_comentar", { p_rt: s.aberta, p_texto: t, p_tipo: tipo }); refolha(); aviso((tipo === "orientacao" ? "Orientação registrada" : "Comentário salvo") + ". O ALFY vai ler e atualizar a rota"); await recarregar(); esperarEntender(s.aberta); render(); }
     if (f.id === "f-chat-rota") { falarNaRota($("#t-chat-rota").value); }
     if (f.id === "f-msg") { const t = $("#t-msg").value.trim(); if (!t) return; s.pautaDet = await chamar("alfy_pauta_msg", { p_pauta: s.pauta, p_tipo: s.tipoMsg, p_texto: t }); await recarregar(); render(); setTimeout(() => $("#t-msg")?.focus(), 20); }
     if (f.id === "f-chat") { const t = $("#t-chat").value.trim(); if (!t) return; await pedir("ia", "geral", { texto: t }, "geral"); s.chatGeral = await chamar("alfy_ia_conversa", { p_escopo: "geral" }); render(); setTimeout(() => $("#t-chat")?.focus(), 20); }
@@ -1482,7 +1485,7 @@ function vigiar() {
     try {
       const v = await chamar("alfy_versao");
       if (v === null) { sair(); return; }
-      if (v !== versao) { await recarregar(); renderSeguro(); }
+      if (v !== versao || Object.keys(s.esperando).length || s.despejo.pedido) { await recarregar(); renderSeguro(); }
       if (rrRodando() && s.aba === "rotas" && s.vista === "rar") { await rrCarregar(); renderSeguro(); }
     } catch (_) { /* sem rede: tenta de novo */ }
     agenda();
