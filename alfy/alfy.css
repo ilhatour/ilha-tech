@@ -553,3 +553,61 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 .ult.u-morna{color:var(--amber)}
 .ult.u-parada{color:#FF9A9C}
 .ult-av{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:var(--mint);color:#0F3B43;font-family:var(--fd);font-weight:700;font-size:9px}
+
+/* ---------- 2.8 · 🧭 Rota a Rota: banco de trabalho ---------- */
+.rr-painel{padding:18px 18px 14px;margin-bottom:16px;display:flex;flex-direction:column;gap:12px}
+.rr-l1{display:flex;gap:14px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap}
+.rr-l1 > div{min-width:0;flex:1 1 320px}
+.rr-l1 h2{font-family:var(--fd);font-weight:800;font-size:20px;margin:0 0 2px;letter-spacing:.02em;color:var(--branco)}
+.rr-estado{margin:0;color:var(--aco-2);font-size:15px}
+.rr-estado b{color:var(--mint)}
+.rr-estado .ao-vivo{gap:0;vertical-align:middle;margin-right:4px}
+.rr-l2{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.rr-l2 .espaco{flex:1}
+.rr-rot{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--aco);font-weight:700;margin-right:2px}
+/* a carta da passada: cada rota é um ponto da rota */
+.rr-carta{display:flex;flex-wrap:wrap;gap:4px;padding:10px 12px;background:var(--ferro-1);border:1px solid var(--linha);border-radius:9px;box-shadow:inset 0 2px 5px rgba(0,0,0,.35);
+  background-image:repeating-linear-gradient(90deg,transparent 0 6px,rgba(140,151,159,.12) 6px 7px)}
+.rr-carta i{width:9px;height:9px;border-radius:50%;border:1.5px solid var(--ferro-4);background:transparent;flex:none}
+.rr-carta i.nov{border-color:var(--turq)}
+.rr-carta i.ok{background:var(--turq);border-color:var(--turq)}
+.rr-carta i.dep{border-color:var(--amber);border-style:dashed}
+.rr-carta i.agora{background:var(--coral);border-color:var(--coral);box-shadow:0 0 0 3px rgba(255,122,69,.25)}
+.rr-conta{margin:0;font-size:14px;color:var(--aco);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.rr-conta b{color:var(--branco);font-family:var(--fd)}
+.rr-grupo .lista{display:flex;flex-direction:column;gap:8px}
+.rr-item{background:var(--ferro-2);border:1px solid var(--linha);border-radius:var(--raio);padding:10px 12px;display:flex;flex-direction:column;gap:8px;scroll-margin-top:calc(var(--nav-h,0px) + 120px)}
+.rr-item.foco{border-color:var(--coral);box-shadow:inset 3px 0 0 var(--coral),0 6px 22px rgba(0,0,0,.35);padding:14px 14px 12px}
+.rr-cab{display:flex;gap:12px;align-items:flex-start;cursor:pointer;min-width:0}
+.rr-cab .tt{min-width:0;display:flex;flex-direction:column;gap:3px}
+.rr-cab .tt b{font-weight:600;line-height:1.3}
+.rr-cab .res{color:var(--aco-2);font-size:14px}
+.rr-novo{border-radius:9px;padding:9px 12px;font-size:15px;line-height:1.5}
+.rr-novo p{margin:0}
+.rr-novo.tem{background:#0E1B1A;border:1px solid #2C625C;color:var(--mint)}
+.rr-novo.vazio,.rr-novo.lendo{background:var(--ferro-1);border:1px dashed var(--linha);color:var(--aco);font-size:14px}
+.rr-novo.lendo{color:#7FB8B1}
+.rr-item:not(.foco) .rr-novo.tem p{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.rr-fontes{display:flex;gap:10px;flex-wrap:wrap;margin-top:6px;font-size:12px;color:#7FB8B1}
+.rr-sug{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-top:8px;padding-top:8px;border-top:1px dashed #2C625C}
+.rr-sug span{min-width:0;flex:1 1 220px}
+.rr-sug.fim span{color:var(--foam)}
+.rr-acoes{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.rr-fim{padding:40px 16px;font-size:17px}
+.rr-cartao .rr-mini{font-size:13px;color:var(--aco-2);display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
+.rr-cartao.tem{border-color:#2C625C}
+.rr-cartao.tem .rr-mini{color:var(--mint)}
+.rr-cartao .rr-acoes .ac{padding:5px 9px}
+.rr-kanban .coluna{min-height:200px}
+@media (max-width:900px){
+  .alterna .rr-txt{display:none}
+  .rr-painel{padding:14px 12px 12px}
+  .rr-l1 .cta{width:100%}
+  .rr-item.foco{padding:12px 10px}
+  .rr-acoes .ac span{display:none}
+  .rr-acoes .btn.turq{flex:1}
+  .rr-kanban .coluna{flex:0 0 86%}
+}
+.rr-l1 .cta:disabled{opacity:.55;cursor:wait}
+@media (max-width:900px){ #alterna-cel .alterna button{padding-left:9px;padding-right:9px} }
+@media (max-width:900px){ .topo-cel:has(#alterna-cel .alterna) .titulo{display:none} }
