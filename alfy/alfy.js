@@ -1,4 +1,4 @@
-// ALFY · Mapa de Rotas · Ilha Tech · v2.3.0 · 04/11/2026 · Painel de Ferro · agenda e reuniões
+// ALFY · Mapa de Rotas · Ilha Tech · v2.4.0 · 04/11/2026 · Painel de Ferro · agenda e reuniões
 // Tudo passa pelas funções alfy_* do banco, sempre com a chave pessoal de quem está usando.
 // O banco decide o que cada pessoa vê; a tela só desenha o que voltou.
 // A IA e os comandos são pedidos numa fila (alfy.pedido) que o robô do Mac atende.
@@ -92,6 +92,7 @@ const lerGuardado = () => { try { return localStorage.getItem(GUARDA); } catch (
 const eu = () => M?.eu || {};
 const papel = () => eu().papel;
 const comando = () => papel() === "comando";
+const cuidaPessoas = () => papel() === "comando" || (papel() === "gerente" && (eu().frentes || []).includes("👥 Ilha Tour · Gestão de Pessoas"));
 const manda = () => papel() === "comando" || papel() === "gerente";
 const pessoa = (id) => M?.pessoas?.find((p) => p.id === id);
 const nomeDe = (id) => pessoa(id)?.nome || "";
@@ -157,6 +158,7 @@ function navItens() {
   const abertas = (M?.rotas || []).filter((r) => ABERTOS.includes(r.status)).length;
   const pautas = (M?.pautas || []).filter((p) => p.status === "aberta").length;
   const it = [["rotas", "Rotas", IC.rotas, abertas], ["agenda", "Agenda", IC.agenda, ""], ["feed", "Feed", IC.feed, ""], ["pautas", "Pautas", IC.pautas, pautas || ""]];
+  if (cuidaPessoas()) it.push(["equipe", "Equipe", IC.eu, (s.fichas || []).filter((f) => f.status === "pendente").length || ""]);
   if (comando()) it.push(["comandos", "Comandos", IC.comandos, (M?.sugestoes || []).length || ""]);
   return it;
 }
@@ -169,7 +171,7 @@ function casca() {
   $("#eu-av").textContent = ini(p.nome); $("#eu-av-cel").textContent = ini(p.nome);
   $("#eu-nome").textContent = p.nome;
   $("#eu-papel").textContent = papelTxt();
-  $("#titulo-cel").textContent = { rotas: "Rotas", agenda: "Agenda", feed: "Feed", pautas: "Pautas", comandos: "Comandos", eu: "Eu" }[s.aba];
+  $("#titulo-cel").textContent = { rotas: "Rotas", equipe: "Equipe", agenda: "Agenda", feed: "Feed", pautas: "Pautas", comandos: "Comandos", eu: "Eu" }[s.aba];
   $("#fab").hidden = s.aba !== "rotas";
 }
 const papelTxt = () => comando() ? "Comando · vê tudo" : papel() === "gerente" ? "Gerente · " + (eu().frentes || []).map(frenteCurta).join(", ") : "Vê as rotas dele";
@@ -199,7 +201,7 @@ function topo() {
     const tipos = [["todos", "Tudo"], ["comentario", "Comentários"], ["orientacao", "Orientações"], ["whatsapp", "WhatsApp"], ["status", "Status"], ["editar", "Edições"], ["nova", "Rotas novas"], ["budget", "Budget"], ["pauta", "Pautas"]];
     fi.innerHTML = filtrosHTML() + `<div style="display:flex;gap:6px;overflow-x:auto;flex-basis:100%;scrollbar-width:none">${tipos.map(([k, n]) => `<button class="chip" type="button" data-ffeed="${k}" aria-pressed="${s.fFeed === k}">${n}</button>`).join("")}</div>`;
   } else {
-    const t = { pautas: "Pautas e reuniões", comandos: "Comandos do ALFY", agenda: "Agenda", eu: "Eu" }[s.aba];
+    const t = { pautas: "Pautas e reuniões", comandos: "Comandos do ALFY", agenda: "Agenda", equipe: "Equipe e cadastro", eu: "Eu" }[s.aba];
     l1.innerHTML = `<h1>${t}</h1><span class="espaco"></span>${vivo}${s.aba === "pautas" && manda() ? '<button class="btn" type="button" data-acao="nova-pauta">＋ Nova pauta</button><button class="cta" type="button" data-acao="nova-reuniao">＋ Nova reunião</button>' : ""}`;
     fi.innerHTML = ""; $("#alterna-cel").innerHTML = "";
   }
@@ -438,7 +440,6 @@ const CMDS = [
   { g: "Mandar", k: "cobrar", n: "Cobrar as vencidas", faz: "Uma mensagem por pessoa só com as rotas vencidas dela.", quando: "na hora", onde: "nuvem" },
   { g: "Mandar", k: "bomdia", n: "Bom dia do Miguel", faz: "O seu dia numa tela: reuniões, o que vence hoje, o que venceu e quem respondeu.", quando: "na hora", onde: "nuvem" },
   { g: "Organizar", k: "ronda", n: "Fazer a ronda agora", faz: "Dá prazo para rota com prioridade e sem data, lê o WhatsApp das últimas 24 h e os e-mails novos.", quando: "8h, 11h, 14h, 17h e 20h", onde: "mac" },
-  { g: "Organizar", k: "equipe", n: "Equipe e acessos", faz: "Quem tem acesso ao ALFY, o papel de cada um e o convite com o link pessoal, pronto para mandar no WhatsApp.", quando: "na hora", onde: "nuvem" },
   { g: "Organizar", k: "diario", n: "Relatórios do ALFY", faz: "O Bom dia, o Relatório do dia e o 📡 Grupos hoje que as rotinas do ALFY escrevem.", quando: "8h (Bom dia) e de hora em hora", onde: "mac" },
   { g: "Pensar", k: "perguntar", n: "Perguntar ao ALFY", faz: "Pergunte qualquer coisa sobre as rotas e as pautas. O ALFY responde com os dados do painel.", quando: "quando você pedir", onde: "mac" },
 ];
@@ -538,6 +539,26 @@ function equipeHTML(h) {
   if (!e) return `<div class="bloco">${h}<div class="carregando">Carregando…</div></div>`;
   const papel = { comando: "Comando", gerente: "Gerente", colaborador: "Colaborador" };
   return `<div class="bloco">${h}<p class="nota" style="margin:0 0 10px">O convite leva o link pessoal: quem tem o link entra. Mande só no privado de cada pessoa.</p>${e.filter((p) => p.papel !== "comando").map((p) => `<div class="sugestao"><div class="tx"><b>${esc(p.nome)}</b><small>${papel[p.papel]}${(p.frentes || []).length ? " · " + p.frentes.map(frenteCurta).join(", ") : ""} · ${p.rotas} rotas abertas · ${p.ultimo ? "usou " + quandoFoi(p.ultimo) : "ainda não usou"}${p.ativo ? "" : " · desligado"}</small></div>${p.ativo ? `<button class="btn turq peq" type="button" data-convite="${p.id}">Copiar convite</button>` : ""}</div>`).join("")}</div>`;
+}
+const LINK_FICHA = "https://ilhatech.io/alfy/ficha.html";
+const MSG_FICHA = `🐙 *Ficha de entrada · Grupo Ilha Tour*\n\nOi! Para te cadastrar nos nossos sistemas, preencha esta ficha (leva 2 minutos):\n\n${LINK_FICHA}\n\nDepois que a Gestão de Pessoas conferir, você recebe o seu acesso ao ALFY por aqui.`;
+const NIVEIS_NAVE = [["operacional", "Operacional"], ["tatico", "Tático"], ["gerente", "Gerente"], ["head", "Head"]];
+function vistaEquipe() {
+  const f = s.fichas;
+  const pend = (f || []).filter((x) => x.status === "pendente"), feitas = (f || []).filter((x) => x.status !== "pendente");
+  return `<div style="max-width:900px;display:flex;flex-direction:column;gap:14px">
+    <div class="bloco"><h3>Ficha de entrada (link fixo e aberto)</h3><p style="margin:0 0 10px;color:var(--aco-2)">Mande este link para toda pessoa que entrar no grupo. Ela preenche nome, WhatsApp, CPF, nascimento e função. A ficha chega aqui para aprovar, e a aprovação cadastra a pessoa na Nave ID e no ALFY ao mesmo tempo.</p>
+      <div class="zap"><div class="msg" style="max-width:none">${zap(MSG_FICHA)}</div></div>
+      <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><button class="btn turq" type="button" data-acao="copiar-ficha">Copiar mensagem com o link</button><a class="btn" href="${LINK_FICHA}" target="_blank" rel="noopener" style="text-decoration:none">Ver a ficha</a></div></div>
+    <div class="bloco"><h3>Fichas para aprovar <span class="ct">${pend.length}</span></h3>${!f ? '<div class="carregando">Carregando…</div>' : pend.map((x) => `<div class="campo" style="margin-bottom:10px"><div class="cab-campo"><b>${esc(x.nome_completo)}</b><span>${quandoFoi(x.criado_em)}</span></div>
+        <p class="txt" style="font-size:14px">${esc(x.apelido ? "Chamar de " + x.apelido + " · " : "")}WhatsApp ${esc(x.whatsapp)}${x.email ? " · " + esc(x.email) : ""}${x.nascimento ? " · nasc. " + ddmm(x.nascimento + "T12:00:00-03:00") : ""}${x.tem_cpf ? " · CPF ✓" : " · sem CPF"}${x.funcao ? "<br>Função: " + esc(x.funcao) : ""}${x.empresa ? " · " + esc(x.empresa) : ""}${x.observacao ? "<br>" + esc(x.observacao) : ""}</p>
+        <div class="props" style="margin-top:8px"><div class="dado"><small>Acesso no ALFY</small><select id="fa-papel-${x.id}">${opc([["colaborador", "Colaborador (vê as rotas dele)"], ["gerente", "Gerente (vê a frente)"]], "colaborador")}</select></div>
+          <div class="dado"><small>Frente (para gerente)</small><select id="fa-frente-${x.id}">${opc(FRENTES.filter((x2) => x2 !== "🧍 Pessoal").map((x2) => [x2, frenteCurta(x2)]), "", "Nenhuma")}</select></div>
+          <div class="dado"><small>Nível na Nave</small><select id="fa-nivel-${x.id}">${opc(NIVEIS_NAVE, "operacional")}</select></div></div>
+        <div style="display:flex;gap:8px;margin-top:8px"><button class="btn turq peq" type="button" data-aprovar="${x.id}">Aprovar e cadastrar</button><button class="btn peq" type="button" data-recusar="${x.id}">Recusar</button></div></div>`).join("") || '<div class="vazio">Nenhuma ficha esperando.</div>'}
+      ${s.aprovado ? `<div class="ia-painel" style="margin-top:10px"><div class="t">✅ ${esc(s.aprovado.nome)} cadastrado na Nave ID e no ALFY</div><div class="zap"><div class="msg" style="max-width:none">${zap(convite({ nome: s.aprovado.nome, token: s.aprovado.token }))}</div></div><div><button class="btn turq" type="button" data-acao="copiar-aprovado">Copiar convite do ALFY</button></div></div>` : ""}
+      ${feitas.length ? `<p class="rotulo" style="margin-top:12px">Últimos 7 dias</p>${feitas.map((x) => `<p style="margin:0 0 4px;font-size:14px">${x.status === "aprovada" ? "✅" : "✖️"} ${esc(x.nome_completo)}</p>`).join("")}` : ""}</div>
+    ${comando() ? equipeHTML("<h3>Quem tem acesso ao ALFY</h3>") : ""}</div>`;
 }
 function diarioHTML(h) {
   const d = s.diario;
@@ -900,7 +921,7 @@ function render() {
   if (!M) return;
   casca(); topo(); medidores();
   const c = $("#conteudo");
-  c.innerHTML = { rotas: () => (s.vista === "lista" ? vistaLista() : vistaKanban()), feed: vistaFeed, agenda: vistaAgenda, pautas: vistaPautas, comandos: vistaComandos, eu: vistaEu }[s.aba]();
+  c.innerHTML = { rotas: () => (s.vista === "lista" ? vistaLista() : vistaKanban()), feed: vistaFeed, agenda: vistaAgenda, equipe: vistaEquipe, pautas: vistaPautas, comandos: vistaComandos, eu: vistaEu }[s.aba]();
   if (s.aba === "rotas" && s.vista === "kanban") ligarKanban();
   if (s.aba === "agenda") { const k = $("#ag-semana"), h = k && k.querySelector(".coluna.hoje"); if (k && h && !s.agRolou) { k.scrollLeft = h.offsetLeft - k.offsetLeft - 8; s.agRolou = true; } }
   try { localStorage.setItem("alfy-vista", JSON.stringify({ vista: s.vista, agrupar: s.agrupar })); } catch (_) { /* privado */ }
@@ -937,6 +958,7 @@ async function recarregar() {
   if (comando()) s.robo = await chamar("alfy_robo").catch(() => s.robo);
   if (s.cmd === "diario" && s.aba === "comandos") s.diario = await chamar("alfy_diario", { p_dias: 3 }).catch(() => s.diario);
   if (s.aba === "agenda") await carregarAgenda();
+  if (cuidaPessoas()) s.fichas = await chamar("alfy_fichas").catch(() => s.fichas);
   if (s.reuniao) await carregarReuniao();
   if (s.aberta) { await recarregarCartao(); if (!ativoNaFolha()) refolha(); }
   if (s.pauta) s.pautaDet = await chamar("alfy_pauta", { p_id: s.pauta }).catch(() => s.pautaDet);
@@ -1052,7 +1074,7 @@ document.addEventListener("click", async (e) => {
   const d = b.dataset;
   try {
     if (b.id === "eu-av-cel") { s.aba = "eu"; render(); return; }
-    if (d.aba) { s.aba = d.aba; s.pauta = null; s.reuniao = null; if (d.aba === "agenda") { render(); await carregarAgenda(); } if (d.aba === "feed") FEED = await chamar("alfy_feed", { p_limite: 150 }); if (d.aba === "comandos" && s.cmd === "perguntar" && !s.chatGeral) s.chatGeral = await chamar("alfy_ia_conversa", { p_escopo: "geral" }); render(); scrollTo(0, 0); return; }
+    if (d.aba) { s.aba = d.aba; s.pauta = null; s.reuniao = null; if (d.aba === "agenda") { render(); await carregarAgenda(); } if (d.aba === "equipe") { s.aprovado = null; s.fichas = await chamar("alfy_fichas"); if (comando()) s.equipe = await chamar("alfy_equipe"); } if (d.aba === "feed") FEED = await chamar("alfy_feed", { p_limite: 150 }); if (d.aba === "comandos" && s.cmd === "perguntar" && !s.chatGeral) s.chatGeral = await chamar("alfy_ia_conversa", { p_escopo: "geral" }); render(); scrollTo(0, 0); return; }
     if (d.vista) { s.vista = d.vista; render(); return; }
     if (d.agvista) { s.agVista = d.agvista; s.agDados = null; render(); await carregarAgenda(); render(); return; }
     if (d.agnav !== undefined) { const n = +d.agnav, b = s.agBase || segundaDe(new Date()); if (n === 0) s.agBase = segundaDe(new Date()); else if (s.agVista === "mes") { const m = new Date(b.getTime() + 6 * 864e5); m.setMonth(m.getMonth() + n, 1); s.agBase = segundaDe(m); } else { const x = new Date(b); x.setDate(x.getDate() + 7 * n); s.agBase = x; } s.agDados = null; s.agRolou = n !== 0; render(); await carregarAgenda(); render(); return; }
@@ -1075,6 +1097,7 @@ document.addEventListener("click", async (e) => {
     if (d.budst) { s.cartao = await chamar("alfy_budget", { p_rt: s.aberta, p_valor: $("[data-bud]")?.value || "", p_status: d.budst }); refolha(); await recarregar(); render(); return; }
     if (d.irpauta) { const id = +d.irpauta; fechar(); s.aba = "pautas"; s.reuniao = null; abrirPauta(id); return; }
     if (d.irreuniao) { fechar(); s.aba = "pautas"; s.pauta = null; s.reuniao = +d.irreuniao; render(); scrollTo(0, 0); return; }
+    if (d.aprovar || d.recusar) { const id = +(d.aprovar || d.recusar), fr = $("#fa-frente-" + id)?.value; const r = await chamar("alfy_ficha_aprovar", { p_id: id, p_papel: $("#fa-papel-" + id)?.value || "colaborador", p_frentes: fr ? [fr] : [], p_nivel: $("#fa-nivel-" + id)?.value || "operacional", p_aprovar: !!d.aprovar }); s.aprovado = d.aprovar ? r : null; s.fichas = await chamar("alfy_fichas"); if (comando()) s.equipe = await chamar("alfy_equipe"); await recarregar(); render(); aviso(d.aprovar ? "Cadastrado na Nave ID e no ALFY" : "Ficha recusada"); return; }
     if (d.convite) { const p = s.equipe.find((x) => x.id === d.convite); copiar(convite(p)); return; }
     if (d.cmd) { s.cmd = d.cmd; if (d.cmd === "equipe") s.equipe = await chamar("alfy_equipe"); if (d.cmd === "diario") s.diario = await chamar("alfy_diario", { p_dias: 3 }); if (d.cmd === "perguntar" && !s.chatGeral) s.chatGeral = await chamar("alfy_ia_conversa", { p_escopo: "geral" }); if (d.cmd === "bomdia") FEED = await chamar("alfy_feed", { p_limite: 150 }); render(); if (matchMedia("(max-width:900px)").matches) setTimeout(() => $("#det-cmd")?.scrollIntoView({ behavior: "smooth" }), 30); return; }
     if (d.alvo) { s.alvo = d.alvo; render(); return; }
@@ -1121,6 +1144,8 @@ document.addEventListener("click", async (e) => {
     if (a === "ronda") { await pedir(a, null, {}); render(); aviso("Pedido na fila do robô"); return; }
     if (a === "copiar-mapa") { const c = s.cmd, modo = c === "cobrar" ? "pessoa" : s.mapaModo || "pessoa"; copiar((modo === "grupo" ? mapaGrupo(s.grupo || []) : modo === "setor" ? mapaSetor(s.alvo) : mapaPessoa(s.alvo, c === "cobrar")).txt); return; }
     if (a === "sair") { sair(); return; }
+    if (a === "copiar-ficha") { copiar(MSG_FICHA); return; }
+    if (a === "copiar-aprovado") { copiar(convite({ nome: s.aprovado.nome, token: s.aprovado.token })); return; }
     if (a === "ver-script") { s.emailChave = await chamar("alfy_email_chave"); render(); return; }
     if (a === "copiar-script") { copiar(SCRIPT_EMAIL(s.emailChave)); return; }
     if (a === "sensivel") { s.cartao = await chamar("alfy_sensivel", { p_rt: s.aberta, p_sensivel: !s.cartao.sensivel }); refolha(); await recarregar(); render(); aviso(s.cartao.sensivel ? "Agora só você vê esta rota" : "A rota voltou a ser vista pela equipe"); return; }
