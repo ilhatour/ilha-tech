@@ -79,6 +79,8 @@ function quandoFoi(iso) {
   return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }) + " " +
     d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
 }
+// na tela é sempre "Rota 266", nunca o código RT-266 do banco
+const nomeRota = (rt) => String(rt).replace(/^RT-/, "Rota ").replace(/^IDEIA-/, "Ideia ");
 const prioCurta = (p) => (p || "").match(/P[1-5]/)?.[0] || "";
 const bolinha = (st) => h("span", { class: "st", style: `background:${ST[st].cor};box-shadow:0 0 8px ${ST[st].cor}` });
 
@@ -206,7 +208,7 @@ async function acao(fn, args, ok) {
     return r;
   } catch (e) { avisar(e.message || "Não salvou.", true); return null; }
 }
-const mover = (rt, st) => acao("alfy_mover", { p_rt: rt, p_status: st }, `${rt} → ${ST[st].nome}`);
+const mover = (rt, st) => acao("alfy_mover", { p_rt: rt, p_status: st }, `${nomeRota(rt)} → ${ST[st].nome}`);
 
 // ---------------------------------------------------------------- painel
 function montarPainel() {
@@ -244,7 +246,7 @@ function rotasFiltradas() {
     if (filtro.vencidas && !vencida(r)) return false;
     if (filtro.minhas && r.responsavel_id !== mapa.eu.id) return false;
     if (filtro.busca) {
-      const t = `${r.rt} ${r.titulo} ${r.assist || ""} ${nomeDe(r.responsavel_id)}`.toLowerCase();
+      const t = `${r.rt} ${nomeRota(r.rt)} ${r.titulo} ${r.assist || ""} ${nomeDe(r.responsavel_id)}`.toLowerCase();
       if (!t.includes(filtro.busca)) return false;
     }
     return true;
@@ -298,7 +300,7 @@ function linhaDe(r, comDono) {
     bolinha(r.status),
     h("div", { class: "meio", role: "button", tabindex: "0", onclick: () => abrirCartao(r.rt),
                 onkeydown: (e) => { if (e.key === "Enter") abrirCartao(r.rt); } },
-      h("div", { class: "tt" }, h("span", { class: "rt" }, r.rt), r.titulo),
+      h("div", { class: "tt" }, h("span", { class: "rt" }, nomeRota(r.rt)), r.titulo),
       metaDe(r, comDono)),
     botoesRapidos(r));
 }
@@ -347,7 +349,7 @@ function desenhaKanban() {
         ondragstart: (e) => { e.dataTransfer.setData("text/plain", r.rt); c.classList.add("arrastando"); },
         ondragend: () => c.classList.remove("arrastando"),
         onclick: () => abrirCartao(r.rt), onkeydown: (e) => { if (e.key === "Enter") abrirCartao(r.rt); } },
-        h("div", { class: "rt" }, r.rt),
+        h("div", { class: "rt" }, nomeRota(r.rt)),
         h("div", { class: "tt" }, r.titulo),
         manda() ? h("div", { class: "meta" }, h("span", {}, nomeDe(r.responsavel_id))) : null,
         metaDe(r, false));
@@ -450,7 +452,7 @@ async function abrirCartao(rt, silencioso) {
 
   m.replaceChildren(h("div", { class: "modal", role: "dialog", "aria-modal": "true", "aria-label": c.titulo },
     h("div", { class: "modal-cab" }, bolinha(c.status),
-      h("div", { style: "min-width:0;flex:1" }, h("div", { class: "rt" }, `${c.rt} · ${nomeDe(c.responsavel_id)}`), titulo),
+      h("div", { style: "min-width:0;flex:1" }, h("div", { class: "rt" }, `${nomeRota(c.rt)} · ${nomeDe(c.responsavel_id)}`), titulo),
       h("button", { class: "fechar", type: "button", "aria-label": "Fechar", onclick: fecharCartao }, "×")),
     h("div", { class: "modal-corpo" },
       h("div", { class: "modal-principal" }, statusBarra,
@@ -515,8 +517,8 @@ function desenhaPautas() {
       const q = busca.value.trim().toLowerCase(); sug.replaceChildren();
       if (q.length < 2) return;
       mapa.rotas.filter((r) => !p.rotas.includes(r.rt) && `${r.rt} ${r.titulo}`.toLowerCase().includes(q)).slice(0, 6)
-        .forEach((r) => sug.append(h("button", { type: "button", onclick: () => acao("alfy_pauta_ligar", { p_pauta: p.id, p_rt: r.rt, p_ligar: true }, `${r.rt} na pauta`) },
-          `${r.rt} · ${r.titulo}`)));
+        .forEach((r) => sug.append(h("button", { type: "button", onclick: () => acao("alfy_pauta_ligar", { p_pauta: p.id, p_rt: r.rt, p_ligar: true }, `${nomeRota(r.rt)} na pauta`) },
+          `${nomeRota(r.rt)} · ${r.titulo}`)));
     });
     lista.append(h("article", { class: "pauta" + (p.status === "tratada" ? " tratada" : "") },
       h("div", { class: "pauta-cab" }, h("h3", {}, p.titulo),
@@ -525,7 +527,7 @@ function desenhaPautas() {
           p.status === "aberta" ? "Pauta tratada" : "Pauta reaberta") }, p.status === "aberta" ? "Marcar tratada" : "Reabrir")),
       p.detalhe ? h("p", {}, p.detalhe) : null,
       rotas.length ? h("ul", {}, rotas.map((r) => h("li", {}, bolinha(r.status),
-        h("button", { class: "lk", type: "button", onclick: () => abrirCartao(r.rt) }, h("span", { class: "rt" }, r.rt), " ", r.titulo),
+        h("button", { class: "lk", type: "button", onclick: () => abrirCartao(r.rt) }, h("span", { class: "rt" }, nomeRota(r.rt)), " ", r.titulo),
         h("button", { class: "rapido", type: "button", style: "margin-left:auto", title: "Tirar da pauta",
           onclick: () => acao("alfy_pauta_ligar", { p_pauta: p.id, p_rt: r.rt, p_ligar: false }, "Tirada da pauta") }, "×")))) :
         h("p", { class: "meta" }, "Pauta sem rota ligada."),
