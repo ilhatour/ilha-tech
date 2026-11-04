@@ -494,3 +494,28 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
   .quando{grid-template-columns:1fr}
 }
 @media (max-width:900px){.ag-leg{display:none}.ag-barra .cta{padding:7px 12px}}
+/* 2.4.1 · no computador o menu vira uma barra de navegação no topo (ganha a largura da tela) */
+@media (min-width:901px){
+  :root{--nav-h:62px}
+  .app{grid-template-columns:1fr}
+  .lateral{position:sticky;top:0;z-index:12;height:var(--nav-h);flex-direction:row;align-items:center;gap:16px;padding:8px 24px;
+    padding-left:max(24px,env(safe-area-inset-left,0px));padding-right:max(24px,env(safe-area-inset-right,0px));border-right:0;border-bottom:1px solid var(--linha);
+    background:linear-gradient(180deg,#22272C,#1A1E22)}
+  .lateral .marca{padding:6px 14px 6px 12px;gap:8px}
+  .lateral .marca .polvo{font-size:20px}
+  .lateral .marca b{font-size:16px}
+  .lateral .marca small{display:none}
+  .lateral .rebites::before,.lateral .rebites::after{top:4px}
+  .nav{flex-direction:row;gap:4px;flex:1;min-width:0;overflow-x:auto;scrollbar-width:none}
+  .nav button{padding:8px 12px;font-size:14px;white-space:nowrap}
+  .nav button svg{width:18px;height:18px}
+  .nav button[aria-current="true"]{box-shadow:inset 0 -3px 0 var(--turq)}
+  .nav .n{margin-left:2px}
+  .nav .n:empty{display:none}
+  .lateral .eu{margin-top:0;padding:6px 10px;gap:8px}
+  .lateral .eu .avatar{width:30px;height:30px;font-size:12px}
+  .lateral .eu .quem b{font-size:13px}
+  .lateral .eu .quem span{display:none}
+  .topo{top:var(--nav-h)}
+  .det-cmd{top:calc(var(--nav-h) + 150px)}
+}
