@@ -1,4 +1,4 @@
-// ALFY · Mapa de Rotas · Ilha Tech · v2.10.3 · 04/11/2026 · Painel de Ferro · Nova rota: o ALFY organiza o texto
+// ALFY · Mapa de Rotas · Ilha Tech · v2.10.4 · 04/11/2026 · Painel de Ferro · nova rota não troca de aba
 // Tudo passa pelas funções alfy_* do banco, sempre com a chave pessoal de quem está usando.
 // O banco decide o que cada pessoa vê; a tela só desenha o que voltou.
 // A IA e os comandos são pedidos numa fila (alfy.pedido) que o robô do Mac atende.
@@ -966,11 +966,10 @@ function novaRota(pre = {}) {
     try {
       const c = await chamar("alfy_nova_rota", { p_campos: campos });
       if (pre.depois) await pre.depois(c.rt);
-      const voltar = s.aba === "agenda" ? "agenda" : "rotas";
       if (organizar) {   // o ALFY reescreve e completa a rota a partir do texto como foi escrito
         await pedir("ia", "rota:" + c.rt, { agir: true, texto: `Organize esta rota nova a partir do que eu escrevi. Título: «${tit0 || "(vazio)"}». Texto: «${txt0 || "(vazio)"}». Reescreva o título no formato "Pessoa: verbo + o quê", o O que fazer na minha voz falando com quem faz (1 ou 2 frases), e preencha Instruções e Resultado esperado só com o que o texto diz. Se o texto disser quem faz, junto com quem, frente, prioridade ou prazo, ajuste. Não invente nada.` }, "rota:" + c.rt);
       }
-      await recarregar(); s.aba = voltar; if (voltar === "agenda") await carregarAgenda(); render(); aviso(organizar ? "Salvo. O ALFY está organizando a rota…" : "Salvo"); await abrir(c.rt); if (organizar) { s.abaFolha = "alfy"; refolha(); }
+      await recarregar(); if (s.aba === "agenda") await carregarAgenda(); render();   // fica na aba em que a pessoa estava aviso(organizar ? "Salvo. O ALFY está organizando a rota…" : "Salvo"); await abrir(c.rt); if (organizar) { s.abaFolha = "alfy"; refolha(); }
     } catch (e) { falhou(e); }
   });
 }
