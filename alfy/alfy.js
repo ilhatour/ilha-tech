@@ -1,4 +1,4 @@
-// ALFY · Mapa de Rotas · Ilha Tech · v2.10.1 · 04/11/2026 · Painel de Ferro · Passagem com ações juntas e última atualização
+// ALFY · Mapa de Rotas · Ilha Tech · v2.10.2 · 04/11/2026 · Painel de Ferro · Passagem: o texto escrito vai junto ao passar
 // Tudo passa pelas funções alfy_* do banco, sempre com a chave pessoal de quem está usando.
 // O banco decide o que cada pessoa vê; a tela só desenha o que voltou.
 // A IA e os comandos são pedidos numa fila (alfy.pedido) que o robô do Mac atende.
@@ -365,6 +365,14 @@ async function rrPassar() {
   s.rr.lote = await pedir("rastrear_lote", "lote", { rts });
   if (!s.rr.lote) s.rr.ped = null;
   rrSalvar(); render();
+}
+// texto escrito no campo da rota vai como comentário quando a pessoa passa, conclui ou agenda (o ALFY lê e atualiza a rota)
+async function enviarRascunho(rt) {
+  const ta = document.getElementById("cl-" + rt.replace(/\W/g, "")), t = (ta?.value || s.rascunhoLinha?.[rt] || "").trim();
+  if (!t) return false;
+  await chamar("alfy_comentar", { p_rt: rt, p_texto: t, p_tipo: "comentario" });
+  s.rascunhoLinha = { ...(s.rascunhoLinha || {}), [rt]: "" }; if (ta) ta.value = "";
+  return true;
 }
 function rrTirar(rt, onde) {
   s.rr[onde] = { ...s.rr[onde], [rt]: true }; s.rr.foco = null; rrSalvar(); render();
@@ -1312,12 +1320,13 @@ document.addEventListener("click", async (e) => {
     if (d.rrfoco) { s.rr.foco = d.rrfoco; render(); setTimeout(() => $("#cl-" + d.rrfoco.replace(/\W/g, ""))?.focus({ preventScroll: true }), 30); return; }
     if (d.rragendar) { s.rrAg = s.rrAg === d.rragendar ? null : d.rragendar; render(); return; }
     if (d.agpor || d.agprazo) {
+      await enviarRascunho(d.agpor || d.agprazo);
       const rt = d.agpor || d.agprazo, dd = $("#ag-dia").value, hi = $("#ag-ini").value, hf = $("#ag-fim").value; if (!dd) { aviso("Escolha o dia"); return; }
       const campos = d.agpor ? { inicio: `${dd}T${hi || "09:00"}:00-03:00`, fim: hf ? `${dd}T${hf}:00-03:00` : "", tipo: "📅 Compromisso" } : { prazo: dd + "T12:00:00-03:00" };
       await chamar("alfy_editar", { p_rt: rt, p_campos: campos }); s.rrAg = null; aviso(d.agpor ? `📅 ${nomeRota(rt)} na agenda: ${ddmm(dd + "T12:00:00-03:00")} ${hi}` : `Prazo da ${nomeRota(rt)}: ${ddmm(dd + "T12:00:00-03:00")}`); await recarregar(); render(); return;
     }
-    if (d.rrfeita) { rrTirar(d.rrfeita, "feitas"); return; }
-    if (d.rrdepois) { rrTirar(d.rrdepois, "depois"); aviso(nomeRota(d.rrdepois) + " ficou para depois"); return; }
+    if (d.rrfeita) { const foi = await enviarRascunho(d.rrfeita); rrTirar(d.rrfeita, "feitas"); if (foi) aviso(`💬 Comentário enviado na ${nomeRota(d.rrfeita)}. O ALFY vai atualizar a rota`); return; }
+    if (d.rrdepois) { const foi = await enviarRascunho(d.rrdepois); rrTirar(d.rrdepois, "depois"); aviso(nomeRota(d.rrdepois) + " ficou para depois" + (foi ? " · comentário enviado" : "")); return; }
     if (d.rrlista) { s.rr.formato = "lista"; s.rr.foco = d.rrlista; rrSalvar(); render(); setTimeout(() => $(".rr-item.foco")?.scrollIntoView({ block: "start", behavior: "smooth" }), 40); return; }
     if (d.rraplicar) { const rt = d.rraplicar, t = s.rr.itens[rt]?.sugestao; if (!t) return; s.rr.itens[rt].sugestao = ""; s.rr.foco = rt; s.respLinha = { ...(s.respLinha || {}), [rt]: "" }; await pedir("ia", "rota:" + rt, { texto: t, agir: true }, "rota:" + rt); render(); return; }
     if (d.agvista) { s.agVista = d.agvista; s.agDados = null; render(); await carregarAgenda(); render(); return; }
@@ -1350,7 +1359,7 @@ document.addEventListener("click", async (e) => {
     if (d.copiarmapa) { copiar(mapaPessoa(d.copiarmapa).txt); s.mapasCopiados = { ...(s.mapasCopiados || {}), [d.copiarmapa]: new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) }; render(); return; }
     if (d.baixar) { aviso("Baixando…"); const x = await chamar("alfy_anexo_baixar", { p_id: +d.baixar }); const bin = atob(x.base64), u8 = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i); const url = URL.createObjectURL(new Blob([u8], { type: x.tipo || "application/octet-stream" })); const l = document.createElement("a"); l.href = url; l.download = x.nome; document.body.append(l); l.click(); l.remove(); setTimeout(() => URL.revokeObjectURL(url), 5000); return; }
     if (d.tiraranexo) { s.cartao = await chamar("alfy_anexo_tirar", { p_id: +d.tiraranexo }); refolha(); await recarregar(); render(); aviso("Anexo tirado da rota"); return; }
-    if (d.rapido) { const rt = d.rrt; await chamar("alfy_mover", { p_rt: rt, p_status: d.rapido }); if (d.rapido === "concluida" && s.rr.feitas) { s.rr.feitas = { ...s.rr.feitas, [rt]: true }; rrSalvar(); } aviso(d.rapido === "concluida" ? `✓ ${nomeRota(rt)} concluída` : `${nomeRota(rt)} em andamento`); await recarregar(); render(); return; }
+    if (d.rapido) { const rt = d.rrt; if (s.aba === "rotas" && s.vista === "rar") await enviarRascunho(rt); await chamar("alfy_mover", { p_rt: rt, p_status: d.rapido }); if (d.rapido === "concluida" && s.rr.feitas) { s.rr.feitas = { ...s.rr.feitas, [rt]: true }; rrSalvar(); } aviso(d.rapido === "concluida" ? `✓ ${nomeRota(rt)} concluída` : `${nomeRota(rt)} em andamento`); await recarregar(); render(); return; }
     if (d.rastrear) { const rt = d.rastrear; s.linhasAbertas = { ...(s.linhasAbertas || {}), [rt]: true }; s.respLinha = { ...(s.respLinha || {}), [rt]: "" }; s.sugLinha = { ...(s.sugLinha || {}), [rt]: "" }; s.rastreando = { ...(s.rastreando || {}), [rt]: true }; s.pedRastreio = { ...(s.pedRastreio || {}), [rt]: await pedir("rastrear", "rota:" + rt, {}, "rota:" + rt) }; render(); return; }
     if (d.aplicarsug) { const rt = d.aplicarsug, t = s.sugLinha[rt]; s.sugLinha[rt] = ""; s.respLinha[rt] = ""; s.rastreando[rt] = false; await pedir("ia", "rota:" + rt, { texto: t, agir: true }, "rota:" + rt); render(); return; }
     if (d.linhacaixa) { s.linhasAbertas = { ...(s.linhasAbertas || {}), [d.linhacaixa]: !s.linhasAbertas?.[d.linhacaixa] }; render(); setTimeout(() => $("#cl-" + d.linhacaixa.replace(/\W/g, ""))?.focus(), 30); return; }
