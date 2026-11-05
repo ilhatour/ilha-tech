@@ -1,4 +1,4 @@
-// ALFY · Mapa de Rotas · Ilha Tech · v2.15.3 · 05/11/2026 · Painel de Ferro · Passagem: 🎲 sorteio
+// ALFY · Mapa de Rotas · Ilha Tech · v2.16.0 · 05/11/2026 · Painel de Ferro · Passagem com a rota mastigada (resumo, onde está, o que mudou, próximo passo)
 // Tudo passa pelas funções alfy_* do banco, sempre com a chave pessoal de quem está usando.
 // O banco decide o que cada pessoa vê; a tela só desenha o que voltou.
 // A IA e os comandos são pedidos numa fila (alfy.pedido) que o robô do Mac atende.
@@ -406,13 +406,26 @@ function rrSituacao(r) {
   if (!r.como_esta && !u) return `<div class="sit4 vazio">Sem atualização ainda. Escreva abaixo o que está acontecendo.</div>`;
   return `<div class="sit4">${r.como_esta ? `<div class="sit4-l"><small>📍 Agora</small><p>${esc(r.como_esta)}</p></div>` : ""}${u ? `<div class="sit4-l ult4"><small>🕘 Último retorno · ${esc(curto(u.quem))} · ${quandoFoi(u.em)}</small><p>${esc(rotaTxt(u.texto.replace(/^📱 WhatsApp · /, "📱 ")))}</p></div>` : ""}</div>`;
 }
+// a rota mastigada: o ALFY entrega resumo, onde está, o que mudou e o próximo passo (sem rastreio, usa o que a rota já tem)
+function rrFicha(r) {
+  const i = s.rr.itens[r.rt] || {}, u = r.ult_txt, lendo = !s.rr.itens[r.rt] && rrRodando() && s.rr.rts.includes(r.rt);
+  const resumo = i.resumo || r.assist || r.titulo, onde = i.onde || r.como_esta || "";
+  const mudou = (i.mudou || []).length ? i.mudou : u ? [{ quando: ddmm(u.em), quem: curto(u.quem), o_que: rotaTxt(u.texto.replace(/^📱 WhatsApp · [^:]*: /, "").replace(/^🤖 ALFY · /, "")).slice(0, 200) }] : [];
+  return `<div class="ficha5">
+    <p class="f5-res">${esc(resumo)}</p>
+    <div class="f5-l"><span class="f5-r">Onde está</span><p class="${onde ? "" : "f5-vazio"}">${onde ? esc(onde) : "Sem atualização ainda. Escreva abaixo o que está acontecendo."}</p></div>
+    ${mudou.length ? `<div class="f5-l"><span class="f5-r">O que mudou</span><ul>${mudou.map((m) => `<li><span class="f5-q">${esc(m.quando || "")}${m.quem ? " · " + esc(m.quem) : ""}</span>${esc(m.o_que)}</li>`).join("")}</ul></div>` : ""}
+    ${lendo ? `<div class="f5-l"><span class="f5-r">Rastreio</span><p class="f5-vazio">📡 lendo WhatsApp, e-mail, Drive e ALFY…</p></div>` : ""}
+    ${i.sugestao ? `<div class="f5-prox"><span class="f5-r">Próximo passo</span><p>${esc(i.sugestao)}</p><button class="mini ia" type="button" data-rraplicar="${r.rt}">🐙 Fazer isso</button></div>` : ""}
+    ${i.concluida ? `<div class="f5-prox fim"><span class="f5-r">Parece pronta</span><p>Pelo que o ALFY leu, esta rota já foi feita.</p><button class="mini" type="button" data-rapido="concluida" data-rrt="${r.rt}">✓ Concluir</button></div>` : ""}
+    ${u || i.fontes ? `<details class="f5-mais"><summary>Ver detalhes</summary>${u ? `<p><small>Último registro · ${esc(curto(u.quem))} · ${quandoFoi(u.em)}</small>${esc(rotaTxt(u.texto))}</p>` : ""}${i.fontes ? `<p><small>Rastreio leu${i.em ? " · " + quandoFoi(i.em) : ""}</small>${Object.entries(i.fontes).filter(([, n]) => n).map(([k, n]) => `${n} ${{ whatsapp: "WhatsApp", email: "e-mail", drive: "Drive", alfy: "ALFY" }[k] || k}`).join(" · ") || "nada"}</p>` : ""}</details>` : ""}
+  </div>`;
+}
 function rrItem(r, foco) {
   const pz = prazoInfo(r), fid = "clf-" + r.rt.replace(/\W/g, ""), selo = (cls, t) => `<span class="selo3 ${cls}">${t}</span>`;
   return `<article class="rr-item ${foco ? "foco" : ""}" id="rr-${r.rt.replace(/\W/g, "")}">
     <div class="rr-cab" role="button" tabindex="0" data-rrfoco="${r.rt}">${tag(r)}<span class="tt"><b>${esc(r.titulo)}</b><span class="selos3">${selo("st-" + r.status, "● " + ST[r.status].um)}${r.prioridade ? selo("", prioTxt(r.prioridade)) : ""}${selo(pz.cls, "📅 " + pz.txt)}${selo("", "👤 " + esc(curto(nomeDe(r.responsavel_id))))}${r.comentarios ? selo("", "💬 " + r.comentarios) : ""}</span></span></div>
-    ${foco && r.assist && r.assist !== r.titulo ? `<p class="oque4">${esc(r.assist)}</p>` : ""}
-    ${rrSituacao(r)}
-    ${rrNovidade(r)}
+    ${foco ? rrFicha(r) : rrSituacao(r) + rrNovidade(r)}
     ${foco ? caixaLinha(r, true) : ""}
     ${s.rrAg === r.rt ? `<div class="rr-agenda"><label>Dia<input type="date" id="ag-dia" value="${r.inicio ? dia(r.inicio) : hojeDia()}"></label><label>Das<input type="time" id="ag-ini" value="${r.inicio ? hhmm(r.inicio) : "09:00"}"></label><label>Até<input type="time" id="ag-fim" value="${r.fim ? hhmm(r.fim) : ""}"></label>
       <span class="rr-acoes"><button class="btn turq peq" type="button" data-agpor="${r.rt}">📅 Pôr na agenda</button><button class="btn peq" type="button" data-agprazo="${r.rt}">Só mudar o prazo</button></span></div>` : ""}
@@ -452,7 +465,7 @@ function vistaRotaARota() {
   if (!fila.length) return painel + `<div class="vazio rr-fim">🏁 Passada completa. ${nFeitas} vistas${nDepois ? `, ${nDepois} ficaram para depois` : ""}.</div>`;
   if (r.formato === "kanban") return painel + `<div class="kanban rr-kanban" style="grid-template-columns:repeat(${gs.length},minmax(230px,1fr))">${gs.map(([n, l]) => `<section class="coluna"><header><b>${esc(n)}</b><span>${l.length}</span></header><div class="cartoes">${l.map(rrCartao).join("")}</div></section>`).join("")}</div>`;
   const fx = fila.find((x) => x.rt === foco);
-  const mini = (x) => `<div class="rr-mini4" role="button" tabindex="0" data-rrfoco="${x.rt}">${tag(x)}<span class="tt"><b>${esc(x.titulo)}</b><small>${esc(ST[x.status].um)} · ${esc(prazoInfo(x).txt)} · ${esc(curto(nomeDe(x.responsavel_id)))}${rrTem(x.rt) ? " · 📡 novidade" : ""}${x.como_esta ? " · " + esc(x.como_esta.slice(0, 110)) : ""}</small></span></div>`;
+  const mini = (x) => `<div class="rr-mini4" role="button" tabindex="0" data-rrfoco="${x.rt}">${tag(x)}<span class="tt"><b>${esc(x.titulo)}</b><small>${esc(ST[x.status].um)} · ${esc(prazoInfo(x).txt)} · ${esc(curto(nomeDe(x.responsavel_id)))}${rrTem(x.rt) ? " · 📡 novidade" : ""}${s.rr.itens[x.rt]?.resumo ? " · " + esc(s.rr.itens[x.rt].resumo.slice(0, 120)) : x.como_esta ? " · " + esc(x.como_esta.slice(0, 110)) : ""}</small></span></div>`;
   const resto = gs.map(([n, l]) => { const ll = l.filter((x) => x.rt !== foco); return ll.length ? `<section class="rr-grupo"><h2>${esc(n)}<span class="ct">${ll.length}</span></h2><div class="lista">${ll.map(mini).join("")}</div></section>` : ""; }).join("");
   return painel + (fx ? `<div class="rr-deck" id="rr-deck">${rrItem(fx, true)}</div>` : "")
     + `<p class="rr-dica">Atalhos: <kbd>⌘ Enter</kbd> comenta e passa · <kbd>⌘ Shift Enter</kbd> pede ao ALFY e passa · <kbd>→</kbd> próxima · <kbd>D</kbd> depois · <kbd>C</kbd> concluir · <kbd>S</kbd> sortear · <kbd>E</kbd> escrever · <kbd>Esc</kbd> sai do campo</p>`
