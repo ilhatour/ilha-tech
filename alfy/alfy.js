@@ -1,4 +1,4 @@
-// ALFY · Mapa de Rotas · Ilha Tech · v2.23.0 · 05/11/2026 · Painel de Ferro · 🏆 Placar enxuto + atalho ✓ Concluídas
+// ALFY · Mapa de Rotas · Ilha Tech · v2.24.0 · 05/11/2026 · Painel de Ferro · 📅 Agenda em kanban (horário no cartão, Sem horário, rotas e pautas no compromisso)
 // Tudo passa pelas funções alfy_* do banco, sempre com a chave pessoal de quem está usando.
 // O banco decide o que cada pessoa vê; a tela só desenha o que voltou.
 // A IA e os comandos são pedidos numa fila (alfy.pedido) que o robô do Mac atende.
@@ -244,7 +244,7 @@ const podeMexer = (r) => manda() || r.responsavel_id === eu().id || r.co_respons
 function acoesLinha(r) {
   if (!podeMexer(r)) return "";
   const ab = ABERTOS.includes(r.status);
-  return `<span class="acoes-linha">${ab ? `<button class="ac ok" type="button" data-rapido="concluida" data-rrt="${r.rt}" title="Concluir">✓<span>Concluir</span></button>` : ""}${r.status === "rota" ? `<button class="ac" type="button" data-rapido="andamento" data-rrt="${r.rt}" title="Começar">▶<span>Começar</span></button>` : ""}${comando() && r.rt.startsWith("RT-") ? `<button class="ac" type="button" data-rastrear="${r.rt}" title="Rastrear: procura novidade desta rota no WhatsApp e no e-mail">📡<span>Rastrear</span></button>` : ""}<button class="ac ${s.linhasAbertas?.[r.rt] ? "on" : ""} ${s.respLinha?.[r.rt] && !s.linhasAbertas?.[r.rt] ? "pronto" : ""}" type="button" data-linhacaixa="${r.rt}" title="${comando() ? "Comentar ou pedir ao ALFY" : "Comentar"}">${comando() ? "🐙" : "💬"}<span>${comando() ? "ALFY" : "Comentar"}</span></button></span>`;
+  return `<span class="acoes-linha">${ab ? `<button class="ac ok" type="button" data-rapido="concluida" data-rrt="${r.rt}" title="Concluir">✓<span>Concluir</span></button>` : ""}${r.status === "rota" ? `<button class="ac" type="button" data-rapido="andamento" data-rrt="${r.rt}" title="Começar">▶<span>Começar</span></button>` : ""}${ab && r.rt.startsWith("RT-") ? `<button class="ac" type="button" data-agdar="${r.rt}" title="${r.inicio ? "Mudar o horário na agenda" : "Dar um horário na agenda"}">📅<span>${r.inicio ? hhmm(r.inicio) : "Agendar"}</span></button>` : ""}${comando() && r.rt.startsWith("RT-") ? `<button class="ac" type="button" data-rastrear="${r.rt}" title="Rastrear: procura novidade desta rota no WhatsApp e no e-mail">📡<span>Rastrear</span></button>` : ""}<button class="ac ${s.linhasAbertas?.[r.rt] ? "on" : ""} ${s.respLinha?.[r.rt] && !s.linhasAbertas?.[r.rt] ? "pronto" : ""}" type="button" data-linhacaixa="${r.rt}" title="${comando() ? "Comentar ou pedir ao ALFY" : "Comentar"}">${comando() ? "🐙" : "💬"}<span>${comando() ? "ALFY" : "Comentar"}</span></button></span>`;
 }
 function caixaLinha(r, forcar) {
   if (!forcar && !s.linhasAbertas?.[r.rt]) return "";
@@ -1135,6 +1135,7 @@ function folha() {
         `<button type="button" class="b3" data-acao="ir-escrever"><span>💬</span>Interagir</button>`,
         comando() ? `<button type="button" class="b3 ia" data-acao="ir-alfy"><span>🐙</span>Pedir</button>` : "",
         comando() && r.rt.startsWith("RT-") ? `<button type="button" class="b3" data-acao="rastrear-cartao"><span>📡</span>Rastrear</button>` : "",
+        r.status === "concluida" || !r.rt.startsWith("RT-") ? "" : `<button type="button" class="b3" data-agdar="${r.rt}"><span>📅</span>${r.inicio ? hhmm(r.inicio) : "Agendar"}</button>`,
         `<button type="button" class="b3 lem" data-irf="lembrete"><span>⏰</span>Lembrar</button>`,
         r.status === "concluida" ? "" : `<button type="button" class="b3 ok" data-mover="concluida"><span>✓</span>Concluir</button>`].filter(Boolean);
       return `<div class="col3 barra3-in" style="grid-template-columns:36px repeat(${bt.length},minmax(0,1fr)) 36px"><button type="button" class="seta3" data-fnav="-1" ${i > 0 ? "" : "disabled"} aria-label="Rota anterior">‹</button>${bt.join("")}<button type="button" class="seta3" data-fnav="1" ${i < ord.length - 1 ? "" : "disabled"} aria-label="Próxima rota">›</button></div>`; })()}</nav>
@@ -1306,15 +1307,22 @@ async function carregarAgenda() {
   const de0 = new Date(de); de0.setHours(0, 0, 0, 0); de0.setHours(de0.getHours() - 3);
   s.agDados = await chamar("alfy_agenda", { p_de: de0.toISOString(), p_ate: new Date(ate.getTime() + 3 * 3600e3).toISOString() }).catch((e) => { falhou(e); return null; });
 }
+// Agenda em kanban (aprovada 05/11): uma coluna por dia, cartões em ordem de horário, "Sem horário" no fim da coluna.
+// k: comp (📅 compromisso) · rota (rota com horário ou sem) · rotina (🔁) · reuniao · google. Detalhe abre por cima (folha).
+const AG_TIPO = { comp: ["📅", "Compromisso"], rota: ["📍", "Rota"], rotina: ["🔁", "Rotina"], reuniao: ["🗓️", "Reunião"], google: ["📆", "Google"] };
 function itensAgenda() {
   const d = s.agDados; if (!d) return {};
   const { de, ate } = intervaloAgenda(), por = {};
-  const por0 = (iso, it) => { const k = dia(iso); (por[k] = por[k] || []).push(it); };
+  s.agItens = {};
+  const por0 = (iso, it) => { const k = dia(iso); (por[k] = por[k] || []).push(it); s.agItens[it.chave] = it; };
   for (const r of d.rotas || []) {
-    const comp = ehCompromisso(r), base = r.inicio || r.prazo;
+    const base = r.inicio || r.prazo;
     if (!base) continue;
-    if (!comp && !s.agPrazos && !r.repete) continue;
-    const it = (quando, virtual) => ({ k: "rota", quando, hora: comp ? hhmm(quando) : "", titulo: r.titulo, rt: r.rt, st: r.status, virtual, repete: r.repete, comp, prazo: !comp });
+    const k = r.repete ? "rotina" : r.tipo === "📅 Compromisso" ? "comp" : "rota";
+    if (!r.inicio && !ABERTOS.includes(r.status)) continue;   // sem horário: só o que ainda está aberto
+    const dur = r.inicio && r.fim ? new Date(r.fim) - new Date(r.inicio) : 0;
+    const it = (quando, virtual) => ({ chave: "r:" + r.rt + (virtual ? ":" + quando : ""), k, quando, ini: r.inicio ? hhmm(quando) : "", fim: dur ? hhmm(new Date(new Date(quando).getTime() + dur).toISOString()) : "",
+      titulo: r.titulo, rt: r.rt, st: r.status, virtual, onde: r.onde, prazo: r.prazo, rotas: r.liga_rotas || [], pautas: r.liga_pautas || [] });
     const b = new Date(base);
     if (b >= de && b < ate) por0(base, it(base, false));
     if (r.repete && ABERTOS.includes(r.status)) {   // próximas da série, só para ver (a rota de verdade abre quando a anterior conclui)
@@ -1322,15 +1330,114 @@ function itensAgenda() {
       for (let i = 0; i < 60; i++) { x = proximaJS(x, r.repete, r.repete_dias); if (x >= ate) break; if (x >= de) por0(x.toISOString(), it(x.toISOString(), true)); }
     }
   }
-  for (const re of d.reunioes || []) por0(re.quando, { k: "reuniao", quando: re.quando, hora: hhmm(re.quando), titulo: re.titulo, id: re.id });
-  for (const g of d.google || []) por0(g.inicio, { k: "google", quando: g.inicio, hora: g.dia_todo ? "" : hhmm(g.inicio), titulo: g.titulo, link: g.link, onde: g.onde });
-  for (const k in por) por[k].sort((a, b) => (a.hora || "00:00").localeCompare(b.hora || "00:00"));
+  for (const re of d.reunioes || []) por0(re.quando, { chave: "re:" + re.id, k: "reuniao", quando: re.quando, ini: hhmm(re.quando), fim: "", titulo: re.titulo, id: re.id, onde: re.onde, gente: re.gente || [], rotas: re.liga_rotas || [], pautas: re.liga_pautas || [] });
+  for (const g of d.google || []) por0(g.inicio, { chave: "g:" + g.id, k: "google", quando: g.inicio, ini: g.dia_todo ? "" : hhmm(g.inicio), fim: g.fim && !g.dia_todo ? hhmm(g.fim) : "", diaTodo: g.dia_todo, titulo: g.titulo, link: g.link, onde: g.onde, g, rotas: [], pautas: [] });
+  for (const k in por) por[k].sort((a, b) => (a.ini || "99:99").localeCompare(b.ini || "99:99"));
   return por;
 }
-function itemAgendaHTML(it) {
-  const ic = it.k === "reuniao" ? "🗓️" : it.k === "google" ? "📆" : it.repete ? "🔁" : it.comp ? "📅" : "📍";
-  const attr = it.k === "rota" ? `data-rt="${it.rt}"` : it.k === "reuniao" ? `data-irreuniao="${it.id}"` : `data-google="${esc(it.link || "")}"`;
-  return `<button type="button" class="ag-it ${it.k} ${it.virtual ? "virtual" : ""} ${it.st === "concluida" ? "feito" : ""}" ${attr}><span class="h">${it.hora || (it.prazo ? "prazo" : "dia")}</span><span class="t">${ic} ${esc(it.titulo)}</span></button>`;
+function itemAgendaHTML(it) {   // mês: linha curta
+  const attr = it.k === "rota" || it.k === "rotina" ? `data-rt="${it.rt}"` : `data-agabrir="${esc(it.chave)}"`;
+  return `<button type="button" class="ag-it ${it.k} ${it.virtual ? "virtual" : ""} ${it.st === "concluida" ? "feito" : ""}" ${attr}><span class="h">${it.ini || (it.diaTodo ? "dia todo" : "sem hora")}</span><span class="t">${AG_TIPO[it.k][0]} ${esc(it.titulo)}</span></button>`;
+}
+const agMin = (h) => { const [a, b] = (h || "0:0").split(":").map(Number); return a * 60 + b; };
+function agCartao(it, hoje, agora) {
+  const [ic, nome] = AG_TIPO[it.k];
+  const abre = it.k === "rota" || it.k === "rotina" ? `data-rt="${it.rt}"` : `data-agabrir="${esc(it.chave)}"`;
+  const arrasta = it.rt && !it.virtual ? `draggable="true" data-agarrasta="${it.rt}"` : "";
+  const podeHora = it.rt && !it.virtual && (manda() || (rotaDe(it.rt) && podeMexer(rotaDe(it.rt))));
+  if (!it.ini && !it.diaTodo) return `<div role="button" tabindex="0" class="agk-card agk-sem k-${it.k}" ${abre} ${arrasta}><span class="agk-rt">${esc(nomeRota(it.rt))} · ${ic} ${nome}</span><span class="agk-tt">${esc(it.titulo)}</span>${podeHora ? `<button class="agk-dar" type="button" data-agdar="${it.rt}">📅 Dar horário</button>` : ""}</div>`;
+  const d0 = dia(it.quando), fimMin = it.fim ? agMin(it.fim) : agMin(it.ini) + 60;
+  const passou = it.st === "concluida" || d0 < hoje || (d0 === hoje && fimMin <= agora), agoraJa = d0 === hoje && agMin(it.ini) <= agora && agora < fimMin;
+  const meta = [it.onde && "📍 " + it.onde, (it.gente || []).length > 1 && "👥 " + it.gente.length].filter(Boolean).join("  ·  ");
+  const chips = (it.rotas.length ? `<span>📍 ${it.rotas.length} ${it.rotas.length > 1 ? "rotas" : "rota"}</span>` : "") + (it.pautas.length ? `<span>💬 ${it.pautas.length} ${it.pautas.length > 1 ? "pautas" : "pauta"}</span>` : "");
+  return `<div role="button" tabindex="0" class="agk-card k-${it.k} ${passou ? "passou" : ""} ${agoraJa ? "agora" : ""} ${it.virtual ? "virtual" : ""}" ${abre} ${arrasta}>
+    <span class="agk-l1"><span class="agk-hora">${it.ini || "Dia todo"}${it.fim ? `<span class="agk-fim"> – ${it.fim}</span>` : ""}</span><span class="agk-tipo">${ic} ${nome}</span></span>
+    <span class="agk-tt">${esc(it.titulo)}</span>${meta ? `<span class="agk-mt">${esc(meta)}</span>` : ""}${chips ? `<span class="agk-chips">${chips}</span>` : ""}</div>`;
+}
+// detalhe do compromisso, da reunião ou do evento do Google, por cima da agenda
+function agFolha(chave) {
+  const it = s.agItens?.[chave]; if (!it) return;
+  s.agAberto = chave;
+  const [ic, nome] = AG_TIPO[it.k], dur = it.fim ? agMin(it.fim) - agMin(it.ini) : 0;
+  const durTxt = dur ? (dur < 60 ? dur + " min" : Math.floor(dur / 60) + "h" + (dur % 60 ? String(dur % 60).padStart(2, "0") : "")) : "";
+  const quando = it.ini ? `${it.ini}${it.fim ? " às " + it.fim : ""} <small>${[durTxt, ddmm(it.quando)].filter(Boolean).join(" · ")}</small>` : `<small>Dia todo · ${ddmm(it.quando)}</small>`;
+  const lig = it.k === "comp" || it.k === "reuniao", pode = manda() || it.k === "reuniao" || (rotaDe(it.rt) && podeMexer(rotaDe(it.rt)));
+  const rotas = it.rotas.map((r) => `<div class="agk-lig"><button type="button" class="agk-ir" data-rt="${r.rt}"><span class="agk-rt">${esc(nomeRota(r.rt))}</span><span class="agk-tt">${esc(r.titulo)}</span><span class="agk-abrir">Abrir ›</span></button>${pode ? `<button type="button" class="agk-tira" data-agtirarota="${r.rt}" aria-label="Tirar a ${esc(nomeRota(r.rt))} deste horário">✕</button>` : ""}</div>`).join("");
+  const pautas = it.pautas.map((p) => `<div class="agk-lig"><button type="button" class="agk-ir" data-irpauta="${p.id}"><span class="agk-rt">Pauta</span><span class="agk-tt">${esc(p.titulo)}</span><span class="agk-abrir">Abrir ›</span></button>${pode && it.k === "comp" ? `<button type="button" class="agk-tira" data-agtirapauta="${p.id}" aria-label="Tirar a pauta">✕</button>` : ""}</div>`).join("");
+  const opRotas = (M.rotas || []).filter((r) => r.rt !== it.rt && ABERTOS.includes(r.status) && !it.rotas.some((x) => x.rt === r.rt)).map((r) => `<option value="${esc(nomeRota(r.rt) + " · " + r.titulo)}"></option>`).join("");
+  $("#camada").innerHTML = `<div class="veu" id="veu"><section class="folha agk-folha" role="dialog" aria-modal="true" aria-label="${esc(it.titulo)}">
+    <div class="cab"><div class="agk-cabtxt"><span class="agk-tipo k-${it.k}">${ic} ${nome}</span><h2>${esc(it.titulo)}</h2><div class="agk-quando">${quando}</div>
+      ${it.onde ? `<div class="agk-dado">📍 ${esc(it.onde)}</div>` : ""}${(it.gente || []).length ? `<div class="agk-dado">👥 ${esc(it.gente.join(", "))}</div>` : ""}</div>
+      <button class="fechar" type="button" data-acao="fechar" aria-label="Fechar">${IC.x}</button></div>
+    <div class="corpo">
+      ${lig ? `<div><p class="rotulo">Rotas deste ${it.k === "reuniao" ? "encontro" : "compromisso"}</p><div class="agk-ligados">${rotas || '<p class="nota" style="margin:0">Nenhuma rota ligada.</p>'}</div></div>
+      <div><p class="rotulo">Pautas para levar</p><div class="agk-ligados">${pautas || '<p class="nota" style="margin:0">Nenhuma pauta.</p>'}</div></div>
+      ${pode ? `<div class="agk-add"><input id="agk-rota" class="busca" list="agk-rotas" placeholder="Ligar rota: número ou nome"><datalist id="agk-rotas">${opRotas}</datalist><button class="btn" type="button" data-agligarota="1">＋ Ligar rota</button></div>
+      <div class="agk-add"><input id="agk-pauta" class="busca" placeholder="Nova pauta: o assunto para levar"><button class="btn" type="button" data-agnovapauta="1">＋ Nova pauta</button></div>` : ""}`
+      : `<p class="nota" style="margin:0">${it.k === "google" ? "Evento do seu Google Agenda. Traga para o ALFY para ligar rotas e pautas." : ""}</p>`}
+    </div>
+    <div class="agk-acoes">${it.k === "google" ? `<button class="cta" type="button" data-agtrazer="${esc(chave)}">Trazer para o ALFY</button>${it.link ? `<a class="btn" href="${esc(it.link)}" target="_blank" rel="noopener">Abrir no Google</a>` : ""}`
+      : it.k === "reuniao" ? `<button class="cta" type="button" data-irreuniao="${it.id}">🗓️ Abrir a reunião</button>`
+      : `${pode ? `<button class="btn" type="button" data-agdar="${it.rt}">📅 Mudar horário</button>` : ""}<button class="btn" type="button" data-rt="${it.rt}">✏️ Abrir o compromisso</button>`}</div>
+  </section></div>`;
+}
+// ⏰ Dar horário (ou mudar): dia, começa e quanto tempo; a rota mantém o prazo e o tipo
+function agDarHorario(rt) {
+  const r = rotaDe(rt) || (s.agDados?.rotas || []).find((x) => x.rt === rt); if (!r) { aviso("Não achei essa rota", true); return; }
+  const dur = r.inicio && r.fim ? Math.round((new Date(r.fim) - new Date(r.inicio)) / 60000) : 60;
+  s.agDur = [15, 30, 60, 90, 120].includes(dur) ? dur : 60;
+  const d0 = r.inicio ? dia(r.inicio) : r.prazo ? dia(r.prazo) : hojeDia();
+  $("#camada").innerHTML = `<div class="veu" id="veu"><section class="folha agk-folha" role="dialog" aria-modal="true" aria-label="Dar horário">
+    <div class="cab"><div class="agk-cabtxt"><span class="agk-tipo k-rota">📅 ${r.inicio ? "Mudar horário" : "Dar horário"}</span><h2>${esc(r.titulo)}</h2><div class="agk-dado">${esc(nomeRota(r.rt))}${r.prazo ? " · prazo " + ddmm(r.prazo) : ""}</div></div>
+      <button class="fechar" type="button" data-acao="fechar" aria-label="Fechar">${IC.x}</button></div>
+    <form class="corpo" id="agk-f-hora">
+      <div class="form-linha"><label><p class="rotulo">Dia</p><input id="agk-dia" type="date" class="busca" style="width:100%" value="${d0}" required></label><label><p class="rotulo">Começa</p><input id="agk-ini" type="time" step="900" class="busca" style="width:100%" value="${r.inicio ? hhmm(r.inicio) : "09:00"}" required></label></div>
+      <div><p class="rotulo">Quanto tempo</p><div class="agk-durs">${[15, 30, 60, 90, 120].map((m) => `<button type="button" data-agdur="${m}" aria-pressed="${s.agDur === m}">${m < 60 ? m + " min" : Math.floor(m / 60) + "h" + (m % 60 ? "30" : "")}</button>`).join("")}</div></div>
+      <p class="nota" style="margin:0">A rota continua na lista de Rotas com o mesmo prazo. Ela só ganha o horário e entra na coluna do dia, na ordem da hora.</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="cta" type="submit">Salvar horário</button>${r.inicio && r.tipo !== "📅 Compromisso" ? `<button class="btn" type="button" data-agsemhora="${r.rt}">Tirar o horário</button>` : ""}</div>
+    </form></section></div>`;
+  $("#agk-f-hora").addEventListener("submit", async (ev) => {
+    ev.preventDefault();
+    const bt = $("#agk-f-hora .cta"); if (bt.disabled) return; bt.disabled = true;
+    const dd = $("#agk-dia").value, hi = $("#agk-ini").value || "09:00", fimMin = agMin(hi) + s.agDur;
+    const ini = new Date(`${dd}T${hi}:00-03:00`), fim = new Date(ini.getTime() + s.agDur * 60000);
+    try {
+      await chamar("alfy_editar", { p_rt: r.rt, p_campos: { inicio: ini.toISOString(), fim: fim.toISOString() } });
+      fechar(); aviso(`📅 ${nomeRota(r.rt)}: ${ddmm(ini.toISOString())}, ${hi} às ${hhmm(fim.toISOString())}`);
+      if (fimMin > 24 * 60) aviso("Passou da meia-noite: confira o horário", true);
+      await recarregar(); if (s.aba === "agenda") await carregarAgenda(); render();
+    } catch (e) { falhou(e); bt.disabled = false; }
+  });
+}
+async function agLigar(campos) {
+  const it = s.agItens?.[s.agAberto]; if (!it) return;
+  if (it.k === "reuniao") {
+    if (campos.p_rt) await chamar("alfy_reuniao_rota", { p_reuniao: it.id, p_rt: campos.p_rt, p_ligar: !campos.p_tirar });
+    if (campos.titulo) await chamar("alfy_pauta_salvar", { p_id: null, p_campos: { titulo: campos.titulo, reuniao_id: String(it.id) } });
+  } else {
+    let pauta = campos.p_pauta || null;
+    if (campos.titulo) pauta = (await chamar("alfy_pauta_salvar", { p_id: null, p_campos: { titulo: campos.titulo } })).id;
+    await chamar("alfy_agenda_ligar", { p_comp: it.rt, p_rt: campos.p_rt || null, p_pauta: pauta, p_tirar: !!campos.p_tirar });
+  }
+  const chave = s.agAberto; await carregarAgenda(); render(); itensAgenda(); agFolha(chave);
+}
+// arrastar o cartão para outro dia: mantém o horário (ou muda o prazo, se ainda não tem horário)
+function ligarAgendaKanban() {
+  const k = $("#ag-semana"); if (!k || k.dataset.ligado) return; k.dataset.ligado = "1";
+  k.addEventListener("dragstart", (e) => { const el = e.target.closest("[data-agarrasta]"); if (!el) return; el.classList.add("arrastando"); e.dataTransfer.setData("text/plain", el.dataset.agarrasta); });
+  k.addEventListener("dragend", (e) => { const el = e.target.closest("[data-agarrasta]"); el && el.classList.remove("arrastando"); });
+  k.querySelectorAll(".coluna").forEach((col) => {
+    col.addEventListener("dragover", (e) => { e.preventDefault(); col.classList.add("alvo"); });
+    col.addEventListener("dragleave", (e) => { if (!col.contains(e.relatedTarget)) col.classList.remove("alvo"); });
+    col.addEventListener("drop", async (e) => {
+      e.preventDefault(); col.classList.remove("alvo");
+      const rt = e.dataTransfer.getData("text/plain"), r = (s.agDados?.rotas || []).find((x) => x.rt === rt), novo = col.dataset.agcoldia; if (!r || !novo) return;
+      const muda = (iso) => iso ? new Date(`${novo}T${hhmm(iso)}:00-03:00`).toISOString() : "";
+      const campos = r.inicio ? { inicio: muda(r.inicio), fim: muda(r.fim) } : { prazo: `${novo}T12:00:00-03:00` };
+      if (r.inicio ? dia(r.inicio) === novo : dia(r.prazo) === novo) return;
+      try { await chamar("alfy_editar", { p_rt: rt, p_campos: campos }); aviso(`${nomeRota(rt)} foi para ${ddmm(novo + "T12:00:00-03:00")}`); await carregarAgenda(); await recarregar(); render(); } catch (er) { falhou(er); }
+    });
+  });
 }
 function vistaAgenda() {
   const { de, mes } = intervaloAgenda(), por = itensAgenda(), hoje = hojeDia();
@@ -1339,15 +1446,20 @@ function vistaAgenda() {
   const g = s.agDados?.google_em;
   const barra = `<div class="ag-barra"><div class="alterna" role="group"><button type="button" data-agvista="semana" aria-pressed="${s.agVista !== "mes"}">Semana</button><button type="button" data-agvista="mes" aria-pressed="${s.agVista === "mes"}">Mês</button></div>
     <div class="ag-nav"><button class="btn peq" type="button" data-agnav="-1" aria-label="Anterior">‹</button><button class="btn peq" type="button" data-agnav="0">Hoje</button><button class="btn peq" type="button" data-agnav="1" aria-label="Próxima">›</button><b>${esc(titulo)}</b></div>
-    <span class="espaco"></span><button class="chip" type="button" data-acao="ag-prazos" aria-pressed="${!!s.agPrazos}">📍 Prazos das minhas rotas</button><button class="cta" type="button" data-acao="novo-compromisso">＋ Compromisso</button></div>
-    <p class="nota ag-leg" style="margin:0 0 10px">📅 compromisso · 🔁 rotina (a pontilhada é a próxima da série) · 🗓️ reunião${comando() ? ` · 📆 Google Agenda${g ? " (atualizado " + quandoFoi(g) + ")" : " (ainda não ligado: Comandos › Ler o e-mail e a agenda)"}` : ""}</p>`;
+    <span class="espaco"></span><button class="cta" type="button" data-acao="novo-compromisso">＋ Compromisso</button></div>
+    ${comando() && !g ? '<p class="nota ag-leg" style="margin:0 0 10px">📆 O Google Agenda ainda não está ligado: Comandos › Ler o e-mail e a agenda.</p>' : ""}`;
   if (!s.agDados) return barra + `<div class="carregando">Carregando a agenda…</div>`;
   if (s.agVista === "mes") {
     const dias = Array.from({ length: 42 }, (_, i) => { const x = new Date(de); x.setDate(x.getDate() + i); return x; });
     return barra + `<div class="ag-mes">${DIAS_SEM.map((n) => `<div class="ag-cab">${n}</div>`).join("")}${dias.map((x) => { const k = diaISO(x), l = por[k] || []; return `<div class="ag-dia ${x.getMonth() !== mes ? "fora" : ""} ${k === hoje ? "hoje" : ""}"><span class="n">${x.getDate()}</span>${l.slice(0, 4).map(itemAgendaHTML).join("")}${l.length > 4 ? `<button class="ag-mais" type="button" data-agdia="${k}">+${l.length - 4}</button>` : ""}</div>`; }).join("")}</div>`;
   }
   const dias = Array.from({ length: 7 }, (_, i) => { const x = new Date(de); x.setDate(x.getDate() + i); return x; });
-  return barra + `<div class="kanban ag-semana" id="ag-semana">${dias.map((x, i) => { const k = diaISO(x), l = por[k] || []; return `<section class="coluna ${k === hoje ? "hoje" : ""}" data-agcoldia="${k}"><header><b>${DIAS_SEM[i]}</b><span>${ddmm(x.toISOString())}</span></header><div class="cartoes">${l.map(itemAgendaHTML).join("") || '<div class="vazio">Livre</div>'}</div></section>`; }).join("")}</div>`;
+  const agora = agMin(hhmm(new Date().toISOString()));
+  return barra + `<div class="kanban ag-semana agk" id="ag-semana">${dias.map((x, i) => {
+    const k = diaISO(x), l = por[k] || [], com = l.filter((it) => it.ini || it.diaTodo), sem = l.filter((it) => !it.ini && !it.diaTodo);
+    return `<section class="coluna ${k === hoje ? "hoje" : ""}" data-agcoldia="${k}"><header><b>${DIAS_SEM[i]}</b><span>${ddmm(x.toISOString())}</span></header>
+      <div class="cartoes">${com.map((it) => agCartao(it, hoje, agora)).join("") || (sem.length ? "" : '<div class="vazio">Livre</div>')}${sem.length ? `<div class="agk-divisa">Sem horário</div>${sem.map((it) => agCartao(it, hoje, agora)).join("")}` : ""}</div></section>`;
+  }).join("")}</div>`;
 }
 
 // ---------------------------------------------------------------- gravação de reunião (PCM 16 kHz mono, sobe em pedaços enquanto grava)
@@ -1427,7 +1539,7 @@ function render() {
   const c = $("#conteudo");
   c.innerHTML = { rotinas: vistaAbaRotinas, placar: vistaPlacar, zap: () => `<div style="max-width:900px">${zapHTML("")}</div>`, rotas: () => (s.vista === "rar" && comando() ? vistaRotaARota() : s.vista === "kanban" ? vistaKanban() : vistaLista()), feed: vistaFeed, agenda: vistaAgenda, equipe: vistaEquipe, pautas: vistaPautas, comandos: vistaComandos, eu: vistaEu }[s.aba]();
   if (s.aba === "rotas" && s.vista === "kanban") ligarKanban();
-  if (s.aba === "agenda") { const k = $("#ag-semana"), h = k && k.querySelector(".coluna.hoje"); if (k && h && !s.agRolou) { k.scrollLeft = h.offsetLeft - k.offsetLeft - 8; s.agRolou = true; } }
+  if (s.aba === "agenda") { const k = $("#ag-semana"), h = k && k.querySelector(".coluna.hoje"); if (k && h && !s.agRolou) { k.scrollLeft = h.offsetLeft - k.offsetLeft - 8; s.agRolou = true; } ligarAgendaKanban(); }
   try { localStorage.setItem("alfy-vista", JSON.stringify({ vista: s.vista, agrupar: s.agrupar, v28: true })); } catch (_) { /* privado */ }
 }
 // não redesenha o que a pessoa está digitando: espera ela sair do campo
@@ -1643,6 +1755,25 @@ document.addEventListener("click", async (e) => {
     if (d.prio) { s.prio = d.prio === "todas" ? "" : d.prio; if (s.prio && s.agrupar === "frente") s.agrupar = "prioridade"; render(); return; }
     if (d.ffeed) { s.fFeed = d.ffeed; render(); return; }
     if (d.ligar) { const rt = d.lrt; s.buscaRota = ""; if (d.ligar === "reuniao") await chamar("alfy_reuniao_rota", { p_reuniao: s.reuniao, p_rt: rt, p_ligar: true }); else await chamar("alfy_pauta_ligar", { p_pauta: s.pauta, p_rt: rt, p_ligar: true }); await recarregar(); render(); aviso(nomeRota(rt) + " ligada"); return; }
+    // agenda em kanban
+    if (d.agabrir) { itensAgenda(); agFolha(d.agabrir); return; }
+    if (d.agdar) { agDarHorario(d.agdar); return; }
+    if (d.agdur) { s.agDur = +d.agdur; document.querySelectorAll("[data-agdur]").forEach((y) => y.setAttribute("aria-pressed", y === b)); return; }
+    if (d.agsemhora) { await chamar("alfy_editar", { p_rt: d.agsemhora, p_campos: { inicio: "", fim: "" } }); fechar(); aviso(`${nomeRota(d.agsemhora)} voltou para Sem horário`); await carregarAgenda(); await recarregar(); render(); return; }
+    if (d.agligarota) {
+      const v = ($("#agk-rota")?.value || "").trim(), n = (v.match(/(\d+)/) || [])[1];
+      const r = n ? (M.rotas || []).find((x) => x.rt === "RT-" + n) : (M.rotas || []).find((x) => x.titulo.toLowerCase() === v.toLowerCase());
+      if (!r) { aviso("Escreva o número da rota (ex.: 549) ou escolha da lista", true); return; }
+      await agLigar({ p_rt: r.rt }); aviso(`${nomeRota(r.rt)} ligada`); return;
+    }
+    if (d.agnovapauta) { const t = ($("#agk-pauta")?.value || "").trim(); if (!t) { aviso("Escreva o assunto da pauta", true); return; } await agLigar({ titulo: t }); aviso("Pauta criada e ligada"); return; }
+    if (d.agtirarota) { await agLigar({ p_rt: d.agtirarota, p_tirar: true }); aviso(`${nomeRota(d.agtirarota)} saiu deste horário`); return; }
+    if (d.agtirapauta) { await agLigar({ p_pauta: +d.agtirapauta, p_tirar: true }); aviso("Pauta tirada deste compromisso"); return; }
+    if (d.agtrazer) {
+      const it = s.agItens?.[d.agtrazer]; if (!it) return;
+      const c = await chamar("alfy_nova_rota", { p_campos: { titulo: it.titulo, status: "rota", tipo: "📅 Compromisso", frente: "🧍 Pessoal", inicio: it.g.inicio, fim: it.g.fim || "", onde: it.onde || "", prioridade: "⏳ P3 · 7 dias" } });
+      aviso(`Trazido para o ALFY como ${nomeRota(c.rt)}`); await carregarAgenda(); await recarregar(); render(); itensAgenda(); agFolha("r:" + c.rt); return;
+    }
     if (d.rt && !d.acao) { abrir(d.rt); return; }
     if (d.mover) { mover(s.aberta, d.mover); return; }
     if (d.afolha) { s.abaFolha = d.afolha; s.editando = null; refolha(); if (d.afolha === "alfy") { const c = $("#corpo-folha"); c.scrollTop = c.scrollHeight; } return; }

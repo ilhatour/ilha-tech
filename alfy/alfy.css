@@ -1158,3 +1158,56 @@ details.z6sec > summary{cursor:pointer;list-style:none}
 .pl6eu p{margin:0;font-size:15px}.pl6de{color:var(--aco);font-size:13px!important}
 .pl6regra{margin:0;font-size:12.5px}
 @media (max-width:600px){.pl6nav b{min-width:0;flex:1}.pl6h .busca{max-width:none}}
+
+/* ---------- Agenda em kanban (05/11): coluna por dia, cartão com horário grande, "Sem horário" no fim ---------- */
+.ag-semana.agk{grid-template-columns:repeat(7,minmax(210px,1fr))}
+.agk .coluna .cartoes{gap:8px}
+.agk-card{display:flex;flex-direction:column;gap:4px;text-align:left;background:var(--ferro-2);border:1px solid var(--linha);border-radius:10px;padding:10px 11px;cursor:pointer}
+.agk-card[draggable="true"]{cursor:grab}
+.agk-card:hover{border-color:var(--ferro-4);background:var(--ferro-3)}
+.agk-card.arrastando{opacity:.4}
+.agk-l1{display:flex;align-items:center;gap:8px;min-width:0}
+.agk-hora{font-family:var(--fd);font-weight:700;font-size:17px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.agk-fim{font-family:var(--fb);font-weight:500;font-size:13px;color:var(--aco)}
+.agk-tipo{margin-left:auto;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;border:1px solid;border-radius:6px;padding:2px 7px;white-space:nowrap}
+.agk-tt{font-weight:600;font-size:15px;line-height:1.3;color:var(--texto);overflow-wrap:anywhere}
+.agk-mt{font-size:13px;color:var(--aco-2)}
+.agk-chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:2px}
+.agk-chips span{font-size:12px;font-weight:700;background:var(--ferro-1);border:1px solid var(--linha);border-radius:6px;padding:1px 7px;color:var(--aco-2)}
+.agk-card.passou{opacity:.55}
+.agk-card.virtual{border-style:dashed;opacity:.7}
+.agk-card.agora{border-color:var(--verm)}
+.agk-card.agora .agk-hora::after{content:"agora";font-family:var(--fb);font-size:11px;font-weight:700;color:var(--verm);margin-left:8px;letter-spacing:.06em;text-transform:uppercase}
+.k-comp .agk-hora,.agk-tipo.k-comp,.k-comp .agk-tipo{color:var(--turq)} .k-comp .agk-tipo,.agk-tipo.k-comp{border-color:rgba(43,175,166,.6)}
+.k-reuniao .agk-hora,.k-reuniao .agk-tipo,.agk-tipo.k-reuniao{color:var(--lilas);border-color:rgba(169,180,245,.6)}
+.k-rota .agk-hora,.k-rota .agk-tipo,.agk-tipo.k-rota{color:var(--amber);border-color:rgba(246,178,74,.6)}
+.k-rotina .agk-hora,.k-rotina .agk-tipo,.agk-tipo.k-rotina{color:var(--amber);border-color:rgba(246,178,74,.6)}
+.k-rotina .agk-tipo{border-style:dashed}
+.k-google .agk-hora,.k-google .agk-tipo,.agk-tipo.k-google{color:#7FA8C9;border-color:rgba(127,168,201,.6)}
+.agk-divisa{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--aco);margin-top:4px}
+.agk-divisa::after{content:"";flex:1;height:1px;background:var(--linha)}
+.agk-card.agk-sem{background:transparent;border-style:dashed}
+.agk-rt{font-size:12px;font-weight:700;color:var(--aco);white-space:nowrap}
+.agk-dar{align-self:flex-start;margin-top:4px;border:1px solid var(--amber);color:var(--amber);background:rgba(246,178,74,.08);border-radius:8px;padding:4px 10px;font-size:13px;font-weight:700}
+/* folha do compromisso */
+.agk-folha .cab{align-items:flex-start}
+.agk-cabtxt{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px}
+.agk-cabtxt .agk-tipo{margin-left:0;align-self:flex-start}
+.agk-quando{font-family:var(--fd);font-weight:700;font-size:20px;font-variant-numeric:tabular-nums}
+.agk-quando small{font-family:var(--fb);font-weight:500;font-size:14px;color:var(--aco);margin-left:6px}
+.agk-dado{font-size:15px;color:var(--aco-2)}
+.agk-ligados{display:flex;flex-direction:column;gap:6px}
+.agk-lig{display:flex;gap:6px}
+.agk-ir{flex:1;min-width:0;display:flex;align-items:center;gap:10px;background:var(--ferro-2);border:1px solid var(--linha);border-radius:9px;padding:9px 11px;text-align:left}
+.agk-ir:hover{border-color:var(--ferro-4)}
+.agk-ir .agk-tt{flex:1;min-width:0;font-size:15px}
+.agk-abrir{font-size:13px;color:var(--turq);font-weight:700;white-space:nowrap}
+.agk-tira{border:1px solid var(--linha);background:var(--ferro-2);border-radius:9px;width:38px;color:var(--aco)}
+.agk-add{display:flex;gap:8px;flex-wrap:wrap}
+.agk-add .busca{flex:1 1 200px}
+.agk-acoes{display:flex;gap:8px;flex-wrap:wrap;padding:14px 20px calc(14px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--linha)}
+.agk-acoes a.btn{text-decoration:none;display:inline-flex;align-items:center}
+.agk-durs{display:flex;gap:6px;flex-wrap:wrap}
+.agk-durs button{border:1px solid var(--linha);background:var(--ferro-2);border-radius:999px;padding:6px 12px;font-size:14px;font-weight:600;color:var(--aco-2)}
+.agk-durs button[aria-pressed="true"]{border-color:var(--turq);color:var(--branco);background:rgba(43,175,166,.18)}
+@media (max-width:760px){ .ag-semana.agk .coluna{flex:0 0 86%} }
