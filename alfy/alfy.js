@@ -1,4 +1,4 @@
-// ALFY · Mapa de Rotas · Ilha Tech · v2.16.0 · 05/11/2026 · Painel de Ferro · Passagem com a rota mastigada (resumo, onde está, o que mudou, próximo passo)
+// ALFY · Mapa de Rotas · Ilha Tech · v2.17.0 · 05/11/2026 · Painel de Ferro · cartão da rota refeito (Rota, Conversa, Detalhes, Lembrete, Histórico)
 // Tudo passa pelas funções alfy_* do banco, sempre com a chave pessoal de quem está usando.
 // O banco decide o que cada pessoa vê; a tela só desenha o que voltou.
 // A IA e os comandos são pedidos numa fila (alfy.pedido) que o robô do Mac atende.
@@ -947,77 +947,99 @@ function chatRotaHTML(r) {
 // ---------------------------------------------------------------- cartão da rota · polegar (rodada 3)
 // uma coluna que rola: Fazer · Interagir · Detalhes · Agenda · Histórico; ações presas embaixo, com anterior e próxima
 const ETAPA_BOT = { rota: ["▶", "Começar", "andamento"], andamento: ["⏸", "Pausar", "pausada"], pausada: ["▶", "Voltar a fazer", "andamento"], concluida: ["↺", "Reabrir", "andamento"], ideia: ["▶", "Virar rota", "rota"] };
-const SECOES_F = [["fazer", "🎯 Fazer"], ["interagir", "💬 Interagir"], ["detalhes", "⚙️ Detalhes"], ["agenda", "⏰ Agenda"], ["historico", "🕘 Histórico"]];
+const SECOES_F = [["fazer", "Rota"], ["interagir", "Conversa"], ["detalhes", "Detalhes"], ["lembrete", "Lembrete"], ["historico", "Histórico"]];
 const lembreteDe = (rt) => (M?.lembretes || []).find((l) => l.rt === rt);
 const adiada = (r) => { const l = lembreteDe(r.rt); return !!l && new Date(l.quando) > new Date(); };
 const tocando = (r) => { const l = lembreteDe(r.rt); return !!l && new Date(l.quando) <= new Date(); };
+// conversa: lista limpa (iniciais, nome, quando, texto); resposta do ALFY com um único "⋯"
 function comentHTML(c) {
-  const orig = c.origem === "whatsapp" ? "📱 WhatsApp" : c.tipo === "orientacao" ? "🧭 orientação" : c.origem === "alfy" ? "🐙 ALFY" : c.origem === "trello" ? "Trello" : "";
-  const eu_ = c.quem === eu().nome;
-  return `<div class="m3 ${eu_ ? "eu" : ""} ${c.origem === "alfy" ? "robo" : ""}"><small>${esc(curto(c.quem))} · ${quandoFoi(c.em)}${orig ? " · " + orig : ""}</small>${esc(rotaTxt(c.texto.replace(/^📱 WhatsApp · /, "")))}</div>`;
+  const orig = c.origem === "whatsapp" ? "WhatsApp" : c.tipo === "orientacao" ? "orientação" : c.origem === "trello" ? "Trello" : "";
+  const robo = c.origem === "alfy";
+  return `<div class="c4 ${robo ? "robo" : ""}"><span class="av4">${robo ? "🐙" : ini(c.quem)}</span><div class="c4b"><div class="c4h"><b>${esc(robo ? "ALFY" : curto(c.quem))}</b><span>${quandoFoi(c.em)}${orig ? " · " + orig : ""}</span></div><p>${esc(rotaTxt(c.texto.replace(/^📱 WhatsApp · .*?\d{2}\/\d{2} \d{2}:\d{2}: /, "").replace(/^🤖 ALFY · /, "")))}</p></div></div>`;
 }
 function iaHTML(m) {
-  if (m.papel === "user") return `<div class="m3 eu pede"><small>Você pediu ao 🐙 · ${quandoFoi(m.em)}</small>${esc(m.texto)}</div>`;
-  return `<div class="m3 alfy"><small>🐙 ALFY · ${quandoFoi(m.em)}</small>${esc(m.texto)}<span class="usar">${Object.keys(CAMPOS).map((k) => `<button class="mini" type="button" data-usar="${m.id}" data-campo="${k}">Usar em ${CAMPOS[k].rot.split(" ").slice(1).join(" ")}</button>`).join("")}<button class="mini" type="button" data-copiarmsg="${m.id}">Copiar</button></span></div>`;
+  if (m.papel === "user") return `<div class="c4 pede"><span class="av4">${ini(eu().nome)}</span><div class="c4b"><div class="c4h"><b>Você → 🐙 ALFY</b><span>${quandoFoi(m.em)}</span></div><p>${esc(m.texto)}</p></div></div>`;
+  const aberto = s.menuIa === String(m.id);
+  return `<div class="c4 alfy"><span class="av4">🐙</span><div class="c4b"><div class="c4h"><b>ALFY</b><span>${quandoFoi(m.em)}</span><button class="mais4" type="button" data-menuia="${m.id}" aria-label="Opções" aria-expanded="${aberto}">⋯</button></div><p>${esc(m.texto)}</p>
+    ${aberto ? `<div class="menu4"><button type="button" data-copiarmsg="${m.id}">Copiar</button>${Object.keys(CAMPOS).map((k) => `<button type="button" data-usar="${m.id}" data-campo="${k}">Usar em ${{ assist: "Resumo", instr: "Instruções", resultado: "Resultado", como_esta: "Status" }[k]}</button>`).join("")}</div>` : ""}</div></div>`;
 }
 function histHTML(e) {
-  const t = e.acao === "status" ? (e.dados?.nova ? "lançou a rota" : `moveu para ${ST[e.para]?.nome || e.para}`) : e.acao === "editar" ? "editou " + Object.keys(e.dados?.campos || {}).map((k) => CAMPO_NOME[k] || k).join(", ") : evTexto({ tipo: e.acao, para: e.para, dados: e.dados || {} });
-  const cls = e.acao === "status" ? "ev-st" : e.acao === "comentario" ? "ev-c" : e.acao === "editar" ? "ev-a" : "ev-a";
-  return `<li class="${cls}"><b>${esc(curto(e.quem || "ALFY"))}</b> ${esc(t)}<small>${quandoFoi(e.em)}</small></li>`;
+  const t = e.acao === "status" ? (e.dados?.nova ? "lançou a rota" : `moveu para ${ST[e.para]?.nome || e.para}`) : e.acao === "editar" ? "editou " + Object.keys(e.dados?.campos || {}).map((k) => CAMPO_NOME[k] || k).join(", ") : { comentario: "comentou", orientacao: "deu uma orientação", whatsapp: "respondeu no WhatsApp", anexo: "anexou um arquivo" }[e.acao] || evTexto({ tipo: e.acao, para: e.para, dados: e.dados || {} });
+  return `<li><span class="h4q">${ddmm(e.em)} ${hhmm(e.em)}</span><b>${esc(curto(e.quem || "ALFY"))}</b> ${esc(t)}</li>`;
 }
 function linhaD(ic, rot, controle) { return `<label class="lin3"><span class="ic">${ic}</span><span class="rot">${rot}</span><span class="val">${controle}</span></label>`; }
+const NOME_CAMPO4 = { assist: "Resumo", instr: "Instruções", resultado: "Resultado esperado", como_esta: "Status" };
+function campo4(r, k, cls) {
+  const v = k === "instr" ? instrDe(r) : r[COLUNA[k]] || "", ed = s.editando === k;
+  return `<div class="f4c ${cls || ""}"><div class="f4h"><h4>${NOME_CAMPO4[k]}</h4>${ed ? "" : `<span>${podeCampo(k) ? `<button class="lk" type="button" data-editar="${k}">Editar</button>` : ""}${comando() ? `<button class="lk ia" type="button" data-iacampo="${k}" title="Pedir ao ALFY para escrever">🐙</button>` : ""}</span>`}</div>
+    ${ed ? `<textarea id="ed-${k}" rows="5">${esc(v)}</textarea><div class="b3ed"><button class="btn turq peq" type="button" data-salvar="${k}">Salvar</button><button class="btn peq" type="button" data-cancelar="1">Cancelar</button></div>`
+      : `<p class="${v ? "" : "vazio"}">${v ? esc(v) : k === "como_esta" ? "Ninguém contou ainda em que pé está." : "Vazio."}</p>`}</div>`;
+}
+const DIAS_LEM = () => { const h = new Date(), am = new Date(h); am.setDate(h.getDate() + 1); const sg = new Date(h); sg.setDate(h.getDate() + ((8 - h.getDay()) % 7 || 7)); return [["hoje", "Hoje", h], ["amanha", "Amanhã", am], ["segunda", "Segunda " + sg.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }), sg]]; };
+const HORAS_LEM = [9, 10, 12, 14, 16, 17];
 function folha() {
   const r = s.cartao; if (!r) return;
   const pz = prazoInfo(r), ger = gerenteDe(r.frente), pode = manda(), ord = s.ordemFolha || [r.rt], i = Math.max(0, ord.indexOf(r.rt));
   const eb = ETAPA_BOT[r.status] || ETAPA_BOT.rota, lem = lembreteDe(r.rt), rod = s.esperando["rota:" + r.rt];
   const reus = (M.reunioes || []).filter((x) => x.status !== "encerrada");
   const tempo = [...(r.lista_comentarios || []).map((c) => ({ em: c.em, h: comentHTML(c) })), ...(comando() ? (r.ia || []).map((m) => ({ em: m.em, h: iaHTML(m) })) : [])].sort((a, b) => String(a.em).localeCompare(String(b.em)));
-  const selo = (cls, t) => `<span class="selo3 ${cls}">${t}</span>`;
-  const campoF = (k, cls) => { const c = CAMPOS[k], v = k === "instr" ? instrDe(r) : r[COLUNA[k]] || "", ed = s.editando === k;
-    return `<div class="bloco3 ${cls}"><div class="b3cab"><small>${c.rot}</small><span>${ed || !podeCampo(k) ? "" : `<button class="mini" type="button" data-editar="${k}">Editar</button>`}${comando() && !ed ? `<button class="mini ia" type="button" data-iacampo="${k}">🐙</button>` : ""}</span></div>
-      ${ed ? `<textarea id="ed-${k}" rows="5">${esc(v)}</textarea><div class="b3ed"><button class="btn turq peq" type="button" data-salvar="${k}">Salvar</button><button class="btn peq" type="button" data-cancelar="1">Cancelar</button></div>` : `<p class="${v ? "" : "vazio"}">${v ? esc(v) : "Vazio."}</p>`}</div>`; };
-  $("#camada").innerHTML = `<div class="veu" id="veu"><section class="folha v3" role="dialog" aria-modal="true" aria-label="${esc(nomeRota(r.rt))}">
+  const conv = s.convTudo ? tempo : tempo.slice(-8), hist = [...(r.historico || [])].reverse(), histV = s.histTudo ? hist : hist.slice(0, 6);
+  const ld = s.lemDia || "amanha", lh = s.lemHora ?? 9;
+  const comp = !!r.inicio;
+  $("#camada").innerHTML = `<div class="veu" id="veu"><section class="folha v3 v4" role="dialog" aria-modal="true" aria-label="${esc(nomeRota(r.rt))}">
     <div class="corpo" id="corpo-folha"><div class="cab3"><div class="col3">
-      <div class="cab3-nav"><button class="voltar3" type="button" data-acao="fechar"><span>‹</span>${{ rotas: "Rotas", agenda: "Agenda", feed: "Feed", pautas: "Pautas", comandos: "Comandos", equipe: "Equipe", eu: "Eu" }[s.aba] || "Voltar"}</button>${ord.length > 1 ? `<span class="pos3">${i + 1} de ${ord.length}</span>` : ""}<span class="espaco"></span>
-        ${comando() && r.rt.startsWith("RT-") ? `<button class="mini" type="button" data-acao="rastrear-cartao">📡 Rastrear</button>` : ""}${comando() ? `<button class="mini" type="button" data-acao="sensivel">${r.sensivel ? "🔒 Só eu vejo" : "🔓 Equipe vê"}</button>` : ""}</div>
-      <div class="cab3-tit">${tag(r)}<div class="tt3"><h2>${esc(r.titulo)}</h2><div class="selos3">${selo("st-" + r.status, "● " + ST[r.status].um)}${r.prioridade ? selo("", prioTxt(r.prioridade)) : ""}${selo(pz.cls, "📅 " + pz.txt)}${lem ? selo("lem", (tocando(r) ? "🔔 " : "⏰ ") + quandoFoi(lem.quando)) : ""}</div></div></div>
-      <nav class="ancoras3" aria-label="Seções">${SECOES_F.map(([k, n]) => `<button type="button" data-irf="${k}" aria-current="${k === "fazer"}">${n}</button>`).join("")}</nav></div></div>
+      <div class="cab3-nav"><button class="voltar3" type="button" data-acao="fechar"><span>‹</span>${{ rotas: "Rotas", agenda: "Agenda", feed: "Feed", pautas: "Pautas", comandos: "Comandos", equipe: "Equipe", eu: "Eu" }[s.aba] || "Voltar"}</button>${ord.length > 1 ? `<span class="pos3">${i + 1} de ${ord.length}</span>` : ""}<span class="espaco"></span><button class="fechar4" type="button" data-acao="fechar" aria-label="Fechar">${IC.x}</button></div>
+      <div class="cab4">${tag(r)}<h2>${esc(r.titulo)}</h2></div>
+      <nav class="ancoras3" aria-label="Seções">${SECOES_F.map(([k, n]) => `<button type="button" data-irf="${k}" aria-current="${k === "fazer"}">${n}${k === "interagir" && tempo.length ? ` <small>${tempo.length}</small>` : ""}${k === "lembrete" && lem ? " ⏰" : ""}</button>`).join("")}</nav></div></div>
     <div class="col3">
-      <section class="secao3" id="f-fazer"><h3 class="h3a"><span>🎯 O que fazer</span>${s.editando === "assist" ? "" : `<span>${podeCampo("assist") ? `<button class="mini" type="button" data-editar="assist">Editar</button>` : ""}${comando() ? `<button class="mini ia" type="button" data-iacampo="assist">🐙</button>` : ""}</span>`}</h3>
-        ${s.editando === "assist" ? campoF("assist", "") : `<p class="oque3">${esc(r.assist || r.titulo)}</p>`}
-        ${campoF("como_esta", "agora3")}${campoF("instr", "")}${campoF("resultado", "chegada3")}</section>
-      <section class="secao3" id="f-interagir"><h3>💬 Interagir</h3>
-        <div class="msgs3">${tempo.map((x) => x.h).join("") || '<p class="nota" style="margin:0">Ninguém escreveu ainda.</p>'}${rod ? '<div class="m3 alfy pensando">🐙 o ALFY está lendo e atualizando a rota…</div>' : ""}</div>
-        <form class="escrever3" id="f-coment"><textarea id="t-coment" rows="2" placeholder="${comando() ? "Comente o que aconteceu ou o próximo passo (o ALFY atualiza a rota), ou peça: faz a mensagem cobrando, sem pressionar" : "Conte como está ou o próximo passo. O ALFY atualiza a rota."}">${esc(s.rascunhoRota || "")}</textarea>
-          <div class="acoes3"><button class="ac" type="submit" data-tipoc="comentario">💬<span>Comentar</span></button>${comando() ? `<button class="ac ia" type="button" data-acao="coment-alfy">🐙<span>Pedir ao ALFY</span></button>` : ""}${pode ? `<button class="ac" type="submit" data-tipoc="orientacao">🧭<span>Orientação</span></button>` : ""}</div></form></section>
-      <section class="secao3" id="f-detalhes"><h3>⚙️ Detalhes</h3><div class="det3 ${pode ? "" : "so-leitura"}">
+      <section class="secao3" id="f-fazer">
+        ${campo4(r, "assist", "resumo4")}${campo4(r, "instr")}${campo4(r, "resultado")}
+        <div class="status4"><div class="f4h"><h4>Status</h4></div><p class="st4l"><span class="pt4 st-${r.status}"></span><b>${ST[r.status].um}</b>${r.prioridade ? ` · ${prioTxt(r.prioridade)}` : ""} · <span class="${pz.cls}">${pz.txt}</span> · ${esc(curto(nomeDe(r.responsavel_id)))}${r.co_responsavel_id ? " + " + esc(curto(nomeDe(r.co_responsavel_id))) : ""}</p>${campo4(r, "como_esta", "agora4")}</div>
+      </section>
+      <section class="secao3" id="f-interagir"><div class="f4h"><h3>Conversa</h3>${comando() && r.rt.startsWith("RT-") ? `<button class="lk" type="button" data-acao="rastrear-cartao" title="Procura no WhatsApp, no e-mail e no Drive o que foi dito sobre esta rota">📡 Buscar novidades</button>` : ""}</div>
+        ${tempo.length > conv.length ? `<button class="lk" type="button" data-acao="conv-tudo">Ver ${tempo.length - conv.length} anteriores</button>` : ""}
+        <div class="conv4">${conv.map((x) => x.h).join("") || '<p class="nota" style="margin:0">Ninguém escreveu ainda.</p>'}${rod ? '<div class="c4 alfy"><span class="av4">🐙</span><div class="c4b"><p class="pensa4">lendo e atualizando a rota…</p></div></div>' : ""}</div>
+        <form class="escrever4" id="f-coment"><textarea id="t-coment" rows="2" placeholder="${comando() ? "Conte o que aconteceu ou o próximo passo (o ALFY atualiza a rota), ou peça algo ao ALFY" : "Conte como está ou o próximo passo. O ALFY atualiza a rota."}">${esc(s.rascunhoRota || "")}</textarea>
+          <div class="acoes4b"><button class="btn peq" type="submit" data-tipoc="comentario">Comentar</button>${comando() ? `<button class="btn turq peq" type="button" data-acao="coment-alfy">🐙 Pedir ao ALFY</button>` : ""}${pode ? `<button class="lk" type="submit" data-tipoc="orientacao">🧭 Dar como orientação</button>` : ""}</div></form></section>
+      <section class="secao3" id="f-detalhes"><div class="f4h"><h3>Detalhes</h3>${comando() ? `<button class="anel4" type="button" data-acao="det-alfy" title="O ALFY preenche os detalhes com o que entendeu da rota">🐙<span>Preencher</span></button>` : ""}</div><div class="det3 ${pode ? "" : "so-leitura"}">
         <div class="grupo3"><small>Quem</small>${linhaD("🗺️", "Frente", `<select data-prop="frente">${opc(FRENTES.map((f) => [f, frenteCurta(f)]), r.frente, "Sem frente")}</select>`)}${linhaD("👤", "Responsável", `<select data-prop="responsavel_id">${opc(gente(), r.responsavel_id, "Sem dono")}</select>`)}${linhaD("🤝", "Junto com", `<select data-prop="co_responsavel_id">${opc(gente(), r.co_responsavel_id, "Ninguém")}</select>`)}${ger ? `<p class="nota3">Gerente da frente: ${esc(ger.nome)}</p>` : ""}</div>
-        <div class="grupo3"><small>Quando e quanto</small>${linhaD("⚡", "Prioridade", `<select data-prop="prioridade">${opc(PRIORIDADES, r.prioridade, "Sem prioridade")}</select>`)}${linhaD("📅", "Prazo", `<input type="date" data-prop="prazo" value="${dia(r.prazo)}">`)}${linhaD("💰", "Custo", `<input data-bud="1" value="${esc(r.budget_valor || "")}" placeholder="sem custo">`)}
-          ${r.budget_valor || r.budget_status !== "sem custo" ? `<div class="bud3">${BUDGET_ST.map((x) => `<button type="button" class="chip" data-budst="${x}" aria-pressed="${r.budget_status === x}" ${(x === "aprovado" || x === "recusado") && !comando() ? "disabled" : ""}>${x}</button>`).join("")}${r.budget_por ? `<span class="nota3">${r.budget_status === "recusado" ? "Recusado" : "Aprovado"} por ${esc(curto(nomeDe(r.budget_por)))}</span>` : ""}</div>` : ""}</div>
-        <div class="grupo3"><small>Tipo</small>${linhaD("🏷️", "Tipo", `<select data-prop="tipo">${opc(TIPOS, r.tipo, "Sem tipo")}</select>`)}${linhaD("🧭", "Natureza", `<select data-prop="natureza">${opc(NATUREZAS, r.natureza, "Sem natureza")}</select>`)}${linhaD("💥", "Impacto", `<select data-prop="impacto">${opc(NIVEIS, r.impacto, "Sem")}</select>`)}${linhaD("🏋️", "Esforço", `<select data-prop="esforco">${opc(NIVEIS, r.esforco, "Sem")}</select>`)}</div>
-        <div class="grupo3"><small>Arquivos</small>${(r.anexos || []).map((x) => `<div class="lin3"><span class="ic">${/pdf/.test(x.tipo || "") ? "📄" : /image/.test(x.tipo || "") ? "🖼️" : "📎"}</span><span class="rot" style="min-width:0;overflow:hidden;text-overflow:ellipsis">${esc(x.nome)}</span><span class="val"><button class="mini" type="button" data-baixar="${x.id}">Baixar</button><button class="mini" type="button" data-tiraranexo="${x.id}" aria-label="Tirar">✕</button></span></div>`).join("")}
-          <label class="lin3" style="cursor:pointer"><span class="ic">＋</span><span class="rot">Anexar arquivo${comando() ? ' <small style="color:var(--aco)">ou peça ao 🐙</small>' : ""}</span><input type="file" id="rota-arq" multiple hidden></label><span id="rota-arq-prog" class="nota3"></span></div>
-      </div></section>
-      <section class="secao3" id="f-agenda"><h3>⏰ Agenda</h3>
-        <div class="lem3">${lem ? `<p>${tocando(r) ? "🔔 Chegou a hora do lembrete" : `⏰ Lembrete ${quandoFoi(lem.quando).replace(/^hoje/, "hoje às")}`}${lem.nota ? ` · ${esc(lem.nota)}` : ""}. ${tocando(r) ? "" : "Até lá a rota sai da sua lista."}</p><div class="rapidas3"><button class="chip" type="button" data-lemfeito="${lem.id}">${tocando(r) ? "✓ Visto" : "Tirar lembrete"}</button><button class="chip" type="button" data-acao="lembrar">Mudar a hora</button></div>`
-          : `<p>Não dá para fazer agora? O ALFY te lembra:</p><div class="rapidas3">${LEM_RAPIDOS().map(([n]) => `<button class="chip" type="button" data-lemq="${n}">${n}</button>`).join("")}<button class="chip" type="button" data-acao="lembrar">📅 escolher</button></div>`}</div>
-        <div class="det3 ${pode ? "" : "so-leitura"}"><div class="grupo3">
-          ${linhaD("📅", "Compromisso", `<span class="q3b"><input type="date" id="q-dia" data-quando="1" value="${r.inicio ? dia(r.inicio) : ""}"><input type="time" id="q-ini" data-quando="1" value="${r.inicio ? hhmm(r.inicio) : ""}"><input type="time" id="q-fim" data-quando="1" value="${r.fim ? hhmm(r.fim) : ""}"></span>`)}
-          ${linhaD("📍", "Onde", `<input data-prop="onde" value="${esc(r.onde || "")}" placeholder="local ou link">`)}
-          ${linhaD("🔁", "Repete", `<select data-prop="repete">${opc([["", "Pontual"], ["diaria", "Diária"], ["semanal", "Semanal"], ["quinzenal", "Quinzenal"], ["mensal", "Mensal"]], r.repete || "")}</select>`)}
+        <div class="grupo3"><small>Quando e quanto</small>${linhaD("⚡", "Prioridade", `<select data-prop="prioridade">${opc(PRIORIDADES, r.prioridade, "Sem prioridade")}</select>`)}${linhaD("📅", "Prazo", `<input type="date" data-prop="prazo" value="${dia(r.prazo)}">`)}${linhaD("🔁", "Repete", `<select data-prop="repete">${opc([["", "Pontual"], ["diaria", "Diária"], ["semanal", "Semanal"], ["quinzenal", "Quinzenal"], ["mensal", "Mensal"]], r.repete || "")}</select>`)}
           ${r.repete === "semanal" ? `<div class="dias-sem" style="padding:0 12px 10px">${DIAS_SEM.map((n, k) => `<label><input type="checkbox" data-repetedia="1" value="${k + 1}" ${(r.repete_dias || []).includes(k + 1) ? "checked" : ""}>${n}</label>`).join("")}</div>` : ""}
-          <div class="lin3"><span class="ic">🗓️</span><span class="rot">Pautas e reuniões</span><span class="val val-w">${(r.pautas || []).map((id) => { const p = (M.pautas || []).find((x) => x.id === id); return p ? `<button class="chip" type="button" data-irpauta="${id}">${esc(p.titulo)}</button>` : ""; }).join("")}${(r.reunioes || []).map((id) => { const x = reuniaoDe(id); return x ? `<button class="chip" type="button" data-irreuniao="${id}">${esc(x.titulo)}</button>` : ""; }).join("")}${pode ? `<button class="chip" type="button" data-acao="pauta-da-rota">＋ pauta</button>${reus.length ? `<select data-levarreuniao="1"><option value="">＋ reunião</option>${reus.filter((x) => !(r.reunioes || []).includes(x.id)).map((x) => `<option value="${x.id}">${esc(x.titulo)}</option>`).join("")}</select>` : ""}` : ""}</span></div>
-        </div></div></section>
-      <section class="secao3 ultima" id="f-historico"><h3>🕘 Histórico</h3><ol class="hist3">${[...(r.historico || [])].reverse().map(histHTML).join("") || "<li>Sem registro.</li>"}</ol></section>
+          ${linhaD("💰", "Custo", `<input data-bud="1" value="${esc(r.budget_valor || "")}" placeholder="sem custo">`)}
+          ${r.budget_valor || r.budget_status !== "sem custo" ? `<div class="bud3">${BUDGET_ST.map((x) => `<button type="button" class="chip" data-budst="${x}" aria-pressed="${r.budget_status === x}" ${(x === "aprovado" || x === "recusado") && !comando() ? "disabled" : ""}>${x}</button>`).join("")}</div>` : ""}</div>
+        <div class="grupo3"><small>Tipo</small>${linhaD("🏷️", "Tipo", `<select data-prop="tipo">${opc(TIPOS, r.tipo, "Sem tipo")}</select>`)}${linhaD("🧭", "Natureza", `<select data-prop="natureza">${opc(NATUREZAS, r.natureza, "Sem natureza")}</select>`)}${linhaD("💥", "Impacto", `<select data-prop="impacto">${opc(NIVEIS, r.impacto, "Sem")}</select>`)}${linhaD("🏋️", "Esforço", `<select data-prop="esforco">${opc(NIVEIS, r.esforco, "Sem")}</select>`)}</div>
+        <div class="grupo3"><small>Arquivos e acesso</small>${(r.anexos || []).map((x) => `<div class="lin3"><span class="ic">${/pdf/.test(x.tipo || "") ? "📄" : /image/.test(x.tipo || "") ? "🖼️" : "📎"}</span><span class="rot" style="min-width:0;overflow:hidden;text-overflow:ellipsis">${esc(x.nome)}</span><span class="val"><button class="mini" type="button" data-baixar="${x.id}">Baixar</button><button class="mini" type="button" data-tiraranexo="${x.id}" aria-label="Tirar">✕</button></span></div>`).join("")}
+          <label class="lin3" style="cursor:pointer"><span class="ic">＋</span><span class="rot">Anexar arquivo</span><input type="file" id="rota-arq" multiple hidden></label><span id="rota-arq-prog" class="nota3"></span>
+          <div class="lin3"><span class="ic">🗓️</span><span class="rot">Pauta / reunião</span><span class="val val-w">${(r.pautas || []).map((id) => { const p = (M.pautas || []).find((x) => x.id === id); return p ? `<button class="chip" type="button" data-irpauta="${id}">${esc(p.titulo)}</button>` : ""; }).join("")}${(r.reunioes || []).map((id) => { const x = reuniaoDe(id); return x ? `<button class="chip" type="button" data-irreuniao="${id}">${esc(x.titulo)}</button>` : ""; }).join("")}${pode ? `<button class="chip" type="button" data-acao="pauta-da-rota">＋ pauta</button>${reus.length ? `<select data-levarreuniao="1"><option value="">＋ reunião</option>${reus.filter((x) => !(r.reunioes || []).includes(x.id)).map((x) => `<option value="${x.id}">${esc(x.titulo)}</option>`).join("")}</select>` : ""}` : ""}</span></div>
+          ${comando() ? `<div class="lin3"><span class="ic">${r.sensivel ? "🔒" : "👥"}</span><span class="rot">Quem vê</span><span class="val"><button class="chip" type="button" data-acao="sensivel" aria-pressed="${!!r.sensivel}">${r.sensivel ? "Só eu" : "Equipe da rota"}</button></span></div>` : ""}</div>
+      </div></section>
+      <section class="secao3" id="f-lembrete"><h3>Lembrete</h3>
+        ${lem ? `<div class="lem4"><p>${tocando(r) ? "🔔 Chegou a hora do lembrete" : `⏰ Vou te lembrar ${quandoFoi(lem.quando).replace(/^hoje/, "hoje às")}`}${lem.nota ? ` · ${esc(lem.nota)}` : ""}.</p><div class="rapidas3"><button class="chip" type="button" data-lemfeito="${lem.id}">${tocando(r) ? "✓ Visto" : "Tirar lembrete"}</button></div></div>`
+          : `<p class="nota" style="margin:0">Não dá para fazer agora? Escolha quando o ALFY te lembra. Até lá a rota sai da sua lista.</p>
+          <div class="esc4"><span class="esc4r">Dia</span><div class="rapidas3">${DIAS_LEM().map(([k, n]) => `<button class="chip" type="button" data-lemdia="${k}" aria-pressed="${ld === k}">${n}</button>`).join("")}<label class="chip" aria-pressed="${ld === "data"}"><input type="date" id="lem-dia" value="${s.lemData || ""}" aria-label="Outra data"></label></div></div>
+          <div class="esc4"><span class="esc4r">Hora</span><div class="rapidas3">${HORAS_LEM.map((h) => `<button class="chip" type="button" data-lemhora="${h}" aria-pressed="${lh === h}">${h}h</button>`).join("")}<label class="chip"><input type="time" id="lem-hora" value="${s.lemHoraTxt || ""}" aria-label="Outra hora"></label></div></div>
+          <div class="esc4"><span class="esc4r"></span><div class="rapidas3" style="flex:1"><input id="lem-nota" placeholder="Por quê? (opcional) Ex.: esperando o Luan" class="nota4"><button class="btn turq peq" type="button" data-acao="lem-confirmar">⏰ Lembrar</button></div></div>`}
+        <div class="comp4"><div class="f4h"><h4>Compromisso na agenda</h4></div>
+          ${comp && !s.compEditando ? `<p>📅 ${new Date(r.inicio).toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "2-digit", timeZone: FUSO })} · ${hhmm(r.inicio)}${r.fim ? "–" + hhmm(r.fim) : ""}${r.onde ? " · " + esc(r.onde) : ""}</p><div class="rapidas3"><button class="chip" type="button" data-acao="comp-editar">Mudar</button><button class="chip" type="button" data-acao="comp-tirar">Tirar da agenda</button></div>`
+            : s.compEditando ? `<div class="rapidas3"><input type="date" id="cp-dia" value="${comp ? dia(r.inicio) : hojeDia()}"><input type="time" id="cp-ini" value="${comp ? hhmm(r.inicio) : "09:00"}"><input type="time" id="cp-fim" value="${r.fim ? hhmm(r.fim) : ""}" aria-label="Até"><input id="cp-onde" value="${esc(r.onde || "")}" placeholder="Onde (local ou link)" class="nota4"></div><div class="rapidas3" style="margin-top:8px"><button class="btn turq peq" type="button" data-acao="comp-salvar">Pôr na agenda</button><button class="btn peq" type="button" data-acao="comp-cancelar">Cancelar</button></div>`
+            : `<p class="nota" style="margin:0 0 8px">Lembrete é só para você lembrar. Compromisso tem dia e hora e entra na Agenda (e no Google Agenda).</p><button class="btn peq" type="button" data-acao="comp-editar">📅 Transformar em compromisso</button>`}</div></section>
+      <section class="secao3 ultima" id="f-historico"><h3>Histórico</h3><ul class="hist4">${histV.map(histHTML).join("") || "<li>Sem registro.</li>"}</ul>${hist.length > histV.length ? `<button class="lk" type="button" data-acao="hist-tudo">Ver todo o histórico (${hist.length})</button>` : ""}</section>
     </div></div>
     <nav class="barra3" aria-label="Ações da rota"><div class="col3 barra3-in" style="grid-template-columns:44px repeat(${r.status === "concluida" ? 2 : 3},minmax(0,1fr)) 44px">
       <button type="button" class="seta3" data-fnav="-1" ${i > 0 ? "" : "disabled"} aria-label="Rota anterior">‹</button>
       ${r.status === "concluida" ? `<button type="button" class="b3" data-mover="andamento"><span>↺</span>Reabrir</button>` : `<button type="button" class="b3 princ" data-mover="${eb[2]}"><span>${eb[0]}</span>${eb[1]}</button><button type="button" class="b3 ok" data-mover="concluida"><span>✓</span>Concluir</button>`}
-      <button type="button" class="b3 lem" data-acao="lembrar"><span>⏰</span>Lembrar</button>
+      <button type="button" class="b3 lem" data-irf="lembrete"><span>⏰</span>Lembrar</button>
       <button type="button" class="seta3" data-fnav="1" ${i < ord.length - 1 ? "" : "disabled"} aria-label="Próxima rota">›</button></div></nav>
-    ${s.lembrando ? lembrarHTML(r) : ""}</section></div>`;
+  </section></div>`;
   ligarAncoras();
 }
+async function lembrar(quando) {
+  const rt = s.aberta, nota = $("#lem-nota")?.value || "";
+  M.lembretes = await chamar("alfy_lembrar", { p_rt: rt, p_quando: quando.toISOString(), p_nota: nota });
+  aviso(`⏰ Vou te lembrar ${quandoFoi(quando.toISOString()).replace(/^hoje/, "hoje às")}. A rota sai da sua lista até lá`);
+  await recarregarCartao(); refolha(); await recarregar(); render();
+}
+
 function LEM_RAPIDOS() {
   const ag = new Date(), h = (d, hh) => { const x = new Date(d); x.setHours(hh, 0, 0, 0); return x; };
   const amanha = new Date(ag); amanha.setDate(ag.getDate() + 1);
@@ -1026,20 +1048,6 @@ function LEM_RAPIDOS() {
   if (ag.getHours() < 16) l.push(["hoje 17h", h(ag, 17)]);
   l.push(["amanhã 8h", h(amanha, 8)], ["segunda 8h", h(seg, 8)]);
   return l;
-}
-function lembrarHTML(r) {
-  return `<div class="veu-lem" data-fechalem="1"><div class="folha-lem" role="dialog" aria-modal="true" aria-label="Lembrar"><span class="puxa"></span><h4>⏰ Lembrar da ${esc(nomeRota(r.rt))}</h4>
-    <p class="nota" style="margin:0">Até a hora, a rota sai da sua lista. Quando faltar menos de 1 hora, aparece a bolha com o número dela.</p>
-    <div class="rapidas3">${LEM_RAPIDOS().map(([n]) => `<button class="chip" type="button" data-lemq="${n}">${n}</button>`).join("")}</div>
-    <div class="rapidas3"><input type="date" id="lem-dia" value="${hojeDia()}" aria-label="Dia"><input type="time" id="lem-hora" value="09:00" aria-label="Hora"><button class="btn peq lem" type="button" data-acao="lem-escolhido">Lembrar</button></div>
-    <input id="lem-nota" placeholder="Por que adiou? (opcional) Ex.: esperando o Luan">
-    <button class="btn" type="button" data-fechalem="1">Cancelar</button></div></div>`;
-}
-async function lembrar(quando) {
-  const rt = s.aberta, nota = $("#lem-nota")?.value || "";
-  M.lembretes = await chamar("alfy_lembrar", { p_rt: rt, p_quando: quando.toISOString(), p_nota: nota });
-  s.lembrando = false; aviso(`⏰ Lembrete: ${quandoFoi(quando.toISOString()).replace(/^hoje/, "hoje às")}. A rota sai da sua lista até lá`);
-  await recarregarCartao(); refolha(); await recarregar(); render();
 }
 // a aba de seção acende conforme a parte do cartão que está na tela
 function ligarAncoras() {
@@ -1068,7 +1076,7 @@ setInterval(() => { if (M) bolhas(); }, 30000);
 function refolha() { const c = $("#corpo-folha"), y = c ? c.scrollTop : 0; folha(); const n = $("#corpo-folha"); if (n) n.scrollTop = y; }
 async function abrir(rt, navegando) {
   if (!navegando) { const vistos = [...new Set([...document.querySelectorAll("#conteudo [data-rt]")].map((x) => x.dataset.rt))]; s.ordemFolha = vistos.includes(rt) ? vistos : [rt]; }
-  s.lembrando = false;
+  s.lembrando = false; s.convTudo = false; s.histTudo = false; s.compEditando = false; s.menuIa = null; s.lemDia = "amanha"; s.lemHora = 9; s.lemHoraTxt = ""; s.lemData = "";
   s.aberta = rt; s.abaFolha = "ficha"; s.editando = null; s.rascunhoRota = "";
   try { s.cartao = await chamar("alfy_cartao", { p_rt: rt }); if (!s.cartao) { aviso("Você não tem acesso a essa rota", true); return; } folha(); } catch (e) { falhou(e); }
 }
@@ -1488,6 +1496,9 @@ document.addEventListener("click", async (e) => {
     if (d.bolhas) { s.bolhasAbertas = d.bolhas === "1"; bolhas(); return; }
     if (d.abrirlem) { s.bolhasAbertas = false; const l = lembreteDe(d.abrirlem); if (l && new Date(l.quando) <= new Date()) M.lembretes = await chamar("alfy_lembrete_feito", { p_id: l.id }); bolhas(); abrir(d.abrirlem); return; }
     if (d.zapler !== undefined) { await pedir("zap", null, d.zapler ? { horas: +d.zapler } : {}); await carregarZap(); render(); aviso("Lendo o WhatsApp… leva de 1 a 2 minutos"); return; }
+    if (d.menuia) { s.menuIa = s.menuIa === d.menuia ? null : d.menuia; refolha(); return; }
+    if (d.lemdia) { s.lemDia = d.lemdia; refolha(); return; }
+    if (d.lemhora) { s.lemHora = +d.lemhora; s.lemHoraTxt = ""; refolha(); return; }
     if (d.zapmodo) { s.zapModo = d.zapmodo; render(); return; }
     if (d.zapvisto) { s.zap = await chamar("alfy_zap_visto", { p_id: +d.zapvisto }); render(); return; }
     if (d.zaprota) { const z = (s.zap?.itens || []).find((x) => String(x.id) === d.zaprota); if (z) novaRota({ titulo: z.pede || z.conversa, assist: `${z.conversa}: ${z.pede || ""}\n${z.resumo || ""}` }); return; }
@@ -1588,7 +1599,20 @@ document.addEventListener("click", async (e) => {
     if (a === "ronda") { await pedir(a, null, {}); render(); aviso("Pedido na fila do robô"); return; }
     if (a === "copiar-mapa") { const cob = s.cmd === "cobrar" || s.mapaModo === "cobrar", modo = cob ? "pessoa" : s.mapaModo || "pessoa"; copiar((modo === "grupo" ? mapaGrupo(s.grupo || []) : modo === "setor" ? mapaSetor(s.alvo) : mapaPessoa(s.alvo, cob)).txt); return; }
     if (a === "sair") { sair(); return; }
-    if (a === "lembrar") { s.lembrando = true; refolha(); return; }
+    if (a === "lembrar") { $("[data-irf=lembrete]")?.click(); return; }
+    if (a === "lem-confirmar") {
+      const dl = DIAS_LEM().find(([k]) => k === (s.lemDia || "amanha")), base = s.lemDia === "data" && s.lemData ? new Date(s.lemData + "T12:00:00-03:00") : dl ? dl[2] : new Date();
+      const hh = s.lemHoraTxt || String(s.lemHora ?? 9).padStart(2, "0") + ":00", q = new Date(`${base.toLocaleDateString("en-CA", { timeZone: FUSO })}T${hh}:00-03:00`);
+      if (q <= new Date()) { aviso("Esse horário já passou. Escolha outro.", true); return; }
+      await lembrar(q); return;
+    }
+    if (a === "comp-editar") { s.compEditando = true; refolha(); return; }
+    if (a === "comp-cancelar") { s.compEditando = false; refolha(); return; }
+    if (a === "comp-salvar") { const dd = $("#cp-dia").value, hi = $("#cp-ini").value || "09:00", hf = $("#cp-fim").value; if (!dd) { aviso("Escolha o dia"); return; } s.compEditando = false; await editar({ inicio: `${dd}T${hi}:00-03:00`, fim: hf ? `${dd}T${hf}:00-03:00` : "", onde: $("#cp-onde").value, tipo: "📅 Compromisso" }, "📅 Na agenda"); return; }
+    if (a === "comp-tirar") { await editar({ inicio: "", fim: "", tipo: "" }, "Saiu da agenda"); return; }
+    if (a === "conv-tudo") { s.convTudo = true; refolha(); return; }
+    if (a === "hist-tudo") { s.histTudo = true; refolha(); return; }
+    if (a === "det-alfy") { await pedir("ia", "rota:" + s.aberta, { agir: true, texto: "Preencha os detalhes desta rota com o que você entende dela: frente, responsável, prioridade, prazo, tipo, natureza, impacto e esforço. Só mude o que estiver vazio ou claramente errado, sem inventar, e diga em uma linha o que mudou." }, "rota:" + s.aberta); refolha(); aviso("🐙 O ALFY está preenchendo os detalhes…"); return; }
     if (a === "lem-escolhido") { const dd = $("#lem-dia").value, hh = $("#lem-hora").value || "09:00"; if (!dd) { aviso("Escolha o dia"); return; } await lembrar(new Date(`${dd}T${hh}:00-03:00`)); return; }
     if (a === "coment-alfy") { const t = $("#t-coment").value.trim(); if (!t) { aviso("Escreva o pedido para o ALFY"); return; } s.rascunhoRota = ""; await pedir("ia", "rota:" + s.aberta, { texto: t, agir: true }, "rota:" + s.aberta); refolha(); $("#f-interagir")?.scrollIntoView({ block: "start" }); return; }
     if (a === "acesso-novo") { const fr = $("#nv-frente")?.value; await gerarAcesso(null, "colaborador", fr ? [fr] : null); return; }
@@ -1642,6 +1666,8 @@ document.addEventListener("change", async (e) => {
     if (t.id === "rota-arq" && t.files.length && s.aberta) { const rt = s.aberta; for (const f of [...t.files]) { if (f.size > 15 * 1024 * 1024) { aviso(f.name + " passa de 15 MB", true); continue; } const el = $("#rota-arq-prog"); if (el) el.textContent = "Subindo " + f.name + "…"; const id = await subirGrande(f); s.cartao = await chamar("alfy_rota_anexo", { p_rt: rt, p_anexo: id }); } refolha(); await recarregar(); render(); aviso("Anexado"); }
     if (t.id === "plaud-arq" && t.files[0]) { const f = t.files[0], rid = s.reuniao; aviso("Subindo " + f.name + "…"); const id = await subirGrande(f); await chamar("alfy_reuniao_anexo", { p_reuniao: rid, p_anexo: id }); aviso("Anexado. O ALFY vai ler e escrever a ata."); await recarregar(); await carregarReuniao(); render(); }
     if (t.dataset.repetedia && s.aberta) { const dias = [...document.querySelectorAll("[data-repetedia]:checked")].map((x) => +x.value); editar({ repete_dias: dias }); }
+    if (t.id === "lem-dia") { s.lemDia = "data"; s.lemData = t.value; refolha(); }
+    if (t.id === "lem-hora") { s.lemHoraTxt = t.value; s.lemHora = null; refolha(); }
     if (t.id === "n-comp") { $("#n-quando").hidden = !t.checked; }
     if (t.id === "n-rep") { $("#n-dias").hidden = t.value !== "semanal"; }
     if (t.id === "desp-arq") { for (const f of [...t.files]) subirAnexo(f, f.name, f.type.startsWith("audio")); }
