@@ -1,4 +1,4 @@
-// ALFY · Mapa de Rotas · Ilha Tech · v2.29.0 · 05/11/2026 · Painel de Ferro · agendar escrevendo + aviso de horário que bate
+// ALFY · Mapa de Rotas · Ilha Tech · v2.30.0 · 05/11/2026 · Painel de Ferro · pílulas que editam (etapa, prioridade que acerta o prazo, prazo, dono)
 // Tudo passa pelas funções alfy_* do banco, sempre com a chave pessoal de quem está usando.
 // O banco decide o que cada pessoa vê; a tela só desenha o que voltou.
 // A IA e os comandos são pedidos numa fila (alfy.pedido) que o robô do Mac atende.
@@ -559,7 +559,7 @@ function rrFicha(r) {
 function rrItem(r, foco) {
   const pz = prazoInfo(r), fid = "clf-" + r.rt.replace(/\W/g, ""), selo = (cls, t) => `<span class="selo3 ${cls}">${t}</span>`;
   return `<article class="rr-item ${foco ? "foco" : ""}" id="rr-${r.rt.replace(/\W/g, "")}">
-    <div class="rr-cab" role="button" tabindex="0" data-rrfoco="${r.rt}">${tag(r)}<span class="tt"><b>${esc(r.titulo)}</b><span class="selos3">${selo("st-" + r.status, "● " + ST[r.status].um)}${r.prioridade ? selo("", prioTxt(r.prioridade)) : ""}${selo(pz.cls, "📅 " + pz.txt)}${selo("", "👤 " + esc(curto(nomeDe(r.responsavel_id))))}${r.comentarios ? selo("", "💬 " + r.comentarios) : ""}</span></span></div>
+    <div class="rr-cab" role="button" tabindex="0" data-rrfoco="${r.rt}">${tag(r)}<span class="tt"><b>${esc(r.titulo)}</b><span class="selos3">${foco ? pil(r, "st", "selo3 st-" + r.status, "● " + ST[r.status].um) + pil(r, "prio", "selo3", r.prioridade ? prioTxt(r.prioridade) : "Sem prioridade") + pil(r, "prazo", "selo3 " + pz.cls, "📅 " + pz.txt) + pil(r, "dono", "selo3", "👤 " + esc(curto(nomeDe(r.responsavel_id)))) : selo("st-" + r.status, "● " + ST[r.status].um) + (r.prioridade ? selo("", prioTxt(r.prioridade)) : "") + selo(pz.cls, "📅 " + pz.txt) + selo("", "👤 " + esc(curto(nomeDe(r.responsavel_id))))}${r.comentarios ? selo("", "💬 " + r.comentarios) : ""}</span></span></div>${foco && !s.aberta ? pilMenu(r) : ""}
     ${foco && s.rr.modo === "mudou" && rrMudou(r) ? `<p class="rr-mudou">🔔 ${esc(rrMudou(r).txt)}</p>` : ""}
     ${foco ? rrFicha(r) : rrSituacao(r) + rrNovidade(r)}
     ${foco ? caixaLinha(r, true) : ""}
@@ -615,6 +615,40 @@ function vistaRotaARota() {
 }
 
 
+// pílulas que editam: tocou, abre o menu daquela propriedade (etapa, prioridade, prazo, dono). Prioridade recalcula o prazo; o prazo continua editável
+const PRIO_HORAS = { P1: 24, P2: 72, P3: 168, P4: 720 };
+const prazoDaPrio = (p) => { const h = PRIO_HORAS[p]; if (!h) return ""; const d = new Date(Date.now() + h * 3600e3); return d.toLocaleDateString("en-CA", { timeZone: FUSO }) + "T" + d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: FUSO }) + ":00-03:00"; };
+const podeEditar = (r) => manda() && !(r.sensivel && !comando());
+function pil(r, k, cls, txt) {   // k: st | prio | prazo | dono
+  const pode = k === "st" ? podeMexer(r) : podeEditar(r), ab = s.pil?.rt === r.rt && s.pil?.k === k;
+  return pode ? `<button type="button" class="${cls} pil" data-pil="${k}" data-pilrt="${r.rt}" aria-expanded="${ab}">${txt}</button>` : `<span class="${cls}">${txt}</span>`;
+}
+function pilMenu(r) {
+  if (s.pil?.rt !== r.rt) return "";
+  const k = s.pil.k, b = (v, nm, on, extra = "") => `<button type="button" class="pm-op" data-pilset="${k}" data-pilv="${esc(v)}" data-pilrt="${r.rt}" aria-pressed="${on}" ${extra}>${nm}</button>`;
+  const dd = (n) => { const d = new Date(hojeDia() + "T12:00:00-03:00"); d.setDate(d.getDate() + n); return d.toLocaleDateString("en-CA"); };
+  let corpo = "";
+  if (k === "st") corpo = ["rota", "andamento", "pausada", "concluida"].map((v) => b(v, `${ST[v].bola} ${ST[v].um}`, r.status === v)).join("");
+  if (k === "prio") corpo = PRIORIDADES.map((p) => { const c = pcod(p), pz = prazoDaPrio(c); return b(p, `${p.split(" · ")[0]} <small>${pz ? "prazo " + ddmm(pz) : "sem prazo"}</small>`, pcod(r.prioridade) === c); }).join("")
+    + `<p class="pm-nota">A prioridade acerta o prazo sozinha (P1 24 h, P2 3 dias, P3 7 dias, P4 30 dias, P5 sem prazo). Depois dá para mudar o prazo.</p>`;
+  if (k === "prazo") corpo = [["0", "Hoje"], ["1", "Amanhã"], ["3", "Em 3 dias"], ["7", "Em 7 dias"], ["30", "Em 30 dias"]].map(([n, nm]) => b(dd(+n), `${nm} <small>${ddmm(dd(+n) + "T12:00:00-03:00")}</small>`, r.prazo && dia(r.prazo) === dd(+n))).join("")
+    + `<label class="pm-data">Outra data<input type="date" data-pildata="${r.rt}" value="${r.prazo ? dia(r.prazo) : ""}"></label>${r.prazo ? b("", "Tirar o prazo", false) : ""}`;
+  if (k === "dono") corpo = `<select class="pm-sel" data-pildono="${r.rt}">${opc(gente().sort((x, y) => x[1].localeCompare(y[1])), r.responsavel_id || "", "Sem dono")}</select>`;
+  const tit = { st: "Etapa", prio: "Prioridade", prazo: "Prazo de entrega", dono: "Quem faz" }[k];
+  return `<div class="pmenu" role="dialog" aria-label="${tit}"><div class="pm-cab"><b>${tit}</b><button type="button" class="pm-x" data-pilfecha="1" aria-label="Fechar">✕</button></div><div class="pm-ops">${corpo}</div></div>`;
+}
+async function pilSalvar(rt, k, v) {
+  s.pil = null;
+  try {
+    if (k === "st") await chamar("alfy_mover", { p_rt: rt, p_status: v });
+    else {
+      const campos = k === "prio" ? { prioridade: v, prazo: prazoDaPrio(pcod(v)) } : k === "prazo" ? { prazo: v ? (v.includes("T") ? v : v + "T18:00:00-03:00") : "" } : { responsavel_id: v };
+      const c = await chamar("alfy_editar", { p_rt: rt, p_campos: campos }); if (s.aberta === rt && c) s.cartao = c;
+    }
+    aviso(k === "prio" ? `${nomeRota(rt)}: ${v.split(" · ")[0]}${prazoDaPrio(pcod(v)) ? ", prazo " + ddmm(prazoDaPrio(pcod(v))) : ", sem prazo"}` : `${nomeRota(rt)} atualizada`);
+    await recarregar(); if (s.aberta === rt) refolha(); render();
+  } catch (e) { falhou(e); }
+}
 // ---------------------------------------------------------------- 📱 WhatsApp
 // ficar longe do zap sem perder nada: o que espera resposta, o resumo de cada conversa e grupo, e o que vira rota
 const zapRodando = () => ["fila", "rodando"].includes(s.zap?.pedido?.status);
@@ -1189,7 +1223,7 @@ function folha() {
       <nav class="ancoras3" aria-label="Seções">${SECOES_F.map(([k, n]) => `<button type="button" data-irf="${k}" aria-current="${k === "fazer"}">${n}${k === "interagir" ? (novas ? ` <small class="novas4">${novas} nova${novas > 1 ? "s" : ""}</small>` : tempo.length ? ` <small>${tempo.length}</small>` : "") : ""}${k === "lembrete" && lem ? " ⏰" : ""}</button>`).join("")}</nav></div></div>
     <div class="col3">
       <section class="secao3" id="f-fazer">
-        <div class="selos4"><span class="sl4 st-${r.status}"><i></i>${ST[r.status].um}</span>${r.prioridade ? `<span class="sl4">${prioTxt(r.prioridade)}</span>` : ""}<span class="sl4 ${pz.cls}">📅 ${pz.txt}</span><span class="sl4">👤 ${esc(curto(nomeDe(r.responsavel_id)))}${r.co_responsavel_id ? " + " + esc(curto(nomeDe(r.co_responsavel_id))) : ""}</span>${(() => { const v = valorRota(r); return v ? `<button type="button" class="sl4 pts" data-irf="det-tipo" title="Quanto esta rota vale no Placar">🏆 ${v.feito ? "" : "vale "}${(v.feito || v.mod === 1 ? (v.feito ? v.pts : v.base) : v.pts).toLocaleString("pt-BR")} pts</button>` : ""; })()}${r.repete ? `<span class="sl4">🔁 ${REPETE_TXT[r.repete]}</span>` : ""}${r.sensivel ? '<span class="sl4">🔒 só eu</span>' : ""}</div>
+        <div class="selos4">${pil(r, "st", "sl4 st-" + r.status, "<i></i>" + ST[r.status].um)}${pil(r, "prio", "sl4", r.prioridade ? prioTxt(r.prioridade) : "Sem prioridade")}${pil(r, "prazo", "sl4 " + pz.cls, "📅 " + pz.txt)}${pil(r, "dono", "sl4", "👤 " + esc(curto(nomeDe(r.responsavel_id))) + (r.co_responsavel_id ? " + " + esc(curto(nomeDe(r.co_responsavel_id))) : ""))}${(() => { const v = valorRota(r); return v ? `<button type="button" class="sl4 pts" data-irf="det-tipo" title="Quanto esta rota vale no Placar">🏆 ${v.feito ? "" : "vale "}${(v.feito || v.mod === 1 ? (v.feito ? v.pts : v.base) : v.pts).toLocaleString("pt-BR")} pts</button>` : ""; })()}${r.repete ? `<span class="sl4">🔁 ${REPETE_TXT[r.repete]}</span>` : ""}${r.sensivel ? '<span class="sl4">🔒 só eu</span>' : ""}</div>${pilMenu(r)}
         ${campo4(r, "assist", "resumo4")}${campo4(r, "instr")}${campo4(r, "resultado")}
         ${campo4(r, "como_esta", "agora4")}
       </section>
@@ -1938,6 +1972,9 @@ document.addEventListener("click", async (e) => {
     if (d.zapir) { document.getElementById(d.zapir)?.scrollIntoView({ behavior: "smooth", block: "start" }); return; }
     if (d.rrf) { const f = rrF(), l = f[d.rrf]; f[d.rrf] = l.includes(d.rrfv) ? l.filter((x) => x !== d.rrfv) : [...l, d.rrfv]; s.rr.foco = null; rrSalvar(); render(); return; }
     if (d.rrftira) { s[d.rrftira] = ""; s.rr.foco = null; render(); return; }
+    if (d.pil) { s.pil = s.pil?.rt === d.pilrt && s.pil?.k === d.pil ? null : { rt: d.pilrt, k: d.pil }; if (s.aberta === d.pilrt) refolha(); render(); return; }
+    if (d.pilfecha) { const rt = s.pil?.rt; s.pil = null; if (s.aberta === rt) refolha(); render(); return; }
+    if (d.pilset) { await pilSalvar(d.pilrt, d.pilset, d.pilv); return; }
     if (d.rrmodo) { s.rr.modo = d.rrmodo; s.rr.foco = null; rrSalvar(); render(); return; }
     if (d.agsel) { s.agDia = d.agsel; render(); return; }
     if (d.agnovo) { novaRota({ compromisso: true, dia: d.agnovo }); return; }
@@ -2120,6 +2157,8 @@ document.addEventListener("input", (e) => {
 document.addEventListener("change", async (e) => {
   const t = e.target;
   try {
+    if (t.dataset.pildata) { await pilSalvar(t.dataset.pildata, "prazo", t.value); return; }
+    if (t.dataset.pildono) { await pilSalvar(t.dataset.pildono, "dono", t.value); return; }
     if (t.dataset.rrsel) { s[t.dataset.rrsel] = t.value; s.rr.foco = null; render(); return; }
     if (t.id === "f-pessoa") { s.pessoa = t.value; render(); }
     if (t.id === "f-frente") { s.frente = t.value; render(); }

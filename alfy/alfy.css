@@ -1440,3 +1440,24 @@ button.sl4{border:0}
 .qd-conf b{color:#FF9A9C;font-weight:700}
 .agk-card.choque{box-shadow:inset 0 0 0 1px rgba(229,72,77,.7)}
 .agk-choque{font-size:12px;font-weight:700;color:#FF9A9C;line-height:1.35}
+
+/* ---------- 2.30 · pílulas que editam ---------- */
+button.pil{font:inherit;cursor:pointer;border:inherit}
+.selo3.pil,.sl4.pil{border:1px solid var(--linha)}
+.pil:hover{border-color:var(--turq)!important;color:var(--texto)}
+.pil[aria-expanded="true"]{border-color:var(--turq)!important;box-shadow:0 0 0 2px rgba(43,175,166,.25)}
+.pmenu{margin:10px 0 4px;padding:12px 14px;border-radius:12px;background:var(--ferro-1);border:1px solid var(--linha);box-shadow:0 10px 30px rgba(0,0,0,.35);max-width:620px}
+.pm-cab{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.pm-cab b{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--aco)}
+.pm-x{border:0;background:none;color:var(--aco);font-size:14px;cursor:pointer;width:28px;height:28px;border-radius:8px}
+.pm-x:hover{background:var(--ferro-3);color:var(--texto)}
+.pm-ops{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.pm-op{display:inline-flex;align-items:baseline;gap:6px;height:34px;padding:0 12px;border-radius:9px;border:1px solid var(--linha);background:transparent;color:var(--aco-2);font:inherit;font-size:14px;cursor:pointer;align-items:center}
+.pm-op small{font-size:12px;color:var(--aco)}
+.pm-op:hover{border-color:var(--ferro-4);color:var(--texto)}
+.pm-op[aria-pressed="true"]{background:var(--turq);border-color:var(--turq);color:#06201E;font-weight:700}
+.pm-op[aria-pressed="true"] small{color:#06201E}
+.pm-nota{flex-basis:100%;margin:6px 0 0;font-size:12.5px;color:var(--aco)}
+.pm-data{display:inline-flex;align-items:center;gap:8px;font-size:13px;color:var(--aco)}
+.pm-data input,.pm-sel{height:34px;border-radius:9px;border:1px solid var(--linha);background:var(--ferro-2);color:var(--texto);font:inherit;font-size:14px;padding:0 10px}
+.pm-sel{min-width:240px}
