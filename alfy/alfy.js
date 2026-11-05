@@ -1,4 +1,4 @@
-// ALFY · Mapa de Rotas · Ilha Tech · v2.20.0 · 05/11/2026 · Painel de Ferro · 🔁 Rotinas + aba 📱 WhatsApp com limpeza geral
+// ALFY · Mapa de Rotas · Ilha Tech · v2.21.0 · 05/11/2026 · Painel de Ferro · 🏆 Placar (pontuação V3, ranking, banco de entregas)
 // Tudo passa pelas funções alfy_* do banco, sempre com a chave pessoal de quem está usando.
 // O banco decide o que cada pessoa vê; a tela só desenha o que voltou.
 // A IA e os comandos são pedidos numa fila (alfy.pedido) que o robô do Mac atende.
@@ -57,6 +57,7 @@ const IC = {
   ronda: svg('<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>'),
   virada: svg('<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4M9 15l2 2 4-4"/>'),
   zap: svg('<path d="M21 12a9 9 0 0 1-13.4 7.8L3 21l1.3-4.4A9 9 0 1 1 21 12z"/><path d="M9 10h6M9 14h4"/>'),
+  placar: svg('<path d="M8 21h8M12 17v4M7 4h10v4a5 5 0 0 1-10 0V4z"/><path d="M17 5h3a3 3 0 0 1-3 4M7 5H4a3 3 0 0 0 3 4"/>'),
   aprendi: svg('<path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-4 10.5c.7.6 1 1.5 1 2.5h6c0-1 .3-1.9 1-2.5A6 6 0 0 0 12 3z"/>'),
   perguntar: svg('<path d="M21 12a9 9 0 1 1-4-7.5"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14M12 17.5v.01"/>'),
   x: svg('<path d="M6 6l12 12M18 6 6 18"/>', 'width="18" height="18" stroke-width="2.2"'),
@@ -159,7 +160,7 @@ const gente = () => (M?.pessoas || []).filter((p) => p.nome).map((p) => [p.id, p
 function navItens() {
   const abertas = (M?.rotas || []).filter((r) => ABERTOS.includes(r.status)).length;
   const pautas = (M?.pautas || []).filter((p) => p.status === "aberta").length;
-  const it = [["rotas", "Rotas", IC.rotas, abertas], ["agenda", "Agenda", IC.agenda, ""], ["feed", "Feed", IC.feed, ""], ["pautas", "Pautas", IC.pautas, pautas || ""]];
+  const it = [["rotas", "Rotas", IC.rotas, abertas], ["agenda", "Agenda", IC.agenda, ""], ["feed", "Feed", IC.feed, ""], ["pautas", "Pautas", IC.pautas, pautas || ""], ["placar", "Placar", IC.placar, ""]];
   if (cuidaPessoas()) it.push(["equipe", "Equipe", IC.eu, (s.fichas || []).filter((f) => f.status === "pendente").length || ""]);
   if (comando()) it.push(["zap", "WhatsApp", IC.whatsapp, (s.zap?.itens || []).filter((z) => z.precisa && !z.visto).length || ""]);
   if (comando()) it.push(["comandos", "Comandos", IC.comandos, ""]);
@@ -168,13 +169,13 @@ function navItens() {
 function casca() {
   const p = eu();
   $("#nav").innerHTML = navItens().map(([k, n, ic, c]) => `<button type="button" data-aba="${k}" aria-current="${s.aba === k}">${ic}<span>${n}</span><span class="n">${c}</span></button>`).join("");
-  const bb = [...navItens(), ["eu", "Eu", IC.eu]];
+  const bb = [...navItens().filter(([k]) => k !== "feed" && k !== "equipe"), ["eu", "Eu", IC.eu]];   // no celular Feed e Equipe ficam na aba Eu
   $("#barra-baixo").innerHTML = bb.map(([k, n, ic]) => `<button type="button" data-aba="${k}" aria-current="${s.aba === k}">${ic}<span>${n}</span></button>`).join("");
   $("#barra-baixo").style.gridTemplateColumns = `repeat(${bb.length},1fr)`;
   $("#eu-av").textContent = ini(p.nome); $("#eu-av-cel").textContent = ini(p.nome);
   $("#eu-nome").textContent = p.nome;
   $("#eu-papel").textContent = papelTxt();
-  $("#titulo-cel").textContent = { zap: "WhatsApp", rotas: "Rotas", equipe: "Equipe", agenda: "Agenda", feed: "Feed", pautas: "Pautas", comandos: "Comandos", eu: "Eu" }[s.aba];
+  $("#titulo-cel").textContent = { placar: "Placar", zap: "WhatsApp", rotas: "Rotas", equipe: "Equipe", agenda: "Agenda", feed: "Feed", pautas: "Pautas", comandos: "Comandos", eu: "Eu" }[s.aba];
   $("#fab").hidden = s.aba !== "rotas" || s.vista === "rar";
 }
 const papelTxt = () => comando() ? "Comando · vê tudo" : papel() === "gerente" ? "Gerente · " + (eu().frentes || []).map(frenteCurta).join(", ") : "Vê as rotas dele";
@@ -204,7 +205,7 @@ function topo() {
     const tipos = [["todos", "Tudo"], ["comentario", "Comentários"], ["orientacao", "Orientações"], ["whatsapp", "WhatsApp"], ["status", "Status"], ["editar", "Edições"], ["nova", "Rotas novas"], ["budget", "Budget"], ["pauta", "Pautas"]];
     fi.innerHTML = filtrosHTML() + `<div style="display:flex;gap:6px;overflow-x:auto;flex-basis:100%;scrollbar-width:none">${tipos.map(([k, n]) => `<button class="chip" type="button" data-ffeed="${k}" aria-pressed="${s.fFeed === k}">${n}</button>`).join("")}</div>`;
   } else {
-    const t = { zap: "📱 WhatsApp", pautas: "Pautas e reuniões", comandos: "Comandos do ALFY", agenda: "Agenda", equipe: "Equipe e cadastro", eu: "Eu" }[s.aba];
+    const t = { placar: "🏆 Placar", zap: "📱 WhatsApp", pautas: "Pautas e reuniões", comandos: "Comandos do ALFY", agenda: "Agenda", equipe: "Equipe e cadastro", eu: "Eu" }[s.aba];
     l1.innerHTML = `<h1>${t}</h1><span class="espaco"></span>${vivo}${s.aba === "pautas" && manda() ? '<button class="btn" type="button" data-acao="nova-pauta">＋ Nova pauta</button><button class="cta" type="button" data-acao="nova-reuniao">＋ Nova reunião</button>' : ""}`;
     fi.innerHTML = ""; $("#alterna-cel").innerHTML = "";
   }
@@ -320,6 +321,32 @@ function ligarKanban() {
     col.addEventListener("drop", (e) => { e.preventDefault(); col.classList.remove("alvo"); mover(e.dataTransfer.getData("text/plain"), col.dataset.colSt); });
   });
   k.addEventListener("scroll", () => { const w = k.querySelector(".coluna").offsetWidth + 10, i = Math.round(k.scrollLeft / w); if (i !== s.colMovel) { s.colMovel = i; document.querySelectorAll(".abas-col .chip").forEach((b, j) => b.setAttribute("aria-pressed", j === i)); } }, { passive: true });
+}
+
+// ---------------------------------------------------------------- 🏆 Placar
+// pontuação V3: (Impacto + Dificuldade + Qualidade) × prazo, de 0 a 10, por rota concluída; responsável e co-responsável pontuam
+const MES_TXT = (d) => new Date(d + "T12:00:00-03:00").toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+async function carregarPlacar() { s.placar = await chamar("alfy_placar", { p_mes: s.placarMes || null }).catch(() => s.placar); }
+const ptsTxt = (n) => `${String(+n).replace(".", ",")} pt${+n === 1 ? "" : "s"}`;
+function entregaHTML(e, comDono) {
+  const pt = e.pt || {};
+  return `<div class="ent5"><span class="ent5n">${ptsTxt(pt.pontos)}</span><div class="ent5b"><b>${esc(e.titulo)}</b><small>${esc(nomeRota(e.rt))} · concluída ${ddmm(pt.concluida_em)}${comDono ? " · " + esc(curto(nomeDe(e.resp))) + (e.co ? " + " + esc(curto(nomeDe(e.co))) : "") : ""}</small>
+    <small class="ent5c">Impacto ${pt.impacto} + Dificuldade ${pt.dificuldade} + Qualidade ${pt.qualidade} × ${pt.mod === 1 ? "no prazo" : pt.mod === 0.5 ? "fora do prazo (½)" : "muito fora do prazo (falta)"}</small></div><button class="lk" type="button" data-rt="${e.rt}">↗</button></div>`;
+}
+function vistaPlacar() {
+  const pl = s.placar; if (!pl) return `<div class="carregando">Carregando o placar…</div>`;
+  const mes = pl.mes, ant = new Date(mes + "T12:00:00-03:00"); ant.setMonth(ant.getMonth() - 1); const prox = new Date(mes + "T12:00:00-03:00"); prox.setMonth(prox.getMonth() + 1);
+  const ehMesAtual = mes.slice(0, 7) === hojeDia().slice(0, 7);
+  const nav = `<div class="pl5nav"><button class="btn peq" type="button" data-plmes="${ant.toLocaleDateString("en-CA")}">‹</button><b>${MES_TXT(mes)}</b><button class="btn peq" type="button" data-plmes="${prox.toLocaleDateString("en-CA")}" ${ehMesAtual ? "disabled" : ""}>›</button></div>`;
+  const eu_ = pl.eu || {}, minhas = pl.minhas || [];
+  const meu = comando() ? "" : `<section class="pl5eu"><div class="pl5big"><span>${eu_.pos ? `${eu_.pos}º` : "–"}</span><small>de ${pl.total}</small></div><div class="pl5num"><p><b>${ptsTxt(eu_.pontos || 0)}</b> no mês</p><p>${eu_.entregas || 0} ${eu_.entregas === 1 ? "entrega" : "entregas"}${eu_.faltas ? ` · <span class="venc">${eu_.faltas} fora do prazo</span>` : ""}</p><p class="nota" style="margin:0">Sua posição entre a equipe. Os pontos dos outros não aparecem.</p></div></section>`;
+  const rank = pl.rank || [], pod = rank.filter((r) => r.pontos > 0).slice(0, 3), med = ["🥇", "🥈", "🥉"];
+  const podio = comando() && pod.length ? `<section class="pl5pod">${[1, 0, 2].filter((k) => pod[k]).map((k) => `<div class="pod5 p${k + 1}"><span class="pod5m">${med[k]}</span><span class="avatar">${ini(pod[k].nome)}</span><b>${esc(curto(pod[k].nome))}</b><span class="pod5p">${ptsTxt(pod[k].pontos)}</span><span class="pod5d"></span></div>`).join("")}</section>` : "";
+  const lista = comando() ? `<section class="pl5rank"><h3>Ranking do mês</h3>${rank.map((r) => `<div class="rk5"><span class="rk5p">${r.pos}º</span><span class="avatar">${ini(r.nome)}</span><div class="rk5b"><b>${esc(r.nome)}</b><small>${r.entregas} ${r.entregas === 1 ? "entrega" : "entregas"}${r.faltas ? ` · ${r.faltas} fora do prazo` : ""}${(r.frentes || []).length ? " · " + r.frentes.map(frenteCurta).join(", ") : ""}</small></div><span class="rk5n">${ptsTxt(r.pontos)}</span></div>`).join("")}</section>` : "";
+  const banco = comando() ? `<section class="pl5banco"><div class="f4h"><h3>Banco de entregas · ${(pl.entregas || []).length}</h3><input class="busca" id="pl-busca" placeholder="Buscar entrega" value="${esc(s.plBusca || "")}" style="max-width:240px"></div>
+      ${(pl.entregas || []).filter((e) => !s.plBusca || (e.titulo + " " + nomeDe(e.resp) + " " + nomeDe(e.co)).toLowerCase().includes(s.plBusca.toLowerCase())).map((e) => entregaHTML(e, true)).join("") || '<div class="vazio">Nenhuma entrega neste mês.</div>'}</section>`
+    : `<section class="pl5banco"><h3>Suas entregas · ${minhas.length}</h3>${minhas.map((e) => entregaHTML(e)).join("") || '<div class="vazio">Nenhuma entrega neste mês ainda. Cada rota concluída vale até 10 pontos.</div>'}</section>`;
+  return `<div class="pl5">${nav}${meu}${podio}${lista}${banco}<p class="nota pl5regra">Como pontua: (Impacto 1 a 3 + Dificuldade 1 a 4 + Qualidade 1 a 3) × prazo. No prazo vale inteiro, até 7 dias fora vale metade, mais que isso vale zero. Responsável e co-responsável pontuam. Compromisso não conta.</p></div>`;
 }
 
 // ---------------------------------------------------------------- 🔁 Rotinas
@@ -940,6 +967,7 @@ function vistaEu() {
   return `<div class="placa rebites" style="padding:22px 18px;display:flex;gap:14px;align-items:center"><div class="avatar" style="width:52px;height:52px;font-size:18px">${ini(p.nome)}</div><div><b style="font-family:var(--fd);font-size:18px">${esc(p.nome)}</b><div style="color:var(--aco);font-size:14px">${papelTxt()}</div></div></div>
     <div class="bloco" style="margin-top:14px"><h3>Suas rotas abertas <span class="ct">${minhas.length}</span></h3><p style="margin:0;color:var(--aco-2)">${minhas.filter(vencida).length} vencidas · ${minhas.filter((r) => r.prazo && dias(r.prazo) === 0).length} vencem hoje</p></div>
     <div class="bloco" style="margin-top:14px"><h3>No celular</h3><p style="margin:0;color:var(--aco-2)">Para usar como app: no iPhone, toque em Compartilhar › Adicionar à Tela de Início. No Android, menu ⋮ › Adicionar à tela inicial.</p></div>
+    <div class="bloco eu-atalhos" style="margin-top:14px"><h3>Atalhos</h3><div class="rapidas3"><button class="btn" type="button" data-aba="feed">📰 Feed</button>${cuidaPessoas() ? '<button class="btn" type="button" data-aba="equipe">👥 Equipe</button>' : ""}<button class="btn" type="button" data-aba="placar">🏆 Placar</button></div></div>
     <div class="bloco" style="margin-top:14px"><h3>Seu acesso</h3><p style="margin:0 0 10px;color:var(--aco-2)">${p.usuario ? `Você entra com o usuário <b>${esc(p.usuario)}</b> e sua senha, de qualquer aparelho.` : "Crie um usuário e uma senha para entrar de qualquer aparelho, sem precisar do link."}</p><button class="btn turq" type="button" data-acao="meu-acesso">🔑 ${p.usuario ? "Trocar minha senha" : "Criar usuário e senha"}</button></div>
     <div style="margin-top:14px"><button class="btn" type="button" data-acao="sair">Sair deste aparelho</button></div>`;
 }
@@ -1019,7 +1047,7 @@ function folha() {
       <nav class="ancoras3" aria-label="Seções">${SECOES_F.map(([k, n]) => `<button type="button" data-irf="${k}" aria-current="${k === "fazer"}">${n}${k === "interagir" ? (novas ? ` <small class="novas4">${novas} nova${novas > 1 ? "s" : ""}</small>` : tempo.length ? ` <small>${tempo.length}</small>` : "") : ""}${k === "lembrete" && lem ? " ⏰" : ""}</button>`).join("")}</nav></div></div>
     <div class="col3">
       <section class="secao3" id="f-fazer">
-        <div class="selos4"><span class="sl4 st-${r.status}"><i></i>${ST[r.status].um}</span>${r.prioridade ? `<span class="sl4">${prioTxt(r.prioridade)}</span>` : ""}<span class="sl4 ${pz.cls}">📅 ${pz.txt}</span><span class="sl4">👤 ${esc(curto(nomeDe(r.responsavel_id)))}${r.co_responsavel_id ? " + " + esc(curto(nomeDe(r.co_responsavel_id))) : ""}</span>${r.repete ? `<span class="sl4">🔁 ${REPETE_TXT[r.repete]}</span>` : ""}${r.sensivel ? '<span class="sl4">🔒 só eu</span>' : ""}</div>
+        <div class="selos4"><span class="sl4 st-${r.status}"><i></i>${ST[r.status].um}</span>${r.prioridade ? `<span class="sl4">${prioTxt(r.prioridade)}</span>` : ""}<span class="sl4 ${pz.cls}">📅 ${pz.txt}</span><span class="sl4">👤 ${esc(curto(nomeDe(r.responsavel_id)))}${r.co_responsavel_id ? " + " + esc(curto(nomeDe(r.co_responsavel_id))) : ""}</span>${r.pontos ? `<span class="sl4 pts">🏆 ${ptsTxt(r.pontos.pontos)}</span>` : ""}${r.repete ? `<span class="sl4">🔁 ${REPETE_TXT[r.repete]}</span>` : ""}${r.sensivel ? '<span class="sl4">🔒 só eu</span>' : ""}</div>
         ${campo4(r, "assist", "resumo4")}${campo4(r, "instr")}${campo4(r, "resultado")}
         ${campo4(r, "como_esta", "agora4")}
       </section>
@@ -1037,7 +1065,7 @@ function folha() {
           ${r.repete === "semanal" ? `<div class="dias-sem" style="padding:0 12px 10px">${DIAS_SEM.map((n, k) => `<label><input type="checkbox" data-repetedia="1" value="${k + 1}" ${(r.repete_dias || []).includes(k + 1) ? "checked" : ""}>${n}</label>`).join("")}</div>` : ""}
           ${linhaD("💰", "Custo", `<input data-bud="1" value="${esc(r.budget_valor || "")}" placeholder="sem custo">`)}
           ${r.budget_valor || r.budget_status !== "sem custo" ? `<div class="bud3">${BUDGET_ST.map((x) => `<button type="button" class="chip" data-budst="${x}" aria-pressed="${r.budget_status === x}" ${(x === "aprovado" || x === "recusado") && !comando() ? "disabled" : ""}>${x}</button>`).join("")}</div>` : ""}</div>
-        <div class="grupo3"><small>Tipo</small>${linhaD("🏷️", "Tipo", `<select data-prop="tipo">${opc(TIPOS, r.tipo, "Sem tipo")}</select>`)}${linhaD("🧭", "Natureza", `<select data-prop="natureza">${opc(NATUREZAS, r.natureza, "Sem natureza")}</select>`)}${linhaD("💥", "Impacto", `<select data-prop="impacto">${opc(NIVEIS, r.impacto, "Sem")}</select>`)}${linhaD("🏋️", "Esforço", `<select data-prop="esforco">${opc(NIVEIS, r.esforco, "Sem")}</select>`)}</div>
+        <div class="grupo3"><small>Tipo</small>${linhaD("🏷️", "Tipo", `<select data-prop="tipo">${opc(TIPOS, r.tipo, "Sem tipo")}</select>`)}${linhaD("🧭", "Natureza", `<select data-prop="natureza">${opc(NATUREZAS, r.natureza, "Sem natureza")}</select>`)}${linhaD("💥", "Impacto", `<select data-prop="impacto">${opc(NIVEIS, r.impacto, "Sem")}</select>`)}${linhaD("🏋️", "Dificuldade", `<select data-prop="esforco">${opc(["Fácil", "Simples", "Difícil", "Muito difícil"].concat(["Baixo", "Médio", "Alto"].includes(r.esforco) ? [r.esforco] : []), r.esforco, "Sem")}</select>`)}${comando() ? linhaD("⭐", "Qualidade da entrega", `<select data-prop="qualidade">${opc(["Acima", "Como esperado", "Abaixo"], r.qualidade, "Como esperado (padrão)")}</select>`) : ""}</div>
         <div class="grupo3"><small>📎 Arquivos</small>${(r.anexos || []).map((x) => `<div class="lin3"><span class="ic">${/pdf/.test(x.tipo || "") ? "📄" : /image/.test(x.tipo || "") ? "🖼️" : "📎"}</span><span class="rot" style="min-width:0;overflow:hidden;text-overflow:ellipsis">${esc(x.nome)}</span><span class="val"><button class="mini" type="button" data-baixar="${x.id}">Baixar</button><button class="mini" type="button" data-tiraranexo="${x.id}" aria-label="Tirar">✕</button></span></div>`).join("")}
           <label class="lin3" style="cursor:pointer"><span class="ic">＋</span><span class="rot">Anexar arquivo</span><input type="file" id="rota-arq" multiple hidden></label><span id="rota-arq-prog" class="nota3"></span></div>
         <div class="grupo3"><small>🗓️ Pauta e reunião</small><div class="lin3"><span class="rot">Levar para</span><span class="val val-w">${(r.pautas || []).map((id) => { const p = (M.pautas || []).find((x) => x.id === id); return p ? `<button class="chip" type="button" data-irpauta="${id}">${esc(p.titulo)}</button>` : ""; }).join("")}${(r.reunioes || []).map((id) => { const x = reuniaoDe(id); return x ? `<button class="chip" type="button" data-irreuniao="${id}">${esc(x.titulo)}</button>` : ""; }).join("")}${pode ? `<button class="chip" type="button" data-acao="pauta-da-rota">＋ pauta</button>${reus.length ? `<select data-levarreuniao="1"><option value="">＋ reunião</option>${reus.filter((x) => !(r.reunioes || []).includes(x.id)).map((x) => `<option value="${x.id}">${esc(x.titulo)}</option>`).join("")}</select>` : ""}` : ""}</span></div>
@@ -1350,7 +1378,7 @@ function render() {
   if (!M) return;
   casca(); topo(); medidores(); bolhas();
   const c = $("#conteudo");
-  c.innerHTML = { zap: () => `<div style="max-width:900px">${zapHTML("")}</div>`, rotas: () => (s.vista === "rar" && comando() ? vistaRotaARota() : s.vista === "rotinas" ? vistaRotinas() : s.vista === "kanban" ? vistaKanban() : vistaLista()), feed: vistaFeed, agenda: vistaAgenda, equipe: vistaEquipe, pautas: vistaPautas, comandos: vistaComandos, eu: vistaEu }[s.aba]();
+  c.innerHTML = { placar: vistaPlacar, zap: () => `<div style="max-width:900px">${zapHTML("")}</div>`, rotas: () => (s.vista === "rar" && comando() ? vistaRotaARota() : s.vista === "rotinas" ? vistaRotinas() : s.vista === "kanban" ? vistaKanban() : vistaLista()), feed: vistaFeed, agenda: vistaAgenda, equipe: vistaEquipe, pautas: vistaPautas, comandos: vistaComandos, eu: vistaEu }[s.aba]();
   if (s.aba === "rotas" && s.vista === "kanban") ligarKanban();
   if (s.aba === "agenda") { const k = $("#ag-semana"), h = k && k.querySelector(".coluna.hoje"); if (k && h && !s.agRolou) { k.scrollLeft = h.offsetLeft - k.offsetLeft - 8; s.agRolou = true; } }
   try { localStorage.setItem("alfy-vista", JSON.stringify({ vista: s.vista, agrupar: s.agrupar, v28: true })); } catch (_) { /* privado */ }
@@ -1518,7 +1546,7 @@ document.addEventListener("click", async (e) => {
   b.classList.add("ocupado"); b.setAttribute("aria-busy", "true");
   try {
     if (b.id === "eu-av-cel") { s.aba = "eu"; render(); return; }
-    if (d.aba) { s.aba = d.aba; s.pauta = null; s.reuniao = null; if (d.aba === "agenda") { render(); await carregarAgenda(); } if (d.aba === "equipe") { s.aprovado = null; if ((s.naveBusca || "").trim()) s.naveRes = await chamar("alfy_nave_buscar", { p_q: s.naveBusca }).catch(() => null); s.fichas = await chamar("alfy_fichas"); if (comando()) s.equipe = await chamar("alfy_equipe"); } if (d.aba === "feed") FEED = await chamar("alfy_feed", { p_limite: 150 }); if (d.aba === "zap") await carregarZap(); if (d.aba === "rotas" && s.vista === "rotinas") await carregarRotinas(); if (d.aba === "comandos" && s.cmd === "perguntar" && !s.chatGeral) s.chatGeral = await chamar("alfy_ia_conversa", { p_escopo: "geral" }); render(); scrollTo(0, 0); return; }
+    if (d.aba) { s.aba = d.aba; s.pauta = null; s.reuniao = null; if (d.aba === "agenda") { render(); await carregarAgenda(); } if (d.aba === "equipe") { s.aprovado = null; if ((s.naveBusca || "").trim()) s.naveRes = await chamar("alfy_nave_buscar", { p_q: s.naveBusca }).catch(() => null); s.fichas = await chamar("alfy_fichas"); if (comando()) s.equipe = await chamar("alfy_equipe"); } if (d.aba === "feed") FEED = await chamar("alfy_feed", { p_limite: 150 }); if (d.aba === "zap") await carregarZap(); if (d.aba === "placar") await carregarPlacar(); if (d.aba === "rotas" && s.vista === "rotinas") await carregarRotinas(); if (d.aba === "comandos" && s.cmd === "perguntar" && !s.chatGeral) s.chatGeral = await chamar("alfy_ia_conversa", { p_escopo: "geral" }); render(); scrollTo(0, 0); return; }
     if (d.vista) { s.vista = d.vista; if (d.vista === "rar") await rrCarregar(); if (d.vista === "rotinas") await carregarRotinas(); render(); return; }
     if (d.rrordem) { s.rr.ordem = d.rrordem; s.rr.foco = null; rrSalvar(); render(); return; }
     if (d.rrformato) { s.rr.formato = d.rrformato; rrSalvar(); render(); return; }
@@ -1536,6 +1564,7 @@ document.addEventListener("click", async (e) => {
     if (d.lemdia) { s.lemDia = d.lemdia; refolha(); return; }
     if (d.lemhora) { s.lemHora = +d.lemhora; s.lemHoraTxt = ""; refolha(); return; }
     if (d.zapmodo) { s.zapModo = d.zapmodo; render(); return; }
+    if (d.plmes) { s.placarMes = d.plmes; await carregarPlacar(); render(); return; }
     if (d.rodarrotina) { const r = await chamar("alfy_rotina_rodar", { p_serie: d.rodarrotina }); await recarregar(); await carregarRotinas(); render(); aviso(r.ja_aberta ? `Já tem uma aberta: ${nomeRota(r.rt)}` : `🔁 Rotina aberta: ${nomeRota(r.rt)}`); abrir(r.rt); return; }
     if (d.zapvisto) { s.zap = await chamar("alfy_zap_visto", { p_id: +d.zapvisto }); render(); return; }
     if (d.zaprota) { const z = (s.zap?.itens || []).find((x) => String(x.id) === d.zaprota); if (z) novaRota({ titulo: z.pede || z.conversa, assist: `${z.conversa}: ${z.pede || ""}\n${z.resumo || ""}` }); return; }
@@ -1691,6 +1720,7 @@ function abrirNovaOpcao() {
 }
 document.addEventListener("input", (e) => {
   const t = e.target;
+  if (t.id === "pl-busca") { s.plBusca = t.value; const pos = t.selectionStart; render(); const i = $("#pl-busca"); i.focus(); i.setSelectionRange(pos, pos); return; }
   if (t.id === "nave-busca") { clearTimeout(naveBuscar.t); const q = t.value; naveBuscar.t = setTimeout(() => naveBuscar(q), 250); return; }
   if (t.id === "busca") { s.busca = t.value; const pos = t.selectionStart; render(); const i = $("#busca"); i.focus(); i.setSelectionRange(pos, pos); }
   if (t.id === "t-chat-rota" || t.id === "t-coment") s.rascunhoRota = t.value;
