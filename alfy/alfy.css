@@ -965,3 +965,12 @@ details.z5bloco[open] > summary::after{content:" ▴"}
 .status4{position:relative}
 .status4 .f4c .f4h{position:absolute;top:8px;right:10px}
 .comp4 > .btn{align-self:flex-start}
+/* 2.17.1 · canal de cada novidade · plaquinha da fila sem cortar */
+.f5-canal{display:inline-block;margin-left:6px;font-size:11px;font-weight:700;border-radius:999px;padding:1px 8px;border:1px solid var(--linha);background:var(--ferro-1);color:var(--aco-2);white-space:nowrap;vertical-align:1px}
+.f5-canal.c-whatsapp{color:#7FCBA0;border-color:#2A5A47}
+.f5-canal.c-email{color:#A9B4F5;border-color:#3D4270}
+.f5-canal.c-drive{color:#F6B24A;border-color:#5A4527}
+.f5-canal.c-alfy{color:#7FD3CB;border-color:#2B5753}
+.rr-mini4 .tag{width:54px;height:42px}
+.rr-mini4 .tag small{font-size:8px;letter-spacing:.14em}
+.rr-mini4 .tag b{font-size:16px}

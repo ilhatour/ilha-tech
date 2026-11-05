@@ -1,4 +1,4 @@
-// ALFY · Mapa de Rotas · Ilha Tech · v2.17.0 · 05/11/2026 · Painel de Ferro · cartão da rota refeito (Rota, Conversa, Detalhes, Lembrete, Histórico)
+// ALFY · Mapa de Rotas · Ilha Tech · v2.17.1 · 05/11/2026 · Painel de Ferro · canal em O que mudou; plaquinha da fila
 // Tudo passa pelas funções alfy_* do banco, sempre com a chave pessoal de quem está usando.
 // O banco decide o que cada pessoa vê; a tela só desenha o que voltou.
 // A IA e os comandos são pedidos numa fila (alfy.pedido) que o robô do Mac atende.
@@ -410,11 +410,12 @@ function rrSituacao(r) {
 function rrFicha(r) {
   const i = s.rr.itens[r.rt] || {}, u = r.ult_txt, lendo = !s.rr.itens[r.rt] && rrRodando() && s.rr.rts.includes(r.rt);
   const resumo = i.resumo || r.assist || r.titulo, onde = i.onde || r.como_esta || "";
-  const mudou = (i.mudou || []).length ? i.mudou : u ? [{ quando: ddmm(u.em), quem: curto(u.quem), o_que: rotaTxt(u.texto.replace(/^📱 WhatsApp · [^:]*: /, "").replace(/^🤖 ALFY · /, "")).slice(0, 200) }] : [];
+  const mudou = (i.mudou || []).length ? i.mudou : u ? [{ quando: ddmm(u.em), quem: curto(u.quem), o_que: rotaTxt(u.texto.replace(/^📱 WhatsApp · .*?\d{2}\/\d{2} \d{2}:\d{2}: /, "").replace(/^🤖 ALFY · /, "")).slice(0, 200), canal: /^📱/.test(u.texto) ? "whatsapp" : "alfy" }] : [];
+  const CANAL = { whatsapp: "💬 WhatsApp", email: "✉️ E-mail", drive: "📁 Drive", alfy: "🐙 ALFY" };
   return `<div class="ficha5">
     <p class="f5-res">${esc(resumo)}</p>
     <div class="f5-l"><span class="f5-r">Onde está</span><p class="${onde ? "" : "f5-vazio"}">${onde ? esc(onde) : "Sem atualização ainda. Escreva abaixo o que está acontecendo."}</p></div>
-    ${mudou.length ? `<div class="f5-l"><span class="f5-r">O que mudou</span><ul>${mudou.map((m) => `<li><span class="f5-q">${esc(m.quando || "")}${m.quem ? " · " + esc(m.quem) : ""}</span>${esc(m.o_que)}</li>`).join("")}</ul></div>` : ""}
+    ${mudou.length ? `<div class="f5-l"><span class="f5-r">O que mudou</span><ul>${mudou.map((m) => `<li><span class="f5-q">${esc(m.quando || "")}${m.quem ? " · " + esc(m.quem) : ""}</span>${esc(m.o_que)}${CANAL[m.canal] ? ` <span class="f5-canal c-${m.canal}">${CANAL[m.canal]}</span>` : ""}</li>`).join("")}</ul></div>` : ""}
     ${lendo ? `<div class="f5-l"><span class="f5-r">Rastreio</span><p class="f5-vazio">📡 lendo WhatsApp, e-mail, Drive e ALFY…</p></div>` : ""}
     ${i.sugestao ? `<div class="f5-prox"><span class="f5-r">Próximo passo</span><p>${esc(i.sugestao)}</p><button class="mini ia" type="button" data-rraplicar="${r.rt}">🐙 Fazer isso</button></div>` : ""}
     ${i.concluida ? `<div class="f5-prox fim"><span class="f5-r">Parece pronta</span><p>Pelo que o ALFY leu, esta rota já foi feita.</p><button class="mini" type="button" data-rapido="concluida" data-rrt="${r.rt}">✓ Concluir</button></div>` : ""}
