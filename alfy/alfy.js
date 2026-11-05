@@ -1,4 +1,4 @@
-// ALFY · Mapa de Rotas · Ilha Tech · v2.15.2 · 05/11/2026 · Painel de Ferro · Salvar rota abre na hora; recarregar em paralelo
+// ALFY · Mapa de Rotas · Ilha Tech · v2.15.3 · 05/11/2026 · Painel de Ferro · Passagem: 🎲 sorteio
 // Tudo passa pelas funções alfy_* do banco, sempre com a chave pessoal de quem está usando.
 // O banco decide o que cada pessoa vê; a tela só desenha o que voltou.
 // A IA e os comandos são pedidos numa fila (alfy.pedido) que o robô do Mac atende.
@@ -382,6 +382,11 @@ function rrNoLugar() {
   const t = d.getBoundingClientRect().top;
   if (t < 0 || t > innerHeight * 0.6) d.scrollIntoView({ block: "start" });
 }
+// 🎲 sorteio: a próxima rota da vez sai ao acaso (para atacar rotas soltas no tempo livre)
+function rrSortear() {
+  const f = rrFila().filter((x) => x.rt !== s.rr.foco); if (!f.length) { aviso("Não sobrou rota para sortear"); return; }
+  const r = f[Math.floor(Math.random() * f.length)]; s.rr.foco = r.rt; render(); setTimeout(rrNoLugar, 20); aviso(`🎲 Sorteada: ${nomeRota(r.rt)}`);
+}
 function rrTirar(rt, onde) {
   s.rr[onde] = { ...s.rr[onde], [rt]: true }; s.rr.foco = null; rrSalvar(); render();
   setTimeout(rrNoLugar, 20);
@@ -414,7 +419,7 @@ function rrItem(r, foco) {
     ${foco ? `<div class="acoes4"><div class="grupo4">
         <button class="ac" type="submit" form="${fid}" data-clmodo="comentar">💬<span>Comentar</span></button>${comando() ? `<button class="ac ia" type="submit" form="${fid}" data-clmodo="alfy">🐙<span>Pedir ao ALFY</span></button>` : ""}${comando() && r.rt.startsWith("RT-") ? `<button class="ac" type="button" data-rastrear="${r.rt}">📡<span>Rastrear</span></button>` : ""}
         <button class="ac ${s.rrAg === r.rt ? "on" : ""}" type="button" data-rragendar="${r.rt}">📅<span>Agendar</span></button>${r.status !== "andamento" ? `<button class="ac" type="button" data-rapido="andamento" data-rrt="${r.rt}">▶<span>Em andamento</span></button>` : ""}<button class="ac ok" type="button" data-rapido="concluida" data-rrt="${r.rt}">✓<span>Concluir</span></button><button class="ac" type="button" data-rt="${r.rt}">↗<span>Abrir</span></button></div>
-      <div class="grupo4 dir"><button class="ac" type="button" data-rrdepois="${r.rt}">⏭<span>Depois</span></button><button class="btn turq" type="button" data-rrfeita="${r.rt}">Próxima →</button></div></div>`
+      <div class="grupo4 dir"><button class="ac" type="button" data-rrdepois="${r.rt}">⏭<span>Depois</span></button><button class="ac" type="button" data-acao="rr-sortear" title="Sortear a próxima (S)">🎲<span>Sortear</span></button><button class="btn turq" type="button" data-rrfeita="${r.rt}">Próxima →</button></div></div>`
       : `<div class="acoes4 mini4"><button class="ac" type="button" data-rrfoco="${r.rt}">✎<span>Tratar</span></button><button class="ac" type="button" data-rrfeita="${r.rt}">✓<span>Vista</span></button><button class="ac" type="button" data-rrdepois="${r.rt}">⏭<span>Depois</span></button></div>`}
   </article>`;
 }
@@ -450,7 +455,7 @@ function vistaRotaARota() {
   const mini = (x) => `<div class="rr-mini4" role="button" tabindex="0" data-rrfoco="${x.rt}">${tag(x)}<span class="tt"><b>${esc(x.titulo)}</b><small>${esc(ST[x.status].um)} · ${esc(prazoInfo(x).txt)} · ${esc(curto(nomeDe(x.responsavel_id)))}${rrTem(x.rt) ? " · 📡 novidade" : ""}${x.como_esta ? " · " + esc(x.como_esta.slice(0, 110)) : ""}</small></span></div>`;
   const resto = gs.map(([n, l]) => { const ll = l.filter((x) => x.rt !== foco); return ll.length ? `<section class="rr-grupo"><h2>${esc(n)}<span class="ct">${ll.length}</span></h2><div class="lista">${ll.map(mini).join("")}</div></section>` : ""; }).join("");
   return painel + (fx ? `<div class="rr-deck" id="rr-deck">${rrItem(fx, true)}</div>` : "")
-    + `<p class="rr-dica">Atalhos: <kbd>⌘ Enter</kbd> comenta e passa · <kbd>⌘ Shift Enter</kbd> pede ao ALFY e passa · <kbd>→</kbd> próxima · <kbd>D</kbd> depois · <kbd>C</kbd> concluir · <kbd>E</kbd> escrever · <kbd>Esc</kbd> sai do campo</p>`
+    + `<p class="rr-dica">Atalhos: <kbd>⌘ Enter</kbd> comenta e passa · <kbd>⌘ Shift Enter</kbd> pede ao ALFY e passa · <kbd>→</kbd> próxima · <kbd>D</kbd> depois · <kbd>C</kbd> concluir · <kbd>S</kbd> sortear · <kbd>E</kbd> escrever · <kbd>Esc</kbd> sai do campo</p>`
     + (resto ? `<h3 class="rr-fila-t">Na fila · ${fila.length - (fx ? 1 : 0)}</h3>${resto}` : "");
 }
 
@@ -1579,6 +1584,7 @@ document.addEventListener("click", async (e) => {
     if (a === "nave-novo") { s.naveNovo = true; render(); setTimeout(() => $("#nn-nome")?.focus(), 30); return; }
     if (a === "nave-cancelar") { s.naveNovo = false; render(); return; }
     if (a === "nave-salvar-novo") { const fr = $("#nn-frente")?.value, lig = s.naveLigar; const r = await chamar("alfy_pessoa_nova", { p_nome_completo: $("#nn-nome").value, p_apelido: $("#nn-apelido").value, p_whatsapp: $("#nn-zap").value, p_papel: $("#nn-papel")?.value || "colaborador", p_frentes: fr ? [fr] : null, p_funcao: $("#nn-funcao").value, p_alfy: lig || null }); await naveDepois(lig ? {} : r, lig ? "Cadastrado na Nave ID e ligado" : `${r.nome} cadastrado na Nave ID e no ALFY`); return; }
+    if (a === "rr-sortear") { rrSortear(); return; }
     if (a === "rr-passar") { await rrPassar(); return; }
     if (a === "rr-novfirst") { s.rr.novFirst = !s.rr.novFirst; s.rr.foco = null; rrSalvar(); render(); return; }
     if (a === "rr-voltar") { s.rr.depois = {}; rrSalvar(); render(); return; }
@@ -1680,6 +1686,7 @@ document.addEventListener("keydown", (e) => {
       if (e.key === "ArrowRight" || (!naCaixa && e.key === "j")) { aperta("[data-rrfeita]"); e.target.blur?.(); }
       else if (!naCaixa && (e.key === "d" || e.key === "D")) aperta("[data-rrdepois]");
       else if (!naCaixa && (e.key === "c" || e.key === "C")) aperta('[data-rapido="concluida"]');
+      else if (!naCaixa && (e.key === "s" || e.key === "S")) { e.preventDefault(); rrSortear(); }
       else if (!naCaixa && (e.key === "e" || e.key === "/")) { e.preventDefault(); deck.querySelector("textarea")?.focus({ preventScroll: true }); }
     }
   }
