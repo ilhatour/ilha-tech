@@ -1,4 +1,4 @@
-// ALFY · Mapa de Rotas · Ilha Tech · v2.12.1 · 04/11/2026 · Painel de Ferro · comandos sem repetição
+// ALFY · Mapa de Rotas · Ilha Tech · v2.13.0 · 04/11/2026 · Painel de Ferro · 📱 WhatsApp
 // Tudo passa pelas funções alfy_* do banco, sempre com a chave pessoal de quem está usando.
 // O banco decide o que cada pessoa vê; a tela só desenha o que voltou.
 // A IA e os comandos são pedidos numa fila (alfy.pedido) que o robô do Mac atende.
@@ -160,7 +160,8 @@ function navItens() {
   const pautas = (M?.pautas || []).filter((p) => p.status === "aberta").length;
   const it = [["rotas", "Rotas", IC.rotas, abertas], ["agenda", "Agenda", IC.agenda, ""], ["feed", "Feed", IC.feed, ""], ["pautas", "Pautas", IC.pautas, pautas || ""]];
   if (cuidaPessoas()) it.push(["equipe", "Equipe", IC.eu, (s.fichas || []).filter((f) => f.status === "pendente").length || ""]);
-  if (comando()) it.push(["comandos", "Comandos", IC.comandos, (M?.sugestoes || []).length || ""]);
+  if (comando()) it.push(["zap", "WhatsApp", IC.whatsapp, (s.zap?.itens || []).filter((z) => z.precisa && !z.visto).length || ""]);
+  if (comando()) it.push(["comandos", "Comandos", IC.comandos, ""]);
   return it;
 }
 function casca() {
@@ -172,7 +173,7 @@ function casca() {
   $("#eu-av").textContent = ini(p.nome); $("#eu-av-cel").textContent = ini(p.nome);
   $("#eu-nome").textContent = p.nome;
   $("#eu-papel").textContent = papelTxt();
-  $("#titulo-cel").textContent = { rotas: "Rotas", equipe: "Equipe", agenda: "Agenda", feed: "Feed", pautas: "Pautas", comandos: "Comandos", eu: "Eu" }[s.aba];
+  $("#titulo-cel").textContent = { zap: "WhatsApp", rotas: "Rotas", equipe: "Equipe", agenda: "Agenda", feed: "Feed", pautas: "Pautas", comandos: "Comandos", eu: "Eu" }[s.aba];
   $("#fab").hidden = s.aba !== "rotas" || s.vista === "rar";
 }
 const papelTxt = () => comando() ? "Comando · vê tudo" : papel() === "gerente" ? "Gerente · " + (eu().frentes || []).map(frenteCurta).join(", ") : "Vê as rotas dele";
@@ -202,7 +203,7 @@ function topo() {
     const tipos = [["todos", "Tudo"], ["comentario", "Comentários"], ["orientacao", "Orientações"], ["whatsapp", "WhatsApp"], ["status", "Status"], ["editar", "Edições"], ["nova", "Rotas novas"], ["budget", "Budget"], ["pauta", "Pautas"]];
     fi.innerHTML = filtrosHTML() + `<div style="display:flex;gap:6px;overflow-x:auto;flex-basis:100%;scrollbar-width:none">${tipos.map(([k, n]) => `<button class="chip" type="button" data-ffeed="${k}" aria-pressed="${s.fFeed === k}">${n}</button>`).join("")}</div>`;
   } else {
-    const t = { pautas: "Pautas e reuniões", comandos: "Comandos do ALFY", agenda: "Agenda", equipe: "Equipe e cadastro", eu: "Eu" }[s.aba];
+    const t = { zap: "📱 WhatsApp", pautas: "Pautas e reuniões", comandos: "Comandos do ALFY", agenda: "Agenda", equipe: "Equipe e cadastro", eu: "Eu" }[s.aba];
     l1.innerHTML = `<h1>${t}</h1><span class="espaco"></span>${vivo}${s.aba === "pautas" && manda() ? '<button class="btn" type="button" data-acao="nova-pauta">＋ Nova pauta</button><button class="cta" type="button" data-acao="nova-reuniao">＋ Nova reunião</button>' : ""}`;
     fi.innerHTML = ""; $("#alterna-cel").innerHTML = "";
   }
@@ -442,6 +443,39 @@ function vistaRotaARota() {
   return painel + gs.map(([n, l]) => `<section class="grupo-frente rr-grupo"><h2>${esc(n)}<span class="ct">${l.length}</span></h2><div class="lista">${l.map((x) => rrItem(x, x.rt === foco)).join("")}</div></section>`).join("");
 }
 
+
+// ---------------------------------------------------------------- 📱 WhatsApp
+// ficar longe do zap sem perder nada: o que espera resposta, o resumo de cada conversa e grupo, e o que vira rota
+const zapRodando = () => ["fila", "rodando"].includes(s.zap?.pedido?.status);
+async function carregarZap() { s.zap = await chamar("alfy_zap").catch(() => s.zap); }
+function zapCard(z, forte) {
+  const u = z.ultima || {};
+  return `<div class="zap4 ${forte ? "forte" : ""} ${z.visto ? "visto" : ""} urg-${z.urgencia || "baixa"}">
+    <div class="z4cab"><b>${z.grupo ? "👥" : "💬"} ${esc(z.conversa)}</b><span>${forte && z.espera_desde ? `espera ${quandoFoi(z.espera_desde).replace(/^há /, "há ")}` : `${z.n} msg${z.n === 1 ? "" : "s"}`}${z.nao_lidas ? ` · ${z.nao_lidas} não lida${z.nao_lidas === 1 ? "" : "s"}` : ""}</span></div>
+    ${forte && z.pede ? `<p class="z4pede">👉 ${esc(z.pede)}</p>` : ""}
+    ${z.resumo ? `<p class="z4res">${esc(z.resumo)}</p>` : ""}
+    ${forte ? `<p class="z4ult"><small>Última · ${esc(u.quem || "")} · ${esc(u.em || "")}</small>${esc((u.txt || "").slice(0, 240))}</p>
+      <div class="rapidas3"><button class="chip" type="button" data-zapvisto="${z.id}">${z.visto ? "↺ Voltar para pendentes" : "✓ Já vi / respondi"}</button><button class="chip" type="button" data-zaprota="${z.id}">🗺️ Virar rota</button></div>` : ""}</div>`;
+}
+function vistaZap() {
+  const zp = s.zap, it = zp?.itens || [], ped = zp?.pedido;
+  const esp = it.filter((z) => z.precisa && !z.visto), vistos = it.filter((z) => z.precisa && z.visto);
+  const grupos = it.filter((z) => z.grupo && !z.precisa), pess = it.filter((z) => !z.grupo && !z.precisa);
+  const nov = (M.sugestoes || []).filter((x) => x.tipo === "nova");
+  const estado = !ped ? "Aperte <b>Atualizar</b>: o ALFY lê todas as conversas e grupos e mostra o que rolou e o que espera você."
+    : zapRodando() ? `<span class="ao-vivo"><i></i></span> Lendo o WhatsApp… leva de 1 a 2 minutos.`
+    : ped.status === "erro" ? `Deu erro: ${esc((ped.erro || "").slice(0, 140))}`
+    : `Atualizado ${quandoFoi(ped.feito_em)} · lido desde ${esc(ped.desde || "")} · ${it.length} conversas`;
+  return `<div class="zap-tela"><section class="placa rebites rr-painel"><div class="rr-l1"><div><h2>📱 O que rolou no seu WhatsApp</h2><p class="rr-estado">${estado}</p></div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap"><button class="cta" type="button" data-zapler="" ${zapRodando() ? "disabled" : ""}>📡 Atualizar</button><button class="btn" type="button" data-zapler="72" ${zapRodando() ? "disabled" : ""}>Últimos 3 dias</button></div></div>
+      ${ped && ped.status === "feito" ? `<div class="z4num"><span><b>${esp.length}</b> esperando você</span><span><b>${pess.length}</b> conversas pessoais</span><span><b>${grupos.length}</b> grupos</span><span><b>${nov.length}</b> podem virar rota</span></div>` : ""}
+      <p class="nota" style="margin:0">"Atualizar" lê tudo desde a última vez. Conversas arquivadas e propaganda ficam fora. Os retornos de rota entram sozinhos nas rotas.</p></section>
+    ${ped ? `<section class="z4sec"><h3>⏳ Esperando sua resposta · ${esp.length}</h3>${esp.map((z) => zapCard(z, true)).join("") || '<div class="vazio">Nada esperando você. 🎉</div>'}
+      ${vistos.length ? `<details><summary class="nota" style="cursor:pointer">Já vistas · ${vistos.length}</summary>${vistos.map((z) => zapCard(z, true)).join("")}</details>` : ""}</section>
+    <section class="z4sec"><h3>💬 Conversas pessoais · ${pess.length}</h3>${pess.map((z) => zapCard(z)).join("") || '<div class="vazio">Nada novo.</div>'}</section>
+    <section class="z4sec"><h3>👥 Grupos · ${grupos.length}</h3>${grupos.map((z) => zapCard(z)).join("") || '<div class="vazio">Nada novo.</div>'}</section>
+    <section class="z4sec"><h3>🗺️ Pode virar rota · ${nov.length}</h3>${ped.retornos ? `<p class="nota" style="margin:0 0 6px">${esc(ped.retornos)}</p>` : ""}${nov.map((x) => `<div class="sugestao"><div class="tx"><b style="white-space:pre-wrap">${esc(rotaTxt(x.texto))}</b><small>${esc(x.quem || "")}${x.conversa ? " · " + esc(x.conversa) : ""}${x.quando ? " · " + esc(x.quando) : ""}</small></div><button class="btn turq peq" type="button" data-sug="${x.id}" data-sugacao="rota">Virar rota</button><button class="btn peq" type="button" data-sug="${x.id}" data-sugacao="descartar">Descartar</button></div>`).join("") || '<div class="vazio">Nada novo.</div>'}</section>` : ""}</div>`;
+}
 // ---------------------------------------------------------------- feed
 const EV_IC = { comentario: "💬", orientacao: "🧭", whatsapp: "📱", status: "🔀", nova: "🗺️", ideia: "💡", editar: "✏️", budget: "💰", pauta_ligar: "🗓️", reuniao_ligar: "🗓️", pauta_desligar: "🗓️", reuniao_desligar: "🗓️" };
 const CAMPO_NOME = { titulo: "o título", prioridade: "a prioridade", prazo: "o prazo", frente: "a frente", natureza: "a natureza", tipo: "o tipo", impacto: "o impacto", esforco: "o esforço", responsavel_id: "o responsável", co_responsavel_id: "o co-responsável", assist: "o O que fazer", instrucoes: "as Instruções", resultado: "o Resultado esperado", como_esta: "o Como está agora", detalhamento: "o detalhamento", como_fazer: "o como fazer" };
@@ -621,7 +655,6 @@ const zap = (t) => esc(t).replace(/\*([^*\n]+)\*/g, "<b>$1</b>");
 // ---------------------------------------------------------------- comandos (só o Miguel, por enquanto)
 const CMDS = [
   { g: "Despejar", k: "despejo", n: "Despejo", faz: "Joga aqui o que vier na cabeça: texto, áudio gravado na hora, áudio ou arquivo. O ALFY separa em rota, pauta, arquivo ou lembrete.", quando: "quando você quiser", onde: "mac" },
-  { g: "Ler", k: "whatsapp", n: "Ler o WhatsApp", faz: "Lê suas conversas (24 horas ou 7 dias): o retorno de rota entra sozinho na rota e o que pode virar rota nova aparece aqui.", quando: "quando você pedir", onde: "mac" },
   { g: "Ler", k: "email", n: "Ler o e-mail e a agenda", faz: "Lê a caixa miguel@ilha.tours e faz o mesmo que com o WhatsApp: retorno de rota e o que pode virar rota.", quando: "a cada 15 min", onde: "mac" },
   { g: "Mandar", k: "mapa", n: "Lançar o Mapa de Rotas", faz: "A mensagem oficial do Mapa de Rotas de uma pessoa, de um grupo ou de um setor, ou só as vencidas para cobrar, pronta para colar no WhatsApp.", quando: "na hora", onde: "nuvem" },
   { g: "Organizar", k: "bomdia", n: "📰 Resumos do dia", faz: "O seu dia numa tela (reuniões, o que vence hoje, o que venceu, quem respondeu) e os resumos que o ALFY escreve: Bom dia, Relatório do dia e Grupos hoje.", quando: "na hora", onde: "nuvem" },
@@ -637,7 +670,7 @@ function filaHTML() {
 }
 function vistaComandos() {
   if (!comando()) return `<div class="vazio">Por enquanto os comandos são só do Miguel.</div>`;
-  if (!CMDS.some((x) => x.k === s.cmd)) s.cmd = s.cmd === "cobrar" ? (s.mapaModo = "cobrar", "mapa") : s.cmd === "diario" ? "bomdia" : s.cmd === "grupos" || s.cmd === "ronda" ? "whatsapp" : "despejo";   // comandos que foram juntados
+  if (!CMDS.some((x) => x.k === s.cmd)) s.cmd = s.cmd === "cobrar" ? (s.mapaModo = "cobrar", "mapa") : s.cmd === "diario" ? "bomdia" : s.cmd === "grupos" || s.cmd === "ronda" || s.cmd === "whatsapp" ? "despejo" : "despejo";   // comandos que foram juntados
   const c = CMDS.find((x) => x.k === s.cmd);
   const grupos = ["Despejar", "Ler", "Mandar", "Organizar", "Pensar"].map((g) => `<section class="cmd-grupo"><h2>${g}</h2><div class="cmd-grade">${CMDS.filter((x) => x.g === g).map((x) => `<button type="button" class="placa rebites comando2" data-cmd="${x.k}" aria-pressed="${s.cmd === x.k}"><span class="l1"><span class="ic">${IC[x.k]}</span><b>${x.n}</b></span><span class="faz">${x.faz}</span><span class="onde"><span class="selo">⏱ ${x.quando}</span><span class="selo ${x.onde}">${x.onde === "mac" ? "💻 precisa do Mac" : "☁️ direto"}</span>${x.k === "whatsapp" && (M.sugestoes || []).length ? `<span class="selo novo">${M.sugestoes.length}</span>` : ""}</span></button>`).join("")}</div></section>`).join("");
   return `${pulsoHTML()}<div class="painel-cmd cmd2"><div>${grupos}</div><div class="det-cmd" id="det-cmd">${detCmd(c)}${filaHTML()}</div></div>`;
@@ -1245,7 +1278,7 @@ function render() {
   if (!M) return;
   casca(); topo(); medidores(); bolhas();
   const c = $("#conteudo");
-  c.innerHTML = { rotas: () => (s.vista === "rar" && comando() ? vistaRotaARota() : s.vista === "kanban" ? vistaKanban() : vistaLista()), feed: vistaFeed, agenda: vistaAgenda, equipe: vistaEquipe, pautas: vistaPautas, comandos: vistaComandos, eu: vistaEu }[s.aba]();
+  c.innerHTML = { zap: vistaZap, rotas: () => (s.vista === "rar" && comando() ? vistaRotaARota() : s.vista === "kanban" ? vistaKanban() : vistaLista()), feed: vistaFeed, agenda: vistaAgenda, equipe: vistaEquipe, pautas: vistaPautas, comandos: vistaComandos, eu: vistaEu }[s.aba]();
   if (s.aba === "rotas" && s.vista === "kanban") ligarKanban();
   if (s.aba === "agenda") { const k = $("#ag-semana"), h = k && k.querySelector(".coluna.hoje"); if (k && h && !s.agRolou) { k.scrollLeft = h.offsetLeft - k.offsetLeft - 8; s.agRolou = true; } }
   try { localStorage.setItem("alfy-vista", JSON.stringify({ vista: s.vista, agrupar: s.agrupar, v28: true })); } catch (_) { /* privado */ }
@@ -1410,7 +1443,7 @@ document.addEventListener("click", async (e) => {
   b.classList.add("ocupado"); b.setAttribute("aria-busy", "true");
   try {
     if (b.id === "eu-av-cel") { s.aba = "eu"; render(); return; }
-    if (d.aba) { s.aba = d.aba; s.pauta = null; s.reuniao = null; if (d.aba === "agenda") { render(); await carregarAgenda(); } if (d.aba === "equipe") { s.aprovado = null; if ((s.naveBusca || "").trim()) s.naveRes = await chamar("alfy_nave_buscar", { p_q: s.naveBusca }).catch(() => null); s.fichas = await chamar("alfy_fichas"); if (comando()) s.equipe = await chamar("alfy_equipe"); } if (d.aba === "feed") FEED = await chamar("alfy_feed", { p_limite: 150 }); if (d.aba === "comandos" && s.cmd === "perguntar" && !s.chatGeral) s.chatGeral = await chamar("alfy_ia_conversa", { p_escopo: "geral" }); render(); scrollTo(0, 0); return; }
+    if (d.aba) { s.aba = d.aba; s.pauta = null; s.reuniao = null; if (d.aba === "agenda") { render(); await carregarAgenda(); } if (d.aba === "equipe") { s.aprovado = null; if ((s.naveBusca || "").trim()) s.naveRes = await chamar("alfy_nave_buscar", { p_q: s.naveBusca }).catch(() => null); s.fichas = await chamar("alfy_fichas"); if (comando()) s.equipe = await chamar("alfy_equipe"); } if (d.aba === "feed") FEED = await chamar("alfy_feed", { p_limite: 150 }); if (d.aba === "zap") await carregarZap(); if (d.aba === "comandos" && s.cmd === "perguntar" && !s.chatGeral) s.chatGeral = await chamar("alfy_ia_conversa", { p_escopo: "geral" }); render(); scrollTo(0, 0); return; }
     if (d.vista) { s.vista = d.vista; if (d.vista === "rar") await rrCarregar(); render(); return; }
     if (d.rrordem) { s.rr.ordem = d.rrordem; s.rr.foco = null; rrSalvar(); render(); return; }
     if (d.rrformato) { s.rr.formato = d.rrformato; rrSalvar(); render(); return; }
@@ -1421,6 +1454,9 @@ document.addEventListener("click", async (e) => {
     if (d.lemfeito) { M.lembretes = await chamar("alfy_lembrete_feito", { p_id: +d.lemfeito }); refolha(); render(); aviso("Lembrete tirado"); return; }
     if (d.bolhas) { s.bolhasAbertas = d.bolhas === "1"; bolhas(); return; }
     if (d.abrirlem) { s.bolhasAbertas = false; const l = lembreteDe(d.abrirlem); if (l && new Date(l.quando) <= new Date()) M.lembretes = await chamar("alfy_lembrete_feito", { p_id: l.id }); bolhas(); abrir(d.abrirlem); return; }
+    if (d.zapler !== undefined) { await pedir("zap", null, d.zapler ? { horas: +d.zapler } : {}); await carregarZap(); render(); aviso("Lendo o WhatsApp… leva de 1 a 2 minutos"); return; }
+    if (d.zapvisto) { s.zap = await chamar("alfy_zap_visto", { p_id: +d.zapvisto }); render(); return; }
+    if (d.zaprota) { const z = (s.zap?.itens || []).find((x) => String(x.id) === d.zaprota); if (z) novaRota({ titulo: z.pede || z.conversa, assist: `${z.conversa}: ${z.pede || ""}\n${z.resumo || ""}` }); return; }
     if (d.rragendar) { s.rrAg = s.rrAg === d.rragendar ? null : d.rragendar; render(); return; }
     if (d.agpor || d.agprazo) {
       await enviarRascunho(d.agpor || d.agprazo);
@@ -1629,7 +1665,7 @@ async function entrar(k) {
     guardar(k); M = m; versao = m.versao;
     $("#tela-entrada").hidden = true; $("#tela-painel").hidden = false; $("#barra-baixo").hidden = false;
     try { const g = JSON.parse(localStorage.getItem("alfy-vista") || "{}"); if (g.vista) s.vista = g.vista; if (g.agrupar && g.v28) s.agrupar = g.agrupar; else if (!comando()) s.agrupar = "prioridade"; } catch (_) { /* privado */ }
-    rrLer(); if (comando() && s.rr.lote) await rrCarregar();
+    rrLer(); if (comando() && s.rr.lote) await rrCarregar(); if (comando()) await carregarZap();
     render();
     FEED = await chamar("alfy_feed", { p_limite: 150 }).catch(() => null);
     if (comando()) s.robo = await chamar("alfy_robo").catch(() => null);
@@ -1639,7 +1675,7 @@ async function entrar(k) {
 let vigia = null;
 function vigiar() {
   clearInterval(vigia);
-  const espera = () => (Object.keys(s.esperando).length || s.despejo.pedido || (M?.fila || []).some((q) => q.status === "fila" || q.status === "rodando") || rrRodando() ? 3000 : 8000);
+  const espera = () => (Object.keys(s.esperando).length || s.despejo.pedido || (M?.fila || []).some((q) => q.status === "fila" || q.status === "rodando") || rrRodando() || zapRodando() ? 3000 : 8000);
   const passo = async () => {
     if (document.hidden || !token) return agenda();
     try {
@@ -1647,6 +1683,7 @@ function vigiar() {
       if (v === null) { sair(); return; }
       if (v !== versao || Object.keys(s.esperando).length || s.despejo.pedido) { await recarregar(); renderSeguro(); }
       if (rrRodando() && s.aba === "rotas" && s.vista === "rar") { await rrCarregar(); renderSeguro(); }
+      if (s.aba === "zap" && zapRodando()) { await carregarZap(); renderSeguro(); }
     } catch (_) { /* sem rede: tenta de novo */ }
     agenda();
   };
