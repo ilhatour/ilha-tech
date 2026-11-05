@@ -1390,3 +1390,23 @@ button.sl4{border:0}
 .rr-modo{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:10px 0 2px}
 .rr-modo .nota{font-size:13px;flex:1 1 260px}
 .rr-mudou{margin:0 0 8px;font-size:14px;font-weight:600;color:#F3DDB8}
+
+/* ---------- 2.28 · Passagem: Filtros num botão só, ativos viram etiquetas ---------- */
+.rrf{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:12px 0 4px}
+.rrf-bt{display:inline-flex;align-items:center;gap:7px;height:34px;padding:0 12px;border-radius:10px;border:1px solid var(--linha);background:var(--ferro-1);color:var(--aco-2);font:inherit;font-size:14px;font-weight:600;cursor:pointer}
+.rrf-bt:hover{color:var(--texto);border-color:var(--ferro-4)}
+.rrf-bt[aria-expanded="true"]{border-color:var(--turq);color:var(--texto)}
+.rrf-bt b{min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:var(--turq);color:#06201E;font-size:12px;display:inline-grid;place-items:center}
+.rrf-tk{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 6px 0 10px;border-radius:8px;border:1px solid rgba(43,175,166,.35);background:rgba(43,175,166,.1);color:#CDEDEA;font:inherit;font-size:13px;cursor:pointer}
+.rrf-tk i{font-style:normal;font-size:11px;opacity:.6;width:16px;text-align:center}
+.rrf-tk:hover i{opacity:1}
+.rrf-painel{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px 24px;margin:8px 0 6px;padding:14px 16px;border-radius:12px;background:var(--ferro-1);border:1px solid var(--linha)}
+.rrf-g{display:flex;flex-direction:column;gap:8px;min-width:0}
+.rrf-g>small{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--aco)}
+.rrf-g>div{display:flex;flex-wrap:wrap;gap:6px}
+.rrf-op{height:32px;padding:0 11px;border-radius:8px;border:1px solid var(--linha);background:transparent;color:var(--aco-2);font:inherit;font-size:13.5px;cursor:pointer}
+.rrf-op:hover{color:var(--texto);border-color:var(--ferro-4)}
+.rrf-op[aria-pressed="true"]{background:var(--turq);border-color:var(--turq);color:#06201E;font-weight:700}
+.rrf-sel{flex-direction:column}
+.rrf-sel select{width:100%;height:36px;font-size:14px}
+.rrf-g>div.rrf-sel{flex-wrap:nowrap;align-items:stretch}.rrf-sel select{flex:0 0 auto!important;height:36px!important;min-height:0!important;padding-top:0;padding-bottom:0}
