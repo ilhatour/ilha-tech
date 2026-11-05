@@ -1,4 +1,4 @@
-// ALFY · Mapa de Rotas · Ilha Tech · v2.15.1 · 04/11/2026 · Painel de Ferro · Passagem: setas sem pular a tela
+// ALFY · Mapa de Rotas · Ilha Tech · v2.15.2 · 05/11/2026 · Painel de Ferro · Salvar rota abre na hora; recarregar em paralelo
 // Tudo passa pelas funções alfy_* do banco, sempre com a chave pessoal de quem está usando.
 // O banco decide o que cada pessoa vê; a tela só desenha o que voltou.
 // A IA e os comandos são pedidos numa fila (alfy.pedido) que o robô do Mac atende.
@@ -1095,9 +1095,13 @@ function novaRota(pre = {}) {
       const c = await chamar("alfy_nova_rota", { p_campos: campos });
       if (pre.depois) await pre.depois(c.rt);
       if (organizar) {   // o ALFY reescreve e completa a rota a partir do texto como foi escrito
-        await pedir("ia", "rota:" + c.rt, { agir: true, texto: `Organize esta rota nova a partir do que eu escrevi. Título: «${tit0 || "(vazio)"}». Texto: «${txt0 || "(vazio)"}». Reescreva o título no formato "Pessoa: verbo + o quê", o O que fazer na minha voz falando com quem faz (1 ou 2 frases), e preencha Instruções e Resultado esperado só com o que o texto diz. Se o texto disser quem faz, junto com quem, frente, prioridade ou prazo, ajuste. Não invente nada.` }, "rota:" + c.rt);
+        const q = await chamar("alfy_pedir", { p_tipo: "ia", p_escopo: "rota:" + c.rt, p_dados: { agir: true, texto: `Organize esta rota nova a partir do que eu escrevi. Título: «${tit0 || "(vazio)"}». Texto: «${txt0 || "(vazio)"}». Reescreva o título no formato "Pessoa: verbo + o quê", o O que fazer na minha voz falando com quem faz (1 ou 2 frases), e preencha Instruções e Resultado esperado só com o que o texto diz. Se o texto disser quem faz, junto com quem, frente, prioridade ou prazo, ajuste. Não invente nada.` } });
+        s.esperando["rota:" + c.rt] = q.id;
       }
-      await recarregar(); if (s.aba === "agenda") await carregarAgenda(); render();   // fica na aba em que a pessoa estava aviso(organizar ? "Salvo. O ALFY está organizando a rota…" : "Salvo"); await abrir(c.rt); if (organizar) { s.abaFolha = "alfy"; refolha(); }
+      // abre a rota na hora; a lista se atualiza por trás (fica na aba em que a pessoa estava)
+      aviso(organizar ? "Salvo. O ALFY está organizando a rota…" : "Salvo");
+      await abrir(c.rt); if (organizar) { s.abaFolha = "alfy"; refolha(); }
+      recarregar().then(async () => { if (s.aba === "agenda") await carregarAgenda(); render(); }).catch(falhou);
     } catch (e) { falhou(e); solta(); }
   });
 }
@@ -1326,13 +1330,16 @@ async function recarregar() {
       else { d.itens = p.resultado?.itens || []; d.feitos = {}; d.transcricao = (p.resultado?.transcricao || []).map((t) => t.texto).join(" "); d.anexos = []; d.texto = ""; const rs = p.resultado?.resumo || ""; aviso(rs.startsWith("sem separar") ? rs.replace("sem separar: ", "Não separei: ") : "O ALFY separou o despejo", rs.startsWith("sem separar")); }
     }
   }
-  if (comando()) s.robo = await chamar("alfy_robo").catch(() => s.robo);
-  if ((s.cmd === "diario" || s.cmd === "bomdia") && s.aba === "comandos") s.diario = await chamar("alfy_diario", { p_dias: 3 }).catch(() => s.diario);
-  if (s.aba === "agenda") await carregarAgenda();
-  if (cuidaPessoas()) s.fichas = await chamar("alfy_fichas").catch(() => s.fichas);
-  if (s.reuniao) await carregarReuniao();
-  if (s.aberta) { await recarregarCartao(); if (!ativoNaFolha()) refolha(); }
-  if (s.pauta) s.pautaDet = await chamar("alfy_pauta", { p_id: s.pauta }).catch(() => s.pautaDet);
+  // o resto não depende um do outro: vai tudo junto, em vez de um esperando o outro
+  await Promise.all([
+    comando() && chamar("alfy_robo").then((x) => { s.robo = x; }, () => {}),
+    (s.cmd === "diario" || s.cmd === "bomdia") && s.aba === "comandos" && chamar("alfy_diario", { p_dias: 3 }).then((x) => { s.diario = x; }, () => {}),
+    s.aba === "agenda" && carregarAgenda(),
+    cuidaPessoas() && chamar("alfy_fichas").then((x) => { s.fichas = x; }, () => {}),
+    s.reuniao && carregarReuniao(),
+    s.aberta && recarregarCartao().then(() => { if (!ativoNaFolha()) refolha(); }),
+    s.pauta && chamar("alfy_pauta", { p_id: s.pauta }).then((x) => { s.pautaDet = x; }, () => {}),
+  ]);
 }
 const ativoNaFolha = () => { const a = document.activeElement; return a && $("#camada").contains(a) && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName); };
 
