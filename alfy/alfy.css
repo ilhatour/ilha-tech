@@ -1386,3 +1386,7 @@ button.sl4{border:0}
 .msg6c:hover{color:var(--texto);border-color:var(--turq)}
 .msg6c.ok{color:var(--turq);border-color:var(--turq)}
 .ia-saida .msg6,p+.msg6{margin-top:8px}
+/* 2.27 · Passagem: 🔔 O que mudou */
+.rr-modo{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:10px 0 2px}
+.rr-modo .nota{font-size:13px;flex:1 1 260px}
+.rr-mudou{margin:0 0 8px;font-size:14px;font-weight:600;color:#F3DDB8}
