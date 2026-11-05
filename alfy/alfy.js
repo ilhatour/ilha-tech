@@ -1,4 +1,4 @@
-// ALFY · Mapa de Rotas · Ilha Tech · v2.30.0 · 05/11/2026 · Painel de Ferro · pílulas que editam (etapa, prioridade que acerta o prazo, prazo, dono)
+// ALFY · Mapa de Rotas · Ilha Tech · v2.31.0 · 05/11/2026 · Painel de Ferro · ++ no WhatsApp vira pedido de rota (primeiro em Pode virar rota)
 // Tudo passa pelas funções alfy_* do banco, sempre com a chave pessoal de quem está usando.
 // O banco decide o que cada pessoa vê; a tela só desenha o que voltou.
 // A IA e os comandos são pedidos numa fila (alfy.pedido) que o robô do Mac atende.
@@ -665,7 +665,8 @@ function zapHTML(h) {
   const zp = s.zap, ped = zp?.pedido, modo = s.zapModo || "trabalho", it = (zp?.itens || []).filter(zapNoModo);
   const esp = it.filter((z) => z.precisa && !z.visto), vistos = it.filter((z) => z.precisa && z.visto), resto = it.filter((z) => !z.precisa);
   const br = ped?.briefing || {}, imp = modo === "pessoal" ? [["", br.pessoal]] : modo === "tudo" ? [["Trabalho", br.trabalho], ["Pessoal", br.pessoal]] : [["", br.trabalho]];
-  const nov = (M.sugestoes || []).filter((x) => x.tipo === "nova");
+  const ehMM = (x) => String(x.texto || "").startsWith("++ ");   // ++ = pedido de rota nova da equipe (vem primeiro)
+  const nov = (M.sugestoes || []).filter((x) => x.tipo === "nova").sort((a, b) => ehMM(b) - ehMM(a));
   const estado = !ped ? "Ainda não li. Toque em Atualizar." : zapRodando() ? `<span class="ao-vivo"><i></i></span> Lendo o WhatsApp… uns 2 minutos.` : ped.status === "erro" ? `Deu erro: ${esc((ped.erro || "").slice(0, 120))}` : `Atualizado ${quandoFoi(ped.feito_em)}`;
   const linha6 = (z, forte) => { const nm = nomeZap(z.conversa), ab = s.zapAberto === z.id, u = z.ultima || {};
     return `<div class="z6 ${forte ? "forte" : ""} ${z.urgencia === "alta" && forte ? "alta" : ""} ${z.visto ? "visto" : ""}">
@@ -678,8 +679,8 @@ function zapHTML(h) {
   const sugs = modo === "pessoal" ? [] : nov, sugVis = s.zapSugTodas ? sugs : sugs.slice(0, 6);
   const negrito = (x) => { const i = x.indexOf(": "); return i > 0 && i < 60 ? `<b>${esc(x.slice(0, i))}</b>${esc(x.slice(i))}` : esc(x); };
   const impl = imp.flatMap(([tt, l]) => (l || []).map((x) => [tt, x])), impVis = s.zapImpTudo ? impl : impl.slice(0, 3);
-  const sugHTML = (x) => { const [tit, ...resto_] = rotaTxt(x.texto).split("\n"), cit = resto_.join(" ").replace(/^[“"]|[”"]$/g, "").trim(), nm = nomeZap(x.conversa || "");
-    return `<div class="z7s"><div class="z7st"><b>${esc(tit)}</b>${cit ? `<q>${esc(cit)}</q>` : ""}<small>${esc(x.quem || "")}${nm.nome && nm.nome !== x.quem ? " · " + esc(nm.nome) : ""}${x.quando ? " · " + esc(x.quando) : ""}</small></div>
+  const sugHTML = (x) => { const mm = ehMM(x), [tit, ...resto_] = rotaTxt(String(x.texto).replace(/^\+\+ /, "")).split("\n"), cit = resto_.join(" ").replace(/^[“"]|[”"]$/g, "").trim(), nm = nomeZap(x.conversa || "");
+    return `<div class="z7s ${mm ? "mm" : ""}"><div class="z7st">${mm ? '<span class="mm-selo">++ pedido da equipe</span>' : ""}<b>${esc(tit)}</b>${cit ? `<q>${esc(cit)}</q>` : ""}<small>${esc(x.quem || "")}${nm.nome && nm.nome !== x.quem ? " · " + esc(nm.nome) : ""}${x.quando ? " · " + esc(x.quando) : ""}</small></div>
       <div class="z7sa"><button class="btn turq peq" type="button" data-sug="${x.id}" data-sugacao="rota">＋ Virar rota</button><button class="lk" type="button" data-sug="${x.id}" data-sugacao="descartar">Descartar</button></div></div>`; };
   const conta = (n, txt, alvo, cls) => `<button type="button" class="z7c ${cls} ${n ? "" : "zero"}" data-zapir="${alvo}"><b>${n}</b><span>${txt}</span></button>`;
   return `<div class="z6tela">${h}
@@ -2047,7 +2048,7 @@ document.addEventListener("click", async (e) => {
     if (d.col) { const k = $("#kanban"), w = k.querySelector(".coluna").offsetWidth + 10; k.scrollTo({ left: +d.col * w, behavior: "smooth" }); return; }
     if (d.sug) {
       const sg = (M.sugestoes || []).find((y) => String(y.id) === d.sug);
-      if (d.sugacao === "rota") { const [tit] = (sg.texto || "").split("\n"); novaRota({ titulo: tit, responsavel_id: pessoaPorNome(sg.quem) || eu().id, depois: async (rt) => { await chamar("alfy_sugestao", { p_id: sg.id, p_acao: "rota", p_rt: rt }); } }); return; }
+      if (d.sugacao === "rota") { const [tit, ...cit] = String(sg.texto || "").replace(/^\+\+ /, "").split("\n"); novaRota({ titulo: tit, assist: cit.join(" ").replace(/^“|”$/g, "") + (sg.conversa ? ` (${nomeZap(sg.conversa).nome}, ${sg.quando || ""})` : ""), responsavel_id: pessoaPorNome(sg.quem) || eu().id, depois: async (rt) => { await chamar("alfy_sugestao", { p_id: sg.id, p_acao: "rota", p_rt: rt }); } }); return; }
       await chamar("alfy_sugestao", { p_id: sg.id, p_acao: d.sugacao }); await recarregar(); render(); aviso(d.sugacao === "comentar" ? "Foi para a conversa da " + nomeRota(sg.rt) : "Descartado"); return;
     }
     if (d.desp) { usarItemDespejo(+d.desp); return; }
