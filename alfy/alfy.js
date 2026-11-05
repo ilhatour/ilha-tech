@@ -1,4 +1,4 @@
-// ALFY · Mapa de Rotas · Ilha Tech · v2.13.0 · 04/11/2026 · Painel de Ferro · 📱 WhatsApp
+// ALFY · Mapa de Rotas · Ilha Tech · v2.13.1 · 04/11/2026 · Painel de Ferro · filtro Sem dono
 // Tudo passa pelas funções alfy_* do banco, sempre com a chave pessoal de quem está usando.
 // O banco decide o que cada pessoa vê; a tela só desenha o que voltou.
 // A IA e os comandos são pedidos numa fila (alfy.pedido) que o robô do Mac atende.
@@ -146,7 +146,7 @@ function filtradas() {
   const q = s.busca.trim().toLowerCase();
   return (M?.rotas || []).filter((r) =>
     (!q || [r.titulo, nomeRota(r.rt), r.rt, r.assist, instrDe(r)].join(" ").toLowerCase().includes(q)) &&
-    (!s.pessoa || r.responsavel_id === s.pessoa || r.co_responsavel_id === s.pessoa) &&
+    (!s.pessoa || (s.pessoa === "semdono" ? !r.responsavel_id : r.responsavel_id === s.pessoa || r.co_responsavel_id === s.pessoa)) &&
     (!s.frente || r.frente === s.frente) && (!s.venc || vencida(r)) && !adiada(r) && (!s.prio || pcod(r.prioridade) === s.prio || (s.prio === "sem" && !pcod(r.prioridade))));
 }
 const ativo = () => { const a = document.activeElement; return a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName) && a.id !== "busca"; };
@@ -183,7 +183,7 @@ function filtrosHTML(extra = "") {
   const pes = ids.map((id) => [id, nomeDe(id)]).filter((x) => x[1]).sort((a, b) => a[1].localeCompare(b[1]));
   const frs = [...new Set(vs.map((r) => r.frente).filter(Boolean))].sort((a, b) => FRENTES.indexOf(a) - FRENTES.indexOf(b));
   return `<input class="busca" type="search" id="busca" placeholder="Buscar rota, número ou assunto" value="${esc(s.busca)}">
-    <select class="sel" id="f-pessoa" aria-label="Pessoa">${opc(pes, s.pessoa, "Todas as pessoas")}</select>
+    <select class="sel" id="f-pessoa" aria-label="Pessoa">${opc([["semdono", `👻 Sem dono (${vs.filter((r) => !r.responsavel_id && ABERTOS.includes(r.status)).length})`], ...pes], s.pessoa, "Todas as pessoas")}</select>
     <select class="sel" id="f-frente" aria-label="Frente">${opc(frs.map((f) => [f, frenteCurta(f)]), s.frente, "Todas as frentes")}</select>
     ${extra}<button class="chip" type="button" id="f-mais" aria-label="Mais filtros" aria-pressed="${s.filtrosAbertos}" style="padding:5px 9px">${IC.filtro}</button>`;
 }
