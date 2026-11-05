@@ -1,4 +1,4 @@
-// ALFY · Mapa de Rotas · Ilha Tech · v2.24.0 · 05/11/2026 · Painel de Ferro · 📅 Agenda em kanban (horário no cartão, Sem horário, rotas e pautas no compromisso)
+// ALFY · Mapa de Rotas · Ilha Tech · v2.25.0 · 05/11/2026 · Painel de Ferro · Agenda 7 dias na tela, WhatsApp com Pode virar rota em destaque, Placar novo, pontos no cartão
 // Tudo passa pelas funções alfy_* do banco, sempre com a chave pessoal de quem está usando.
 // O banco decide o que cada pessoa vê; a tela só desenha o que voltou.
 // A IA e os comandos são pedidos numa fila (alfy.pedido) que o robô do Mac atende.
