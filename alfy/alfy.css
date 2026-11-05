@@ -1314,14 +1314,14 @@ details.z6sec > summary{cursor:pointer;list-style:none}
 .pod7{position:relative;display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;padding:22px 10px 16px;border-radius:16px;
   background:linear-gradient(180deg,var(--ferro-3),var(--ferro-1));border:1px solid var(--linha);box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
 .pod7::before{content:"";position:absolute;inset:0 18% auto;height:3px;border-radius:0 0 4px 4px;background:var(--c)}
-.pod7.m1{--c:var(--ouro);padding-top:30px;padding-bottom:22px;border-color:rgba(232,196,104,.35);background:linear-gradient(180deg,rgba(232,196,104,.13),var(--ferro-1) 70%)}
-.pod7.m2{--c:var(--prata)}.pod7.m3{--c:var(--bronze)}
+.pod7.md1{--c:var(--ouro);padding-top:30px;padding-bottom:22px;border-color:rgba(232,196,104,.35);background:linear-gradient(180deg,rgba(232,196,104,.13),var(--ferro-1) 70%)}
+.pod7.md2{--c:var(--prata)}.pod7.md3{--c:var(--bronze)}
 .pod7pos{font-family:var(--fd);font-weight:800;font-size:13px;letter-spacing:.1em;color:var(--c)}
 .pod7av{width:52px;height:52px;border-radius:50%;display:grid;place-items:center;font-family:var(--fd);font-weight:700;font-size:17px;background:var(--ferro-2);color:var(--texto);box-shadow:0 0 0 2px var(--c)}
-.pod7.m1 .pod7av{width:64px;height:64px;font-size:20px}
+.pod7.md1 .pod7av{width:64px;height:64px;font-size:20px}
 .pod7nm{font-size:15px;font-weight:600;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pod7pt{font-family:var(--fd);font-weight:800;font-size:28px;line-height:1;color:var(--c)}
-.pod7.m1 .pod7pt{font-size:36px}
+.pod7.md1 .pod7pt{font-size:36px}
 .pod7pt small{font-size:13px;font-weight:600;color:var(--aco)}
 .pod7mt{font-size:12px;color:var(--aco)}
 .pl7nums{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-top:1px solid var(--linha);border-bottom:1px solid var(--linha)}
@@ -1336,8 +1336,8 @@ details.z6sec > summary{cursor:pointer;list-style:none}
 .rk7l small{font-size:12px;color:var(--aco);white-space:nowrap}
 .rk7bar{display:block;height:6px;border-radius:6px;background:var(--ferro-2);overflow:hidden}
 .rk7bar i{display:block;height:100%;border-radius:6px;background:var(--turq)}
-.rk7.m1 .rk7bar i{background:var(--ouro)}.rk7.m2 .rk7bar i{background:var(--prata)}.rk7.m3 .rk7bar i{background:var(--bronze)}
-.rk7.m1 .rk6p,.rk7.m1 .rk6n{color:var(--ouro)}.rk7.m2 .rk6p,.rk7.m2 .rk6n{color:var(--prata)}.rk7.m3 .rk6p,.rk7.m3 .rk6n{color:var(--bronze)}
+.rk7.md1 .rk7bar i{background:var(--ouro)}.rk7.md2 .rk7bar i{background:var(--prata)}.rk7.md3 .rk7bar i{background:var(--bronze)}
+.rk7.md1 .rk6p,.rk7.md1 .rk6n{color:var(--ouro)}.rk7.md2 .rk6p,.rk7.md2 .rk6n{color:var(--prata)}.rk7.md3 .rk6p,.rk7.md3 .rk6n{color:var(--bronze)}
 .pl7eu{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .pl7eu>div{display:flex;flex-direction:column;gap:4px;padding:20px;border-radius:16px;background:linear-gradient(180deg,var(--ferro-3),var(--ferro-1));border:1px solid var(--linha)}
 .pl7eu b{font-family:var(--fd);font-weight:800;font-size:48px;line-height:1}
@@ -1347,7 +1347,7 @@ details.z6sec > summary{cursor:pointer;list-style:none}
 .pl7tab{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 20px;margin-top:10px}
 .pl7tab div{display:flex;flex-direction:column;gap:2px}
 .pl7tab b{font-size:13px}.pl7tab span{font-size:13px;color:var(--aco)}
-@media (max-width:600px){.pl7pod{gap:6px}.pod7{padding:16px 4px 12px}.pod7.m1{padding-top:22px}.pod7av{width:40px;height:40px;font-size:14px}.pod7.m1 .pod7av{width:48px;height:48px}.pod7pt{font-size:22px}.pod7.m1 .pod7pt{font-size:28px}.pod7nm{font-size:13.5px}.pl7tab{grid-template-columns:1fr}.pl7eu b{font-size:38px}.rk7l{flex-direction:column;gap:0}}
+@media (max-width:600px){.pl7pod{gap:6px}.pod7{padding:16px 4px 12px}.pod7.md1{padding-top:22px}.pod7av{width:40px;height:40px;font-size:14px}.pod7.md1 .pod7av{width:48px;height:48px}.pod7pt{font-size:22px}.pod7.md1 .pod7pt{font-size:28px}.pod7nm{font-size:13.5px}.pl7tab{grid-template-columns:1fr}.pl7eu b{font-size:38px}.rk7l{flex-direction:column;gap:0}}
 /* 2.24 · quanto a rota vale */
 .sl4.pts{color:#E8C468;cursor:pointer;font:inherit}
 button.sl4{border:0}
@@ -1356,3 +1356,26 @@ button.sl4{border:0}
 .vale4 small{display:block;font-size:12.5px;color:var(--aco);margin-top:2px}
 .vale4.nao{background:none;padding:4px 0;font-size:13px;color:var(--aco)}
 @media (max-width:600px){.pl7nav b{font-size:18px;white-space:nowrap}.pl7nav small{font-size:12px;white-space:nowrap}}
+
+/* ---------- 2.26 · mensagem pronta do ALFY: balão de WhatsApp com Copiar ---------- */
+.msg5{margin:8px 0 4px;border-radius:4px 14px 14px 14px;background:#0F2E2B;border:1px solid rgba(43,175,166,.35);overflow:hidden;max-width:560px}
+.msg5t{padding:12px 14px 10px;font-size:15px;line-height:1.55;color:#E3F1EE;white-space:pre-wrap;overflow-wrap:anywhere}
+.msg5t b{color:#fff}
+.msg5c{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;border:0;border-top:1px solid rgba(43,175,166,.3);background:rgba(43,175,166,.12);color:#7FE0D6;font:inherit;font-size:14px;font-weight:700;padding:10px;cursor:pointer}
+.msg5c:hover{background:rgba(43,175,166,.22)}
+
+/* 2.26 · Placar ocupa a tela: duas colunas no computador largo */
+.pl7{max-width:none;display:flex;flex-direction:column;gap:22px}
+.pl7grade{display:grid;grid-template-columns:minmax(0,1fr);gap:28px}
+.pl7a,.pl7b{min-width:0;display:flex;flex-direction:column;gap:24px}
+@media (min-width:1180px){.pl7grade{grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);align-items:start}.pl7b{position:sticky;top:calc(var(--nav-h,0px) + 90px);max-height:calc(100vh - var(--nav-h,0px) - 110px);overflow:auto;padding-right:4px}}
+/* 2.26 · menu do topo em tela média: só o ícone (o nome aparece na aba aberta e ao passar o mouse), nada some para fora */
+@media (min-width:901px) and (max-width:1360px){
+  .nav button{padding:8px 10px}
+  .nav button:not([aria-current="true"]) .nl{display:none}
+}
+@media (min-width:901px) and (max-width:1100px){
+  .lateral{gap:10px;padding-left:14px;padding-right:14px}
+  .lateral .eu .quem{display:none}
+  .nav button{padding:8px 9px}
+}

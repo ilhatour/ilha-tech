@@ -1,4 +1,4 @@
-// ALFY · Mapa de Rotas · Ilha Tech · v2.25.0 · 05/11/2026 · Painel de Ferro · Agenda 7 dias na tela, WhatsApp com Pode virar rota em destaque, Placar novo, pontos no cartão
+// ALFY · Mapa de Rotas · Ilha Tech · v2.26.0 · 05/11/2026 · Painel de Ferro · mensagem do ALFY assinada 🐙 Alfy com Copiar, Placar em 2 colunas, menu do topo sem cortar
 // Tudo passa pelas funções alfy_* do banco, sempre com a chave pessoal de quem está usando.
 // O banco decide o que cada pessoa vê; a tela só desenha o que voltou.
 // A IA e os comandos são pedidos numa fila (alfy.pedido) que o robô do Mac atende.
@@ -171,7 +171,7 @@ function navItens() {
 }
 function casca() {
   const p = eu();
-  $("#nav").innerHTML = navItens().map(([k, n, ic, c]) => `<button type="button" data-aba="${k}" aria-current="${s.aba === k}">${ic}<span>${n}</span><span class="n">${c}</span></button>`).join("");
+  $("#nav").innerHTML = navItens().map(([k, n, ic, c]) => `<button type="button" data-aba="${k}" aria-current="${s.aba === k}" title="${n}" aria-label="${n}">${ic}<span class="nl">${n}</span><span class="n">${c}</span></button>`).join("");
   const fica = comando() ? ["rotas", "rotinas", "agenda", "zap"] : ["rotas", "rotinas", "agenda", "placar"];
   const bb = [...navItens().filter(([k]) => fica.includes(k)), ["eu", "Mais", svg('<path d="M4 6h16M4 12h16M4 18h16"/>')]];   // no celular o resto fica em Mais
   $("#barra-baixo").innerHTML = bb.map(([k, n, ic]) => `<button type="button" data-aba="${k}" aria-current="${s.aba === k}">${ic}<span>${n}</span></button>`).join("");
@@ -253,7 +253,7 @@ function caixaLinha(r, forcar) {
   return `<div class="caixa-linha"><form class="cl-form ${forcar ? "so-campo" : ""}" id="${fid}" data-clform="${r.rt}"><textarea class="busca" id="cl-${r.rt.replace(/\W/g, "")}" rows="2" placeholder="${comando() ? "Comente o que aconteceu ou o próximo passo (o ALFY atualiza a rota), ou peça: muda o dono para a Karol · P1 até sexta · faz a mensagem cobrando" : "Conte como está ou o próximo passo. O ALFY atualiza a rota."}">${esc(s.rascunhoLinha?.[r.rt] || "")}</textarea>
     ${forcar ? "" : `<span class="cl-bot"><button class="btn peq" type="submit" data-clmodo="comentar">💬 Comentar</button>${comando() ? '<button class="btn turq peq" type="submit" data-clmodo="alfy">🐙 Pedir ao ALFY</button>' : ""}</span>`}</form>
     ${rod ? `<div class="ia-saida pensando">${s.rastreando?.[r.rt] ? "📡 rastreando WhatsApp e e-mail desta rota… (até 1 minuto)" : "🐙 o ALFY está lendo e atualizando a rota… (uns 10 segundos)"}</div>` : ""}
-    ${resp ? `<div class="ia-saida">${esc(resp)}<div class="usar">${s.sugLinha?.[r.rt] ? `<button class="mini ia" type="button" data-aplicarsug="${r.rt}">🐙 Aplicar a sugestão</button>` : ""}<button class="mini" type="button" data-copiartxt="${r.rt}">Copiar</button><button class="mini" type="button" data-rt="${r.rt}">Abrir a rota</button></div></div>` : ""}</div>`;
+    ${resp ? `<div class="ia-saida">${textoAlfy(resp)}<div class="usar">${s.sugLinha?.[r.rt] ? `<button class="mini ia" type="button" data-aplicarsug="${r.rt}">🐙 Aplicar a sugestão</button>` : ""}<button class="mini" type="button" data-copiartxt="${r.rt}">Copiar</button><button class="mini" type="button" data-rt="${r.rt}">Abrir a rota</button></div></div>` : ""}</div>`;
 }
 function linha(r, semPessoa) {
   return `<div class="linha-wrap"><div role="button" tabindex="0" class="linha2" data-rt="${r.rt}">${tag(r)}<span class="tt"><b>${esc(r.titulo)}</b>${r.assist && r.assist !== r.titulo ? `<span class="res">${esc(r.assist)}</span>` : ""}${metaLinha(r, semPessoa)}</span>${acoesLinha(r)}</div>${caixaLinha(r)}</div>`;
@@ -363,11 +363,11 @@ function vistaPlacar() {
   let topo = "";
   if (comando()) {
     const rank = pl.rank || [], pod = rank.filter((r) => r.pontos > 0).slice(0, 3);
-    const placa = (r, k) => `<div class="pod7 m${k}"><span class="pod7pos">${k}º</span><span class="pod7av">${ini(r.nome)}</span><b class="pod7nm">${esc(curto(r.nome))}</b><span class="pod7pt">${pts(r.pontos)}<small> pts</small></span><small class="pod7mt">${r.entregas} ${r.entregas === 1 ? "entrega" : "entregas"}</small></div>`;
+    const placa = (r, k) => `<div class="pod7 md${k}"><span class="pod7pos">${k}º</span><span class="pod7av">${ini(r.nome)}</span><b class="pod7nm">${esc(curto(r.nome))}</b><span class="pod7pt">${pts(r.pontos)}<small> pts</small></span><small class="pod7mt">${r.entregas} ${r.entregas === 1 ? "entrega" : "entregas"}</small></div>`;
     topo = (pod.length ? `<section class="pl7pod">${[1, 0, 2].filter((k) => pod[k]).map((k) => placa(pod[k], pod[k].pos)).join("")}</section>` : `<p class="nota">Ninguém pontuou neste mês ainda.</p>`)
       + nums([[ents.length, "entregas no mês"], [ents.length ? Math.round(100 * noPrazo / ents.length) + "%" : "–", "no prazo"], [media.toLocaleString("pt-BR", { maximumFractionDigits: 1 }), "pontos por entrega"]]);
     const max = Math.max(1, ...rank.map((r) => +r.pontos || 0)), com = rank.filter((r) => r.pontos > 0 || r.entregas > 0), sem = rank.filter((r) => !(r.pontos > 0 || r.entregas > 0));
-    topo += `<section class="pl6sec"><h3>Ranking</h3>${com.map((r) => `<div class="rk7 ${r.pos <= 3 && r.pontos > 0 ? "m" + r.pos : ""}"><span class="rk6p">${r.pos}º</span><span class="rk7b"><span class="rk7l"><b>${esc(r.nome)}</b><small>${r.entregas} ${r.entregas === 1 ? "entrega" : "entregas"}${r.faltas ? ` · ${r.faltas} fora do prazo` : ""}</small></span><i class="rk7bar"><i style="width:${Math.max(3, Math.round(100 * (+r.pontos || 0) / max))}%"></i></i></span><span class="rk6n">${pts(r.pontos)}<small> pts</small></span></div>`).join("")}${sem.length ? `<p class="pl6sem">Ainda sem entrega: ${sem.map((r) => esc(curto(r.nome))).join(", ")}</p>` : ""}</section>`;
+    topo += `<section class="pl6sec"><h3>Ranking</h3>${com.map((r) => `<div class="rk7 ${r.pos <= 3 && r.pontos > 0 ? "md" + r.pos : ""}"><span class="rk6p">${r.pos}º</span><span class="rk7b"><span class="rk7l"><b>${esc(r.nome)}</b><small>${r.entregas} ${r.entregas === 1 ? "entrega" : "entregas"}${r.faltas ? ` · ${r.faltas} fora do prazo` : ""}</small></span><i class="rk7bar"><i style="width:${Math.max(3, Math.round(100 * (+r.pontos || 0) / max))}%"></i></i></span><span class="rk6n">${pts(r.pontos)}<small> pts</small></span></div>`).join("")}${sem.length ? `<p class="pl6sem">Ainda sem entrega: ${sem.map((r) => esc(curto(r.nome))).join(", ")}</p>` : ""}</section>`;
   } else {
     const eu_ = pl.eu || {};
     topo = `<section class="pl7eu"><div class="pl7eupos"><b>${eu_.pos ? eu_.pos + "º" : "–"}</b><small>de ${pl.total} na equipe</small></div><div class="pl7eupt"><b>${pts(eu_.pontos)}</b><small>pontos no mês</small></div></section>`
@@ -377,7 +377,7 @@ function vistaPlacar() {
   const lista = comando() ? (pl.entregas || []).filter((e) => !s.plBusca || (e.titulo + " " + nomeDe(e.resp) + " " + nomeDe(e.co)).toLowerCase().includes(s.plBusca.toLowerCase())) : (pl.minhas || []);
   const banco = `<section class="pl6sec"><div class="pl6h"><h3>${comando() ? "Entregas do mês" : "Suas entregas"} · ${(comando() ? pl.entregas : pl.minhas || []).length}</h3><button class="lk" type="button" data-verconc="1">✓ Ver rotas concluídas</button>${comando() ? `<input class="busca" id="pl-busca" placeholder="Buscar entrega ou pessoa" value="${esc(s.plBusca || "")}">` : ""}</div>${lista.map((e) => entregaHTML(e, comando())).join("") || '<p class="nota">Nenhuma entrega neste mês ainda. Cada rota concluída vale até 10 pontos.</p>'}</section>`;
   const regra = `<details class="pl7regra"><summary>Como pontua</summary><div class="pl7tab"><div><b>Impacto</b><span>Alto 3 · Médio 2 · Baixo 1</span></div><div><b>Dificuldade</b><span>Muito difícil 4 · Difícil 3 · Simples 2 · Fácil 1</span></div><div><b>Qualidade</b><span>Acima 3 · Como esperado 2 · Abaixo 1</span></div><div><b>Prazo</b><span>No prazo ×1 · até 7 dias fora ×½ · mais que isso ×0</span></div></div><p class="nota" style="margin:8px 0 0">Pontos = (Impacto + Dificuldade + Qualidade) × prazo, até 10 por rota. Campo vazio conta como o do meio (2 + 2 + 2 = 6). Responsável e co-responsável pontuam. Compromisso e frente Pessoal não contam.</p></details>`;
-  return `<div class="pl6 pl7">${nav}${topo}${banco}${regra}</div>`;
+  return `<div class="pl7">${nav}<div class="pl7grade"><div class="pl7a">${topo}</div><div class="pl7b">${banco}${regra}</div></div></div>`;
 }
 
 // ---------------------------------------------------------------- 🔁 Rotinas
@@ -804,6 +804,19 @@ function ultLinha(r) {
 const tamanhoTxt = (b) => (b > 1048576 ? (b / 1048576).toFixed(1) + " MB" : Math.max(1, Math.round(b / 1024)) + " KB");
 const zap = (t) => esc(t).replace(/\*([^*\n]+)\*/g, "<b>$1</b>");
 
+// mensagem pronta do ALFY para alguém: vem entre ---MENSAGEM--- e ---FIM---, assinada "🐙 Alfy" (o ALFY não finge ser o Miguel, pedido de 05/11); vira balão com Copiar
+const ASSINA = "🐙 Alfy", MSGS = [];
+const assinar = (t) => (String(t || "").trimStart().startsWith(ASSINA) ? String(t).trim() : `${ASSINA}\n\n${String(t || "").trim()}`);
+function textoAlfy(t) {
+  const partes = String(t || "").split(/---MENSAGEM---\s*\n([\s\S]*?)\n\s*---FIM---/);
+  if (partes.length === 1) return String(t || "").trimStart().startsWith(ASSINA) ? msgBalao(t) : `<p>${esc(t)}</p>`;
+  return partes.map((x, i) => (i % 2 ? msgBalao(x) : x.trim() ? `<p>${esc(x.trim())}</p>` : "")).join("");
+}
+const soMsgs = (t) => { const l = [...String(t || "").matchAll(/---MENSAGEM---\s*\n([\s\S]*?)\n\s*---FIM---/g)].map((m) => assinar(m[1])); return l.length ? l.join("\n\n") : String(t || ""); };
+function msgBalao(x) {
+  const txt = assinar(x); let i = MSGS.indexOf(txt); if (i < 0) i = MSGS.push(txt) - 1;
+  return `<div class="msg5"><div class="msg5t">${zap(txt)}</div><button class="msg5c" type="button" data-copiarbloco="${i}">📋 Copiar</button></div>`;
+}
 // ---------------------------------------------------------------- comandos (só o Miguel, por enquanto)
 const CMDS = [
   { g: "Despejar", k: "despejo", n: "Despejo", faz: "Joga aqui o que vier na cabeça: texto, áudio gravado na hora, áudio ou arquivo. O ALFY separa em rota, pauta, arquivo ou lembrete.", quando: "quando você quiser", onde: "mac" },
@@ -910,7 +923,7 @@ const LINK_ACESSO = (c) => `https://ilhatech.io/alfy/acesso.html#c=${c}`;
 const msgAcesso = (nome, c, novo) => `🐙 *ALFY · seu acesso*\n\nOi${nome ? ", " + nome.split(" ")[0] : ""}! ${novo ? "Para entrar no ALFY, faça seu cadastro e crie seu usuário e senha neste link" : "Crie (ou troque) seu usuário e senha do ALFY neste link"} (vale 7 dias, é só seu):\n\n${LINK_ACESSO(c)}\n\nDepois é só entrar em ilhatech.io/alfy com seu usuário e senha, de qualquer aparelho.`;
 async function gerarAcesso(alfyId, papel, frentes) {
   const r = await chamar("alfy_convite_criar", { p_alfy: alfyId || null, p_papel: papel || null, p_frentes: frentes || null });
-  const txt = msgAcesso(r.nome, r.codigo, !alfyId); copiar(txt); s.ultimoAcesso = { nome: r.nome || "pessoa nova", txt }; render();
+  const txt = assinar(msgAcesso(r.nome, r.codigo, !alfyId)); copiar(txt); s.ultimoAcesso = { nome: r.nome || "pessoa nova", txt }; render();
 }
 function equipeHTML(h) {
   const e = s.equipe;
@@ -1040,7 +1053,7 @@ function detCmd(c) {
   if (c.k === "ronda") { const rod = filaRodando(c.k); return `<div class="bloco">${h}<p style="margin:0 0 10px">${c.faz}</p><button class="btn turq" type="button" data-acao="${c.k}" ${rod ? "disabled" : ""}>${rod ? "Rodando…" : "Rodar a ronda agora"}</button></div>`; }
   if (c.k === "perguntar") {
     const msgs = s.chatGeral || [], rod = s.esperando.geral;
-    return `<div class="bloco">${h}<div class="chat" id="chat-geral">${msgs.map((m) => `<div class="m ${m.papel === "user" ? "eu" : "alfy"}">${esc(m.texto)}</div>`).join("") || `<div class="m alfy">🐙 Oi, Miguel. Pergunte sobre as rotas e as pautas. Ex.: "o que está vencido da Karoline?", "o que precisa de decisão minha?", "quais rotas têm budget esperando aprovação?"</div>`}${rod ? '<div class="m alfy">🐙 pensando…</div>' : ""}</div>
+    return `<div class="bloco">${h}<div class="chat" id="chat-geral">${msgs.map((m) => `<div class="m ${m.papel === "user" ? "eu" : "alfy"}">${m.papel === "user" ? esc(m.texto) : textoAlfy(m.texto)}</div>`).join("") || `<div class="m alfy">🐙 Oi, Miguel. Pergunte sobre as rotas e as pautas. Ex.: "o que está vencido da Karoline?", "o que precisa de decisão minha?", "quais rotas têm budget esperando aprovação?"</div>`}${rod ? '<div class="m alfy">🐙 pensando…</div>' : ""}</div>
       <form class="chat-form" id="f-chat"><input id="t-chat" placeholder="Pergunte ao ALFY" autocomplete="off"><button class="btn turq" type="submit">Perguntar</button></form></div>`;
   }
   return "";
@@ -1091,12 +1104,12 @@ const menuApagar = (chave) => comando() ? (s.apagando === chave ? `<span class="
 function comentHTML(c, nova) {
   const orig = c.origem === "whatsapp" ? "WhatsApp" : c.tipo === "orientacao" ? "orientação" : c.origem === "trello" ? "Trello" : "";
   const robo = c.origem === "alfy";
-  return `<div class="c4 ${robo ? "robo" : ""} ${nova ? "nova" : ""}"><span class="av4">${robo ? "🐙" : ini(c.quem)}</span><div class="c4b"><div class="c4h"><b>${esc(robo ? "ALFY" : curto(c.quem))}</b><span>${quandoFoi(c.em)}${orig ? " · " + orig : ""}</span>${nova ? '<span class="novo4">Nova</span>' : ""}${menuApagar("c" + c.id)}</div><p>${esc(rotaTxt(c.texto.replace(/^📱 WhatsApp · .*?\d{2}\/\d{2} \d{2}:\d{2}: /, "").replace(/^🤖 ALFY · /, "")))}</p></div></div>`;
+  return `<div class="c4 ${robo ? "robo" : ""} ${nova ? "nova" : ""}"><span class="av4">${robo ? "🐙" : ini(c.quem)}</span><div class="c4b"><div class="c4h"><b>${esc(robo ? "ALFY" : curto(c.quem))}</b><span>${quandoFoi(c.em)}${orig ? " · " + orig : ""}</span>${nova ? '<span class="novo4">Nova</span>' : ""}${menuApagar("c" + c.id)}</div>${(() => { const tx = rotaTxt(c.texto.replace(/^📱 WhatsApp · .*?\d{2}\/\d{2} \d{2}:\d{2}: /, "").replace(/^🤖 ALFY · /, "")); return robo ? textoAlfy(tx) : `<p>${esc(tx)}</p>`; })()}</div></div>`;
 }
 function iaHTML(m) {
   if (m.papel === "user") return `<div class="c4 pede"><span class="av4">${ini(eu().nome)}</span><div class="c4b"><div class="c4h"><b>Você → 🐙 ALFY</b><span>${quandoFoi(m.em)}</span>${menuApagar("i" + m.id)}</div><p>${esc(m.texto)}</p></div></div>`;
   const aberto = s.menuIa === String(m.id);
-  return `<div class="c4 alfy"><span class="av4">🐙</span><div class="c4b"><div class="c4h"><b>ALFY</b><span>${quandoFoi(m.em)}</span><button class="mais4" type="button" data-menuia="${m.id}" aria-label="Opções" aria-expanded="${aberto}">⋯</button></div><p>${esc(m.texto)}</p>
+  return `<div class="c4 alfy"><span class="av4">🐙</span><div class="c4b"><div class="c4h"><b>ALFY</b><span>${quandoFoi(m.em)}</span><button class="mais4" type="button" data-menuia="${m.id}" aria-label="Opções" aria-expanded="${aberto}">⋯</button></div>${textoAlfy(m.texto)}
     ${aberto ? `<div class="menu4"><button type="button" data-copiarmsg="${m.id}">Copiar</button>${comando() ? `<button type="button" data-apagar="i${m.id}">Apagar</button>` : ""}${Object.keys(CAMPOS).map((k) => `<button type="button" data-usar="${m.id}" data-campo="${k}">Usar em ${{ assist: "Resumo", instr: "Instruções", resultado: "Resultado", como_esta: "Status" }[k]}</button>`).join("")}</div>` : ""}</div></div>`;
 }
 function histHTML(e) {
@@ -1835,7 +1848,8 @@ document.addEventListener("click", async (e) => {
     if (d.iacampo) { const c = CAMPOS[d.iacampo], nome = c.rot.split(" ").slice(1).join(" "), atual = d.iacampo === "instr" ? instrDe(s.cartao) : s.cartao[COLUNA[d.iacampo]]; s.rascunhoRota = atual ? `Melhore o campo ${nome}: ` : `Escreva o campo ${nome} com o que já sabemos. `; refolha(); const t = $("#t-coment"); $("#f-interagir")?.scrollIntoView({ block: "start" }); t.focus(); t.setSelectionRange(t.value.length, t.value.length); return; }
     if (d.rap) { falarNaRota(d.rap); return; }
     if (d.usar) { const m = (s.cartao.ia || []).find((y) => String(y.id) === d.usar); if (m) { s.abaFolha = "ficha"; editar({ [COLUNA[d.campo]]: m.texto }, "Colocado em " + CAMPOS[d.campo].rot.split(" ").slice(1).join(" ")); } return; }
-    if (d.copiarmsg) { const m = (s.cartao.ia || []).find((y) => String(y.id) === d.copiarmsg); if (m) copiar(m.texto); return; }
+    if (d.copiarbloco !== undefined) { const m = MSGS[+d.copiarbloco]; if (m) { copiar(m); b.textContent = "✓ Copiado"; setTimeout(() => { b.textContent = "📋 Copiar"; }, 1600); } return; }
+    if (d.copiarmsg) { const m = (s.cartao.ia || []).find((y) => String(y.id) === d.copiarmsg); if (m) copiar(soMsgs(m.texto)); return; }
     if (d.budst) { s.cartao = await chamar("alfy_budget", { p_rt: s.aberta, p_valor: $("[data-bud]")?.value || "", p_status: d.budst }); refolha(); await recarregar(); render(); return; }
     if (d.irpauta) { const id = +d.irpauta; fechar(); s.aba = "pautas"; s.reuniao = null; abrirPauta(id); return; }
     if (d.irreuniao) { fechar(); s.aba = "pautas"; s.pauta = null; s.reuniao = +d.irreuniao; render(); scrollTo(0, 0); return; }
@@ -1843,15 +1857,15 @@ document.addEventListener("click", async (e) => {
     if (d.naveabrir) { s.naveAbrir = d.naveabrir; render(); return; }
     if (d.navetrazer) { const fr = $("#nv-frente")?.value; const r = await chamar("alfy_nave_trazer", { p_colaborador: d.navetrazer, p_alfy: s.naveLigar || null, p_apelido: $("#nv-apelido")?.value || "", p_papel: $("#nv-papel")?.value || "colaborador", p_frentes: fr ? [fr] : null }); await naveDepois(s.naveLigar ? {} : r, s.naveLigar ? "Ligado à Nave ID" : `${r.nome} entrou no ALFY`); return; }
     if (d.aprovar || d.recusar) { const id = +(d.aprovar || d.recusar), fr = $("#fa-frente-" + id)?.value; const r = await chamar("alfy_ficha_aprovar", { p_id: id, p_papel: $("#fa-papel-" + id)?.value || "colaborador", p_frentes: fr ? [fr] : [], p_nivel: $("#fa-nivel-" + id)?.value || "operacional", p_aprovar: !!d.aprovar }); s.aprovado = d.aprovar ? r : null; s.fichas = await chamar("alfy_fichas"); if (comando()) s.equipe = await chamar("alfy_equipe"); await recarregar(); render(); aviso(d.aprovar ? "Cadastrado na Nave ID e no ALFY" : "Ficha recusada"); return; }
-    if (d.copiarmapa) { copiar(mapaPessoa(d.copiarmapa).txt); s.mapasCopiados = { ...(s.mapasCopiados || {}), [d.copiarmapa]: new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) }; render(); return; }
+    if (d.copiarmapa) { copiar(assinar(mapaPessoa(d.copiarmapa).txt)); s.mapasCopiados = { ...(s.mapasCopiados || {}), [d.copiarmapa]: new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) }; render(); return; }
     if (d.baixar) { aviso("Baixando…"); const x = await chamar("alfy_anexo_baixar", { p_id: +d.baixar }); const bin = atob(x.base64), u8 = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i); const url = URL.createObjectURL(new Blob([u8], { type: x.tipo || "application/octet-stream" })); const l = document.createElement("a"); l.href = url; l.download = x.nome; document.body.append(l); l.click(); l.remove(); setTimeout(() => URL.revokeObjectURL(url), 5000); return; }
     if (d.tiraranexo) { s.cartao = await chamar("alfy_anexo_tirar", { p_id: +d.tiraranexo }); refolha(); await recarregar(); render(); aviso("Anexo tirado da rota"); return; }
     if (d.rapido) { const rt = d.rrt; if (s.aba === "rotas" && s.vista === "rar") await enviarRascunho(rt); await chamar("alfy_mover", { p_rt: rt, p_status: d.rapido }); if (d.rapido === "concluida" && s.rr.feitas) { s.rr.feitas = { ...s.rr.feitas, [rt]: true }; s.rr.foco = null; rrSalvar(); if (s.vista === "rar") setTimeout(rrNoLugar, 60); } aviso(d.rapido === "concluida" ? `✓ ${nomeRota(rt)} concluída` : `${nomeRota(rt)} em andamento`); await recarregar(); render(); return; }
     if (d.rastrear) { const rt = d.rastrear; s.linhasAbertas = { ...(s.linhasAbertas || {}), [rt]: true }; s.respLinha = { ...(s.respLinha || {}), [rt]: "" }; s.sugLinha = { ...(s.sugLinha || {}), [rt]: "" }; s.rastreando = { ...(s.rastreando || {}), [rt]: true }; s.pedRastreio = { ...(s.pedRastreio || {}), [rt]: await pedir("rastrear", "rota:" + rt, {}, "rota:" + rt) }; render(); return; }
     if (d.aplicarsug) { const rt = d.aplicarsug, t = s.sugLinha[rt]; s.sugLinha[rt] = ""; s.respLinha[rt] = ""; s.rastreando[rt] = false; await pedir("ia", "rota:" + rt, { texto: t, agir: true }, "rota:" + rt); render(); return; }
     if (d.linhacaixa) { s.linhasAbertas = { ...(s.linhasAbertas || {}), [d.linhacaixa]: !s.linhasAbertas?.[d.linhacaixa] }; render(); setTimeout(() => $("#cl-" + d.linhacaixa.replace(/\W/g, ""))?.focus(), 30); return; }
-    if (d.copiartxt) { copiar(s.respLinha[d.copiartxt]); return; }
-    if (d.convite) { const p = s.equipe.find((x) => x.id === d.convite); copiar(convite(p)); return; }
+    if (d.copiartxt) { copiar(soMsgs(s.respLinha[d.copiartxt])); return; }
+    if (d.convite) { const p = s.equipe.find((x) => x.id === d.convite); copiar(assinar(convite(p))); return; }
     if (d.acessode) { await gerarAcesso(d.acessode); return; }
     if (d.tiraraprendi) { s.aprendi = await chamar("alfy_aprendizado_tirar", { p_id: +d.tiraraprendi }); render(); aviso("Esquecido"); return; }
     if (d.cmd === "bomdia") s.diario = await chamar("alfy_diario", { p_dias: 3 }).catch(() => s.diario);
@@ -1900,7 +1914,7 @@ document.addEventListener("click", async (e) => {
     if (a === "gravar") { gravar(); return; }
     if (a === "whatsapp" || a === "grupos") { await pedir("whatsapp", null, { horas: a === "grupos" ? 168 : s.waHoras || 24 }); render(); aviso("Lendo o WhatsApp… leva de 1 a 3 minutos"); return; }
     if (a === "ronda") { await pedir(a, null, {}); render(); aviso("Pedido na fila do robô"); return; }
-    if (a === "copiar-mapa") { const cob = s.cmd === "cobrar" || s.mapaModo === "cobrar", modo = cob ? "pessoa" : s.mapaModo || "pessoa"; copiar((modo === "grupo" ? mapaGrupo(s.grupo || []) : modo === "setor" ? mapaSetor(s.alvo) : mapaPessoa(s.alvo, cob)).txt); return; }
+    if (a === "copiar-mapa") { const cob = s.cmd === "cobrar" || s.mapaModo === "cobrar", modo = cob ? "pessoa" : s.mapaModo || "pessoa"; copiar(assinar((modo === "grupo" ? mapaGrupo(s.grupo || []) : modo === "setor" ? mapaSetor(s.alvo) : mapaPessoa(s.alvo, cob)).txt)); return; }
     if (a === "sair") { sair(); return; }
     if (a === "lembrar") { $("[data-irf=lembrete]")?.click(); return; }
     if (a === "lem-confirmar") {
@@ -1936,8 +1950,8 @@ document.addEventListener("click", async (e) => {
     if (a === "rr-novfirst") { s.rr.novFirst = !s.rr.novFirst; s.rr.foco = null; rrSalvar(); render(); return; }
     if (a === "rr-voltar") { s.rr.depois = {}; rrSalvar(); render(); return; }
     if (a === "rr-zerar") { s.rr.feitas = {}; s.rr.depois = {}; s.rr.foco = null; rrSalvar(); render(); return; }
-    if (a === "copiar-ficha") { copiar(MSG_FICHA); return; }
-    if (a === "copiar-aprovado") { copiar(convite({ nome: s.aprovado.nome, token: s.aprovado.token })); return; }
+    if (a === "copiar-ficha") { copiar(assinar(MSG_FICHA)); return; }
+    if (a === "copiar-aprovado") { copiar(assinar(convite({ nome: s.aprovado.nome, token: s.aprovado.token }))); return; }
     if (a === "ver-script") { s.emailChave = await chamar("alfy_email_chave"); render(); return; }
     if (a === "copiar-script") { copiar(SCRIPT_EMAIL(s.emailChave)); return; }
     if (a === "encerrar-reuniao") { s.confirmaEncerrar = s.reuniao; render(); return; }
