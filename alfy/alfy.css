@@ -974,3 +974,42 @@ details.z5bloco[open] > summary::after{content:" ▴"}
 .rr-mini4 .tag{width:54px;height:42px}
 .rr-mini4 .tag small{font-size:8px;letter-spacing:.14em}
 .rr-mini4 .tag b{font-size:16px}
+
+/* ---------- 2.18 · gaveta da rota: escala única, pílulas no topo, novas respostas, ações do ALFY, lembrete compacto ---------- */
+/* escala: título 18 · resumo 17 · texto 15.5 · rótulo 12 · meta 12.5 */
+.cab4{align-items:flex-start}
+.cab4t{min-width:0;display:flex;flex-direction:column;gap:8px}
+.cab4 h2{font-size:18px;font-weight:600}
+.selos4{display:flex;gap:6px;flex-wrap:wrap}
+.sl4{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;font-weight:600;border-radius:999px;padding:2px 9px;background:var(--ferro-1);border:1px solid var(--linha);color:var(--aco-2);white-space:nowrap}
+.sl4 i{width:7px;height:7px;border-radius:50%;background:#F2C94C}
+.sl4.st-rota i{background:var(--verm)}.sl4.st-pausada i{background:#F2994A}.sl4.st-concluida i{background:var(--foam)}.sl4.st-ideia i{background:var(--lilas)}
+.sl4.venc{color:#FF9A9C;border-color:#5A2A2C}.sl4.hoje{color:var(--amber)}
+.folha.v4 .secao3 > h3,.folha.v4 .f4h h3{font-size:12px;letter-spacing:.12em}
+.f4h h4{font-size:12px;letter-spacing:.06em;text-transform:uppercase}
+.f4c p{font-size:15.5px;line-height:1.6}
+.f4c.resumo4 p{font-size:17px;font-weight:600;line-height:1.5}
+.c4b p{font-size:15.5px}
+.status4 .f4h h4{color:#C9A76A;text-transform:none;letter-spacing:0;font-size:13px}
+/* respostas novas */
+.c4.nova{background:linear-gradient(90deg,rgba(255,122,69,.10),transparent 70%);box-shadow:inset 3px 0 0 var(--coral);padding-left:8px;margin-left:-8px;border-radius:6px}
+.novo4{font-size:10.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#2A0F02;background:var(--coral);border-radius:999px;padding:1px 7px}
+.novas4{color:var(--coral)!important;font-weight:800!important}
+.nova-l{color:var(--coral);font-weight:700}
+/* ações do ALFY */
+.alfy4{display:flex;flex-direction:column;gap:6px;padding:10px 12px;border-radius:10px;background:rgba(43,175,166,.07);border:1px solid #234845}
+.alfy4t{font-size:12px;font-weight:700;color:#7FD3CB}
+.alfy4o{display:flex;gap:6px;flex-wrap:wrap}
+.alfy4o .chip{white-space:normal;text-align:left;line-height:1.35;max-width:100%}
+/* lembrete compacto */
+.lem5{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.seg5{display:inline-flex;flex-wrap:wrap;background:var(--ferro-1);border:1px solid var(--linha);border-radius:10px;padding:3px;gap:2px}
+.seg5 button{border:0;background:none;color:var(--aco-2);font-size:13px;font-weight:600;padding:5px 10px;border-radius:7px}
+.seg5 button[aria-pressed="true"]{background:var(--turq);color:#052624}
+.nota5{margin:0;font-size:12.5px;color:var(--aco)}
+.lem4{flex-direction:row;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.comp5{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding-top:12px;border-top:1px solid var(--linha);font-size:14px;color:var(--aco-2)}
+.comp5 input{background:var(--ferro-1);border:1px solid var(--linha);border-radius:9px;padding:6px 8px;font-size:16px;color:var(--texto);color-scheme:dark}
+.rapidas3 input[type=date],.rapidas3 input[type=time]{background:var(--ferro-1);border:1px solid var(--linha);border-radius:9px;padding:6px 8px;font-size:16px;color:var(--texto);color-scheme:dark}
+@media (max-width:900px){.lem5 .btn{flex:1}.seg5{width:100%;justify-content:space-between}}
+.c4h .novo4{color:#2A0F02}
