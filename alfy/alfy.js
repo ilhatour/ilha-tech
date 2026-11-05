@@ -1,4 +1,4 @@
-// ALFY · Mapa de Rotas · Ilha Tech · v2.13.1 · 04/11/2026 · Painel de Ferro · filtro Sem dono
+// ALFY · Mapa de Rotas · Ilha Tech · v2.13.2 · 04/11/2026 · Painel de Ferro · WhatsApp com outros grupos recolhidos
 // Tudo passa pelas funções alfy_* do banco, sempre com a chave pessoal de quem está usando.
 // O banco decide o que cada pessoa vê; a tela só desenha o que voltou.
 // A IA e os comandos são pedidos numa fila (alfy.pedido) que o robô do Mac atende.
@@ -460,7 +460,8 @@ function zapCard(z, forte) {
 function vistaZap() {
   const zp = s.zap, it = zp?.itens || [], ped = zp?.pedido;
   const esp = it.filter((z) => z.precisa && !z.visto), vistos = it.filter((z) => z.precisa && z.visto);
-  const grupos = it.filter((z) => z.grupo && !z.precisa), pess = it.filter((z) => !z.grupo && !z.precisa);
+  const gTodos = it.filter((z) => z.grupo && !z.precisa), pess = it.filter((z) => !z.grupo && !z.precisa);
+  const grupos = gTodos.filter((z) => z.trabalho !== false), outros = gTodos.filter((z) => z.trabalho === false);   // grupo que não é de trabalho fica recolhido
   const nov = (M.sugestoes || []).filter((x) => x.tipo === "nova");
   const estado = !ped ? "Aperte <b>Atualizar</b>: o ALFY lê todas as conversas e grupos e mostra o que rolou e o que espera você."
     : zapRodando() ? `<span class="ao-vivo"><i></i></span> Lendo o WhatsApp… leva de 1 a 2 minutos.`
@@ -468,12 +469,13 @@ function vistaZap() {
     : `Atualizado ${quandoFoi(ped.feito_em)} · lido desde ${esc(ped.desde || "")} · ${it.length} conversas`;
   return `<div class="zap-tela"><section class="placa rebites rr-painel"><div class="rr-l1"><div><h2>📱 O que rolou no seu WhatsApp</h2><p class="rr-estado">${estado}</p></div>
       <div style="display:flex;gap:6px;flex-wrap:wrap"><button class="cta" type="button" data-zapler="" ${zapRodando() ? "disabled" : ""}>📡 Atualizar</button><button class="btn" type="button" data-zapler="72" ${zapRodando() ? "disabled" : ""}>Últimos 3 dias</button></div></div>
-      ${ped && ped.status === "feito" ? `<div class="z4num"><span><b>${esp.length}</b> esperando você</span><span><b>${pess.length}</b> conversas pessoais</span><span><b>${grupos.length}</b> grupos</span><span><b>${nov.length}</b> podem virar rota</span></div>` : ""}
-      <p class="nota" style="margin:0">"Atualizar" lê tudo desde a última vez. Conversas arquivadas e propaganda ficam fora. Os retornos de rota entram sozinhos nas rotas.</p></section>
+      ${ped && ped.status === "feito" ? `<div class="z4num"><span><b>${esp.length}</b> esperando você</span><span><b>${pess.length}</b> conversas pessoais</span><span><b>${grupos.length}</b> grupos de trabalho</span><span><b>${nov.length}</b> podem virar rota</span></div>` : ""}
+      <p class="nota" style="margin:0">"Atualizar" lê tudo desde a última vez. Só os grupos do MU e as contas de propaganda ficam fora. Os retornos de rota entram sozinhos nas rotas.</p></section>
     ${ped ? `<section class="z4sec"><h3>⏳ Esperando sua resposta · ${esp.length}</h3>${esp.map((z) => zapCard(z, true)).join("") || '<div class="vazio">Nada esperando você. 🎉</div>'}
       ${vistos.length ? `<details><summary class="nota" style="cursor:pointer">Já vistas · ${vistos.length}</summary>${vistos.map((z) => zapCard(z, true)).join("")}</details>` : ""}</section>
     <section class="z4sec"><h3>💬 Conversas pessoais · ${pess.length}</h3>${pess.map((z) => zapCard(z)).join("") || '<div class="vazio">Nada novo.</div>'}</section>
-    <section class="z4sec"><h3>👥 Grupos · ${grupos.length}</h3>${grupos.map((z) => zapCard(z)).join("") || '<div class="vazio">Nada novo.</div>'}</section>
+    <section class="z4sec"><h3>👥 Grupos de trabalho · ${grupos.length}</h3>${grupos.map((z) => zapCard(z)).join("") || '<div class="vazio">Nada novo.</div>'}
+      ${outros.length ? `<details><summary class="nota" style="cursor:pointer">Outros grupos · ${outros.length}</summary><div class="z4sec" style="margin-top:8px">${outros.map((z) => zapCard(z)).join("")}</div></details>` : ""}</section>
     <section class="z4sec"><h3>🗺️ Pode virar rota · ${nov.length}</h3>${ped.retornos ? `<p class="nota" style="margin:0 0 6px">${esc(ped.retornos)}</p>` : ""}${nov.map((x) => `<div class="sugestao"><div class="tx"><b style="white-space:pre-wrap">${esc(rotaTxt(x.texto))}</b><small>${esc(x.quem || "")}${x.conversa ? " · " + esc(x.conversa) : ""}${x.quando ? " · " + esc(x.quando) : ""}</small></div><button class="btn turq peq" type="button" data-sug="${x.id}" data-sugacao="rota">Virar rota</button><button class="btn peq" type="button" data-sug="${x.id}" data-sugacao="descartar">Descartar</button></div>`).join("") || '<div class="vazio">Nada novo.</div>'}</section>` : ""}</div>`;
 }
 // ---------------------------------------------------------------- feed
