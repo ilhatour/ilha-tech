@@ -1426,3 +1426,17 @@ button.sl4{border:0}
   .rrf2-sel{height:34px;font-size:14px}
 }
 @media (max-width:760px){.rr-painel .rr-l2{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;-webkit-mask-image:linear-gradient(90deg,#000 88%,transparent)}.rr-painel .rr-l2::-webkit-scrollbar{display:none}.rr-painel .rr-l2>*{flex:0 0 auto}.rr-painel .rr-l2 .espaco{display:none}}
+
+/* ---------- 2.29 · agendar escrevendo + aviso de choque de horário ---------- */
+.qd{display:flex;flex-direction:column;gap:4px;flex-basis:100%;grid-column:1/-1;margin-bottom:6px}
+.qd-txt{width:100%;height:40px;border-radius:10px;border:1px solid var(--linha);background:var(--ferro-1);color:var(--texto);font:inherit;font-size:15px;padding:0 12px}
+.qd-txt:focus{outline:none;border-color:var(--turq)}
+.qd-prev{font-size:13px;color:var(--aco);min-height:0}
+.qd-prev:empty{display:none}
+.qd-prev.ok{color:var(--turq);font-weight:600}
+.qd-prev.erro{color:var(--amber)}
+.qd-conf:empty{display:none}
+.qd-conf{display:flex;flex-direction:column;gap:2px;padding:8px 10px;border-radius:8px;background:rgba(229,72,77,.1);border:1px solid rgba(229,72,77,.4);font-size:13px;color:#F2B8BA}
+.qd-conf b{color:#FF9A9C;font-weight:700}
+.agk-card.choque{box-shadow:inset 0 0 0 1px rgba(229,72,77,.7)}
+.agk-choque{font-size:12px;font-weight:700;color:#FF9A9C;line-height:1.35}

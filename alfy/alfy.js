@@ -1,4 +1,4 @@
-// ALFY · Mapa de Rotas · Ilha Tech · v2.28.1 · 05/11/2026 · Painel de Ferro · filtros da Passagem à mostra no painel
+// ALFY · Mapa de Rotas · Ilha Tech · v2.29.0 · 05/11/2026 · Painel de Ferro · agendar escrevendo + aviso de horário que bate
 // Tudo passa pelas funções alfy_* do banco, sempre com a chave pessoal de quem está usando.
 // O banco decide o que cada pessoa vê; a tela só desenha o que voltou.
 // A IA e os comandos são pedidos numa fila (alfy.pedido) que o robô do Mac atende.
@@ -563,7 +563,7 @@ function rrItem(r, foco) {
     ${foco && s.rr.modo === "mudou" && rrMudou(r) ? `<p class="rr-mudou">🔔 ${esc(rrMudou(r).txt)}</p>` : ""}
     ${foco ? rrFicha(r) : rrSituacao(r) + rrNovidade(r)}
     ${foco ? caixaLinha(r, true) : ""}
-    ${s.rrAg === r.rt ? `<div class="rr-agenda"><label>Dia<input type="date" id="ag-dia" value="${r.inicio ? dia(r.inicio) : hojeDia()}"></label><label>Das<input type="time" id="ag-ini" value="${r.inicio ? hhmm(r.inicio) : "09:00"}"></label><label>Até<input type="time" id="ag-fim" value="${r.fim ? hhmm(r.fim) : ""}"></label>
+    ${s.rrAg === r.rt ? `<div class="rr-agenda">${quandoCaixa(["ag-dia", "ag-ini", "ag-fim"], r.responsavel_id, r.rt)}<label>Dia<input type="date" id="ag-dia" value="${r.inicio ? dia(r.inicio) : hojeDia()}"></label><label>Das<input type="time" id="ag-ini" value="${r.inicio ? hhmm(r.inicio) : "09:00"}"></label><label>Até<input type="time" id="ag-fim" value="${r.fim ? hhmm(r.fim) : ""}"></label>
       <span class="rr-acoes"><button class="btn turq peq" type="button" data-agpor="${r.rt}">📅 Pôr na agenda</button><button class="btn peq" type="button" data-agprazo="${r.rt}">Só mudar o prazo</button></span></div>` : ""}
     ${foco ? `<div class="acoes4"><div class="grupo4">
         <button class="ac" type="submit" form="${fid}" data-clmodo="comentar">💬<span>Comentar</span></button>${comando() ? `<button class="ac ia" type="submit" form="${fid}" data-clmodo="alfy">🐙<span>Pedir ao ALFY</span></button>` : ""}${comando() && r.rt.startsWith("RT-") ? `<button class="ac" type="button" data-rastrear="${r.rt}">📡<span>Rastrear</span></button>` : ""}
@@ -1221,7 +1221,7 @@ function folha() {
             ${s.lemOutro ? `<div class="rapidas3"><input type="date" id="lem-dia" value="${s.lemData || ""}" aria-label="Dia"><input type="time" id="lem-hora" value="${s.lemHoraTxt || ""}" aria-label="Hora"></div>` : ""}
             <p class="nota5">Até a hora escolhida, a rota sai da sua lista.</p>`}
         <div class="comp5">${comp && !s.compEditando ? `<span>📅 Compromisso: <b>${new Date(r.inicio).toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "2-digit", timeZone: FUSO })} · ${hhmm(r.inicio)}${r.fim ? "–" + hhmm(r.fim) : ""}</b>${r.onde ? " · " + esc(r.onde) : ""}</span><button class="lk" type="button" data-acao="comp-editar">Mudar</button><button class="lk" type="button" data-acao="comp-tirar">Tirar da agenda</button>`
-          : s.compEditando ? `<div class="rapidas3"><input type="date" id="cp-dia" value="${comp ? dia(r.inicio) : hojeDia()}"><input type="time" id="cp-ini" value="${comp ? hhmm(r.inicio) : "09:00"}"><input type="time" id="cp-fim" value="${r.fim ? hhmm(r.fim) : ""}" aria-label="Até"><input id="cp-onde" value="${esc(r.onde || "")}" placeholder="Onde" class="nota4"><button class="btn turq peq" type="button" data-acao="comp-salvar">Pôr na agenda</button><button class="lk" type="button" data-acao="comp-cancelar">Cancelar</button></div>`
+          : s.compEditando ? `${quandoCaixa(["cp-dia", "cp-ini", "cp-fim"], r.responsavel_id, r.rt)}<div class="rapidas3"><input type="date" id="cp-dia" value="${comp ? dia(r.inicio) : hojeDia()}"><input type="time" id="cp-ini" value="${comp ? hhmm(r.inicio) : "09:00"}"><input type="time" id="cp-fim" value="${r.fim ? hhmm(r.fim) : ""}" aria-label="Até"><input id="cp-onde" value="${esc(r.onde || "")}" placeholder="Onde" class="nota4"><button class="btn turq peq" type="button" data-acao="comp-salvar">Pôr na agenda</button><button class="lk" type="button" data-acao="comp-cancelar">Cancelar</button></div>`
           : `<button class="lk" type="button" data-acao="comp-editar">📅 Virar compromisso na agenda</button><span class="nota5">tem dia e hora e entra na Agenda</span>`}</div></section>
       <section class="secao3 ultima" id="f-historico"><h3>Histórico</h3><ul class="hist4">${histV.map(histHTML).join("") || "<li>Sem registro.</li>"}</ul>${hist.length > histV.length ? `<button class="lk" type="button" data-acao="hist-tudo">Ver todo o histórico (${hist.length})</button>` : ""}</section>
     </div></div>
@@ -1304,7 +1304,7 @@ function novaRota(pre = {}) {
         <div class="elo"><small>🤝 Co-responsável</small><select id="n-co">${opc(gente(), "", "Ninguém")}</select></div></div>
       <div class="props"><div class="dado"><small>Prioridade</small><select id="n-prio">${opc(PRIORIDADES, pre.prioridade || "⏳ P3 · 7 dias")}</select></div><div class="dado"><small>Prazo</small><input id="n-prazo" type="date" value="${esc(pre.prazo || "")}"></div><div class="dado"><small>Vai para</small><select id="n-st">${opc([["rota", "Rotas"], ["ideia", "Ideias"]], st)}</select></div></div>${comando() ? '<label class="chip" style="cursor:pointer;align-self:flex-start"><input type="checkbox" id="n-sens" style="margin-right:6px">🔒 Só eu vejo (processo, saúde, sócio, assunto sobre gerente)</label>' : ""}` : '<p class="nota" style="margin:0">Entra como ideia. Quem coordena a frente transforma em rota.</p>'}
       <label class="chip" style="cursor:pointer;align-self:flex-start"><input type="checkbox" id="n-comp" ${pre.compromisso ? "checked" : ""} style="margin-right:6px">📅 É compromisso com dia e hora (vai para a agenda, não entra no Mapa de Rotas)</label>
-      <div id="n-quando" ${pre.compromisso ? "" : "hidden"} class="form-linha"><label><p class="rotulo">Dia</p><input id="n-dia" type="date" class="busca" style="width:100%" value="${esc(pre.dia || hojeDia())}"></label><label><p class="rotulo">Das · às</p><span style="display:flex;gap:6px"><input id="n-hi" type="time" class="busca" style="flex:1" value="09:00"><input id="n-hf" type="time" class="busca" style="flex:1" value="10:00"></span></label><label style="grid-column:1/-1"><p class="rotulo">Onde</p><input id="n-onde" class="busca" style="width:100%" placeholder="Local ou link"></label></div>
+      <div id="n-quando" ${pre.compromisso ? "" : "hidden"} class="form-linha">${quandoCaixa(["n-dia", "n-hi", "n-hf"])}<label><p class="rotulo">Dia</p><input id="n-dia" type="date" class="busca" style="width:100%" value="${esc(pre.dia || hojeDia())}"></label><label><p class="rotulo">Das · às</p><span style="display:flex;gap:6px"><input id="n-hi" type="time" class="busca" style="flex:1" value="09:00"><input id="n-hf" type="time" class="busca" style="flex:1" value="10:00"></span></label><label style="grid-column:1/-1"><p class="rotulo">Onde</p><input id="n-onde" class="busca" style="width:100%" placeholder="Local ou link"></label></div>
       <p class="nota" style="margin:0">Depois de salvar, a rota abre para você completar Instruções, Resultado esperado e Budget.</p>
       <div><button class="cta" type="submit">Salvar</button></div></form></section></div>`;
   setTimeout(() => $("#n-tit")?.focus(), 50);
@@ -1345,7 +1345,7 @@ function formReuniao(re) {
     <div class="cab"><span class="tag ideia"><small>REUNIÃO</small><b>🗓️</b></span><h2>${re ? "Editar reunião" : "Nova reunião"}</h2><button class="fechar" type="button" data-acao="fechar" aria-label="Fechar">${IC.x}</button></div>
     <form class="corpo" id="f-reuniao">
       <label><p class="rotulo">Título</p><input id="r-tit" class="busca" style="width:100%" value="${esc(re?.titulo || "")}" placeholder="Ex.: Reunião geral da VDB" required></label>
-      <div class="form-linha"><label><p class="rotulo">Dia</p><input id="r-dia" type="date" class="busca" style="width:100%" value="${d0}"></label><label><p class="rotulo">Hora</p><input id="r-hora" type="time" class="busca" style="width:100%" value="${h0}"></label></div>
+      ${quandoCaixa(["r-dia", "r-hora"])}<div class="form-linha"><label><p class="rotulo">Dia</p><input id="r-dia" type="date" class="busca" style="width:100%" value="${d0}"></label><label><p class="rotulo">Hora</p><input id="r-hora" type="time" class="busca" style="width:100%" value="${h0}"></label></div>
       <label><p class="rotulo">Onde</p><input id="r-onde" class="busca" style="width:100%" value="${esc(re?.onde || "")}" placeholder="House, VDB, online…"></label>
       <div><p class="rotulo">Quem participa (só quem participa vê a reunião)</p><div class="gente-sel">${(M.pessoas || []).filter((p) => p.nome !== "ALFY").map((p) => `<label class="chip" style="cursor:pointer"><input type="checkbox" value="${p.id}" ${g.has(p.id) ? "checked" : ""} style="margin-right:6px">${esc(p.nome)}</label>`).join("")}</div></div>
       <div><button class="cta" type="submit">Salvar</button></div></form></section></div>`;
@@ -1428,13 +1428,97 @@ function itensAgenda() {
   for (const re of d.reunioes || []) por0(re.quando, { chave: "re:" + re.id, k: "reuniao", quando: re.quando, ini: hhmm(re.quando), fim: "", titulo: re.titulo, id: re.id, onde: re.onde, gente: re.gente || [], rotas: re.liga_rotas || [], pautas: re.liga_pautas || [] });
   for (const g of d.google || []) por0(g.inicio, { chave: "g:" + g.id, k: "google", quando: g.inicio, ini: g.dia_todo ? "" : hhmm(g.inicio), fim: g.fim && !g.dia_todo ? hhmm(g.fim) : "", diaTodo: g.dia_todo, titulo: g.titulo, link: g.link, onde: g.onde, g, rotas: [], pautas: [] });
   for (const k in por) por[k].sort((a, b) => (a.ini || "99:99").localeCompare(b.ini || "99:99"));
+  for (const k in por) {   // ⚠️ choque: dois com horário que se sobrepõem no mesmo dia
+    const l = por[k].filter((it) => it.ini && !it.diaTodo && it.st !== "concluida"), fimDe = (y) => (y.fim ? agMin(y.fim) : agMin(y.ini) + 60);
+    l.forEach((x) => { x.choca = l.filter((y) => y !== x && agMin(y.ini) < fimDe(x) && fimDe(y) > agMin(x.ini)).map((y) => `${y.ini} ${y.titulo}`); });
+  }
   return por;
 }
 function itemAgendaHTML(it) {   // mês: linha curta
   const attr = it.k === "rota" || it.k === "rotina" ? `data-rt="${it.rt}"` : `data-agabrir="${esc(it.chave)}"`;
-  return `<button type="button" class="ag-it ${it.k} ${it.virtual ? "virtual" : ""} ${it.st === "concluida" ? "feito" : ""}" ${attr}><span class="h">${it.ini || (it.diaTodo ? "dia todo" : "sem hora")}</span><span class="t">${AG_TIPO[it.k][0]} ${esc(it.titulo)}</span></button>`;
+  return `<button type="button" class="ag-it ${it.k} ${it.virtual ? "virtual" : ""} ${it.st === "concluida" ? "feito" : ""}" ${attr}><span class="h">${it.ini || (it.diaTodo ? "dia todo" : "sem hora")}</span><span class="t">${(it.choca || []).length ? "⚠️ " : ""}${AG_TIPO[it.k][0]} ${esc(it.titulo)}</span></button>`;
 }
 const agMin = (h) => { const [a, b] = (h || "0:0").split(":").map(Number); return a * 60 + b; };
+// ---------------------------------------------------------------- 🗣️ agendar escrevendo: "sexta 15h por 30 min", "amanhã das 14 às 16", "12/11 9h30"
+const DIAS_TXT = [["domingo", "dom"], ["segunda", "seg"], ["terca", "ter"], ["quarta", "qua"], ["quinta", "qui"], ["sexta", "sex"], ["sabado", "sab"]];
+function lerQuando(txt) {
+  let s0 = " " + String(txt || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/-feira/g, "") + " ";
+  if (!s0.trim()) return null;
+  const hoje = new Date(hojeDia() + "T12:00:00-03:00"), r = {};
+  const iso = (d) => d.toLocaleDateString("en-CA", { timeZone: FUSO });
+  const mais = (n) => { const d = new Date(hoje); d.setDate(d.getDate() + n); return d; };
+  // dia
+  let m;
+  if (/\bdepois de amanha\b/.test(s0)) { r.dia = iso(mais(2)); s0 = s0.replace(/depois de amanha/, " "); }
+  else if (/\bamanha\b/.test(s0)) { r.dia = iso(mais(1)); s0 = s0.replace(/amanha/, " "); }
+  else if (/\bhoje\b/.test(s0)) { r.dia = iso(hoje); s0 = s0.replace(/hoje/, " "); }
+  if (!r.dia && (m = s0.match(/\b(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?\b/))) {
+    let a = m[3] ? +m[3] : hoje.getFullYear(); if (a < 100) a += 2000;
+    const d = new Date(`${a}-${String(m[2]).padStart(2, "0")}-${String(m[1]).padStart(2, "0")}T12:00:00-03:00`);
+    if (!m[3] && d < hoje) d.setFullYear(d.getFullYear() + 1);
+    if (!isNaN(d)) r.dia = iso(d); s0 = s0.replace(m[0], " ");
+  }
+  if (!r.dia) DIAS_TXT.forEach(([longo, curto], i) => { if (r.dia) return; const re = new RegExp(`\\b(${longo}|${curto})\\b`); if (re.test(s0)) {
+    let n = (i - hoje.getDay() + 7) % 7; if (/\b(que vem|proxima|proximo)\b/.test(s0) && n === 0) n = 7;
+    r.dia = iso(mais(n)); s0 = s0.replace(re, " "); } });
+  if (!r.dia && (m = s0.match(/\bdia (\d{1,2})\b/))) { const d = new Date(hoje); d.setDate(+m[1]); if (d < hoje) d.setMonth(d.getMonth() + 1); r.dia = iso(d); s0 = s0.replace(m[0], " "); }
+  // duração
+  if ((m = s0.match(/\b(?:por|durante|de duracao)?\s*(\d+(?:[.,]\d)?)\s*(h|hora|horas)\s*(?:e\s*)?(\d{1,2})?\s*(?:min)?\s*(?:de duracao)?\b(?=[^\d]*$)/)) && /\b(por|durante|duracao)\b/.test(m[0])) { r.dur = Math.round(parseFloat(m[1].replace(",", ".")) * 60) + (+m[3] || 0); s0 = s0.replace(m[0], " "); }
+  if ((m = s0.match(/\b(?:por|durante)?\s*(\d{1,3})\s*(min|minutos|mins)\b/))) { r.dur = +m[1]; s0 = s0.replace(m[0], " "); }
+  // hora: "das 14 as 16", "14h-16h", "15h30", "15:30", "as 9", "9 da manha", "meio dia"
+  const tarde = (h, txt2) => (/(da tarde|da noite)/.test(txt2) && h < 12 ? h + 12 : h);
+  const hm = (h, mi) => `${String(h).padStart(2, "0")}:${String(mi || 0).padStart(2, "0")}`;
+  s0 = s0.replace(/\bmeio[ -]?dia\b/, " 12h ");
+  const HORA = String.raw`(\d{1,2})(?:\s*(?:h|:|hs|horas)\s*(\d{2})?|\s*(?:h|hs|horas)\b)`;
+  if ((m = s0.match(new RegExp(String.raw`(?:das|de|entre)?\s*` + HORA + String.raw`\s*(?:as|a|ate|-|e)\s*` + HORA)))
+    || (m = s0.match(/\b(?:das|entre)\s*(\d{1,2})(?:\s*(?:h|:)\s*(\d{2})?)?\s*(?:as|a|ate|e)\s*(\d{1,2})(?:\s*(?:h|:)\s*(\d{2})?)?\b/))) {
+    r.ini = hm(tarde(+m[1], s0), m[2]); r.fim = hm(tarde(+m[3], s0), m[4]);
+  } else if ((m = s0.match(new RegExp(HORA))) || (m = s0.match(/\b(?:as|a partir das)\s*(\d{1,2})\b/))) {
+    r.ini = hm(tarde(+m[1], s0), m[2]);
+    const at = s0.match(new RegExp(String.raw`\bate\s*` + HORA)) || s0.match(/\bate (?:as )?(\d{1,2})\b/); if (at) r.fim = hm(tarde(+at[1], s0), at[2]);
+  } else if (/\bde manha\b/.test(s0)) r.ini = "09:00"; else if (/\b(a|de) tarde\b/.test(s0)) r.ini = "14:00"; else if (/\b(a|de) noite\b/.test(s0)) r.ini = "19:00";
+  if (r.ini && !r.fim && r.dur) r.fim = hm(Math.floor((agMin(r.ini) + r.dur) / 60) % 24, (agMin(r.ini) + r.dur) % 60);
+  if (r.ini && r.fim && !r.dur) r.dur = agMin(r.fim) - agMin(r.ini);
+  return r.dia || r.ini ? r : null;
+}
+// o que já está na agenda de quem faz e bate com esse horário (compromissos, rotas com horário, reuniões, Google)
+function choques(diaIso, ini, fim, pessoa, menosRt) {
+  if (!diaIso || !ini) return [];
+  const a = agMin(ini), b = fim ? agMin(fim) : a + 60, out = [], quem = pessoa || eu().id;
+  const bate = (di, i0, f0) => di === diaIso && i0 && agMin(i0) < b && (f0 ? agMin(f0) : agMin(i0) + 60) > a;
+  (M?.rotas || []).forEach((r) => { if (!r.inicio || r.rt === menosRt || r.status === "concluida" || (r.responsavel_id !== quem && r.co_responsavel_id !== quem)) return;
+    if (bate(dia(r.inicio), hhmm(r.inicio), r.fim ? hhmm(r.fim) : "")) out.push(`${hhmm(r.inicio)}${r.fim ? "–" + hhmm(r.fim) : ""} · ${r.titulo}`); });
+  (M?.reunioes || []).forEach((re) => { if (re.status === "encerrada" || !re.quando || !(re.gente || []).includes(quem)) return;
+    if (bate(dia(re.quando), hhmm(re.quando), "")) out.push(`${hhmm(re.quando)} · 🗓️ ${re.titulo}`); });
+  if (quem === eu().id) (s.agDados?.google || []).forEach((g) => { if (g.dia_todo || !g.inicio) return; if (bate(dia(g.inicio), hhmm(g.inicio), g.fim ? hhmm(g.fim) : "")) out.push(`${hhmm(g.inicio)} · 📆 ${g.titulo}`); });
+  return out;
+}
+// caixa "escreva quando" que preenche os campos de dia e hora; ids = [dia, ini, fim] (fim pode faltar); avisa choque de horário
+const quandoCaixa = (ids, pessoa, menosRt) => `<div class="qd" data-qd="${ids.join(",")}" data-qdp="${pessoa || ""}" data-qdrt="${menosRt || ""}">
+  <input class="qd-txt" type="text" placeholder="Escreva: sexta 15h por 30 min · amanhã das 14 às 16 · 12/11 9h30" autocomplete="off" aria-label="Quando, escrito">
+  <small class="qd-prev"></small><div class="qd-conf"></div></div>`;
+function quandoConferir(box) {
+  const [idD, idI, idF] = box.dataset.qd.split(","), dd = $("#" + idD)?.value, hi = $("#" + idI)?.value, hf = idF ? $("#" + idF)?.value : "";
+  const fim = hf || (box.dataset.qd.includes("agk-") && hi ? (() => { const x = agMin(hi) + (s.agDur || 60); return `${String(Math.floor(x / 60)).padStart(2, "0")}:${String(x % 60).padStart(2, "0")}`; })() : "");
+  const l = choques(dd, hi, fim, box.dataset.qdp || $("#n-resp")?.value || "", box.dataset.qdrt);
+  box.querySelector(".qd-conf").innerHTML = l.length ? `<b>⚠️ Bate com ${l.length > 1 ? l.length + " compromissos" : "outro compromisso"}:</b>${l.map((x) => `<span>${esc(x)}</span>`).join("")}` : "";
+}
+function quandoLer(inp) {
+  const box = inp.closest(".qd"), r = lerQuando(inp.value), [idD, idI, idF] = box.dataset.qd.split(","), prev = box.querySelector(".qd-prev");
+  if (!inp.value.trim()) { prev.textContent = ""; quandoConferir(box); return; }
+  if (!r) { prev.textContent = "Não entendi o dia ou a hora. Ex.: sexta 15h"; prev.className = "qd-prev erro"; return; }
+  if (r.dia && $("#" + idD)) $("#" + idD).value = r.dia;
+  if (r.ini && $("#" + idI)) $("#" + idI).value = r.ini;
+  if (idF && $("#" + idF)) $("#" + idF).value = r.fim || "";
+  if (!idF && r.dur && idD.startsWith("agk")) { s.agDur = r.dur; document.querySelectorAll("[data-agdur]").forEach((y) => y.setAttribute("aria-pressed", +y.dataset.agdur === r.dur)); }
+  const d = r.dia || $("#" + idD)?.value, dt = d ? new Date(d + "T12:00:00-03:00") : null;
+  prev.className = "qd-prev ok";
+  prev.textContent = `📅 ${dt ? DIAS_SEM[(dt.getDay() + 6) % 7] + " " + ddmm(d + "T12:00:00-03:00") : ""}${r.ini ? " · " + r.ini : ""}${r.fim ? "–" + r.fim : ""}${r.dur && !r.fim ? " · " + r.dur + " min" : ""}`;
+  quandoConferir(box);
+}
+document.addEventListener("input", (e) => { if (e.target.classList?.contains("qd-txt")) quandoLer(e.target); });
+new MutationObserver(() => document.querySelectorAll(".qd:not([data-ok])").forEach((x) => { x.dataset.ok = "1"; quandoConferir(x); })).observe(document.body, { childList: true, subtree: true });
+document.addEventListener("change", (e) => { const id = e.target.id || ""; if (/^(ag|cp|n|r|agk)-(dia|ini|fim|hi|hf|hora)$/.test(id)) document.querySelectorAll(".qd").forEach(quandoConferir); });
 function agCartao(it, hoje, agora) {
   const [ic, nome] = AG_TIPO[it.k];
   const abre = it.k === "rota" || it.k === "rotina" ? `data-rt="${it.rt}"` : `data-agabrir="${esc(it.chave)}"`;
@@ -1445,9 +1529,9 @@ function agCartao(it, hoje, agora) {
   const passou = it.st === "concluida" || d0 < hoje || (d0 === hoje && fimMin <= agora), agoraJa = d0 === hoje && agMin(it.ini) <= agora && agora < fimMin;
   const meta = [it.onde && "📍 " + it.onde, (it.gente || []).length > 1 && "👥 " + it.gente.length].filter(Boolean).join("  ·  ");
   const chips = (it.rotas.length ? `<span>📍 ${it.rotas.length} ${it.rotas.length > 1 ? "rotas" : "rota"}</span>` : "") + (it.pautas.length ? `<span>💬 ${it.pautas.length} ${it.pautas.length > 1 ? "pautas" : "pauta"}</span>` : "");
-  return `<div role="button" tabindex="0" class="agk-card k-${it.k} ${passou ? "passou" : ""} ${agoraJa ? "agora" : ""} ${it.virtual ? "virtual" : ""}" ${abre} ${arrasta}>
+  return `<div role="button" tabindex="0" class="agk-card k-${it.k} ${passou ? "passou" : ""} ${agoraJa ? "agora" : ""} ${it.virtual ? "virtual" : ""} ${(it.choca || []).length ? "choque" : ""}" ${abre} ${arrasta}>
     <span class="agk-l1"><span class="agk-hora">${it.ini || "Dia todo"}${it.fim ? `<span class="agk-fim"> – ${it.fim}</span>` : ""}</span><span class="agk-ic" title="${nome}">${ic}</span></span>
-    <span class="agk-tt">${esc(it.titulo)}</span>${meta ? `<span class="agk-mt">${esc(meta)}</span>` : ""}${chips ? `<span class="agk-chips">${chips}</span>` : ""}</div>`;
+    <span class="agk-tt">${esc(it.titulo)}</span>${(it.choca || []).length ? `<span class="agk-choque" title="${esc(it.choca.join(" · "))}">⚠️ Bate com ${esc(it.choca[0])}${it.choca.length > 1 ? ` e mais ${it.choca.length - 1}` : ""}</span>` : ""}${meta ? `<span class="agk-mt">${esc(meta)}</span>` : ""}${chips ? `<span class="agk-chips">${chips}</span>` : ""}</div>`;
 }
 // detalhe do compromisso, da reunião ou do evento do Google, por cima da agenda
 function agFolha(chave) {
@@ -1486,7 +1570,7 @@ function agDarHorario(rt) {
     <div class="cab"><div class="agk-cabtxt"><span class="agk-tipo k-rota">📅 ${r.inicio ? "Mudar horário" : "Dar horário"}</span><h2>${esc(r.titulo)}</h2><div class="agk-dado">${esc(nomeRota(r.rt))}${r.prazo ? " · prazo " + ddmm(r.prazo) : ""}</div></div>
       <button class="fechar" type="button" data-acao="fechar" aria-label="Fechar">${IC.x}</button></div>
     <form class="corpo" id="agk-f-hora">
-      <div class="form-linha"><label><p class="rotulo">Dia</p><input id="agk-dia" type="date" class="busca" style="width:100%" value="${d0}" required></label><label><p class="rotulo">Começa</p><input id="agk-ini" type="time" step="900" class="busca" style="width:100%" value="${r.inicio ? hhmm(r.inicio) : "09:00"}" required></label></div>
+      ${quandoCaixa(["agk-dia", "agk-ini"], r.responsavel_id, r.rt)}<div class="form-linha"><label><p class="rotulo">Dia</p><input id="agk-dia" type="date" class="busca" style="width:100%" value="${d0}" required></label><label><p class="rotulo">Começa</p><input id="agk-ini" type="time" step="900" class="busca" style="width:100%" value="${r.inicio ? hhmm(r.inicio) : "09:00"}" required></label></div>
       <div><p class="rotulo">Quanto tempo</p><div class="agk-durs">${[15, 30, 60, 90, 120].map((m) => `<button type="button" data-agdur="${m}" aria-pressed="${s.agDur === m}">${m < 60 ? m + " min" : Math.floor(m / 60) + "h" + (m % 60 ? "30" : "")}</button>`).join("")}</div></div>
       <p class="nota" style="margin:0">A rota continua na lista de Rotas com o mesmo prazo. Ela só ganha o horário e entra na coluna do dia, na ordem da hora.</p>
       <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="cta" type="submit">Salvar horário</button>${r.inicio && r.tipo !== "📅 Compromisso" ? `<button class="btn" type="button" data-agsemhora="${r.rt}">Tirar o horário</button>` : ""}</div>
@@ -1871,7 +1955,7 @@ document.addEventListener("click", async (e) => {
     // agenda em kanban
     if (d.agabrir) { itensAgenda(); agFolha(d.agabrir); return; }
     if (d.agdar) { agDarHorario(d.agdar); return; }
-    if (d.agdur) { s.agDur = +d.agdur; document.querySelectorAll("[data-agdur]").forEach((y) => y.setAttribute("aria-pressed", y === b)); return; }
+    if (d.agdur) { s.agDur = +d.agdur; document.querySelectorAll("[data-agdur]").forEach((y) => y.setAttribute("aria-pressed", y === b)); document.querySelectorAll(".qd").forEach(quandoConferir); return; }
     if (d.agsemhora) { await chamar("alfy_editar", { p_rt: d.agsemhora, p_campos: { inicio: "", fim: "" } }); fechar(); aviso(`${nomeRota(d.agsemhora)} voltou para Sem horário`); await carregarAgenda(); await recarregar(); render(); return; }
     if (d.agligarota) {
       const v = ($("#agk-rota")?.value || "").trim(), n = (v.match(/(\d+)/) || [])[1];
