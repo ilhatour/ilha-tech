@@ -814,3 +814,25 @@ p.oque3{margin:0;font-family:var(--fd);font-weight:700;font-size:19px;line-heigh
 .z4res{font-size:15px;color:var(--aco-2)}
 .z4ult{font-size:14px;color:var(--aco-2);background:var(--ferro-1);border-radius:9px;padding:7px 10px;white-space:pre-wrap}
 .z4ult small{display:block;font-size:11px;color:var(--aco);letter-spacing:.06em;margin-bottom:2px}
+/* 2.14 · 📱 WhatsApp nos Comandos */
+.z5top{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.z5top .espaco{flex:1}
+.z5bloco{display:flex;flex-direction:column;gap:8px;margin-top:14px}
+.z5bloco h4,.z5bloco summary h4{margin:0;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--aco);font-weight:700;display:inline}
+details.z5bloco > summary{cursor:pointer;list-style:none}
+details.z5bloco > summary::after{content:" ▾";color:var(--aco)}
+details.z5bloco[open] > summary::after{content:" ▴"}
+.z5sub{margin:4px 0 0;font-weight:700;font-size:14px}
+.z5imp{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px;font-size:15px;line-height:1.45}
+.z5imp li::marker{color:var(--turq)}
+.z5esp{background:#211D16;border:1px solid #5A4527;border-radius:11px;padding:9px 12px;display:flex;flex-direction:column;gap:4px}
+.z5esp.alta{border-color:var(--coral);box-shadow:inset 3px 0 0 var(--coral)}
+.z5esp.visto{opacity:.55}
+.z5esp p{margin:0;font-weight:700;color:#F3DDB8}
+.z5esp small{color:var(--aco-2);font-size:13px}
+.z5t{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.z5t span{font-size:12px;color:var(--amber)}
+.z5b{display:flex;gap:6px;flex-wrap:wrap;margin-top:2px}
+.z5conv{display:grid;grid-template-columns:1fr auto;gap:2px 8px;padding:8px 0;border-bottom:1px solid var(--linha)}
+.z5conv span{font-size:12px;color:var(--aco)}
+.z5conv p{grid-column:1/-1;margin:0;font-size:14px;color:var(--aco-2)}
