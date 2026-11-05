@@ -836,3 +836,20 @@ details.z5bloco[open] > summary::after{content:" ▴"}
 .z5conv{display:grid;grid-template-columns:1fr auto;gap:2px 8px;padding:8px 0;border-bottom:1px solid var(--linha)}
 .z5conv span{font-size:12px;color:var(--aco)}
 .z5conv p{grid-column:1/-1;margin:0;font-size:14px;color:var(--aco-2)}
+/* 2.15 · Passagem rápida: cartão da vez fixo no topo, botões presos embaixo, fila compacta */
+.rr-deck{scroll-margin-top:calc(var(--nav-h,0px) + 120px)}
+.rr-deck .rr-item.foco .acoes4{position:sticky;bottom:0;z-index:3;background:var(--ferro-2);margin:0 -14px -12px;padding:10px 14px 12px;border-top:1px solid var(--linha);border-radius:0 0 var(--raio) var(--raio);box-shadow:0 -8px 16px rgba(0,0,0,.25)}
+@media (max-width:900px){.rr-deck .rr-item.foco .acoes4{bottom:calc(64px + env(safe-area-inset-bottom,0px));margin:0 -10px -12px;padding:8px 10px 10px}}
+.rr-dica{margin:8px 2px 0;font-size:12px;color:var(--aco)}
+.rr-dica kbd{font-family:var(--fb);font-size:11px;background:var(--ferro-2);border:1px solid var(--ferro-4);border-bottom-width:2px;border-radius:5px;padding:1px 5px;color:var(--aco-2)}
+@media (max-width:900px){.rr-dica{display:none}}
+.rr-fila-t{margin:22px 0 4px;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--aco);font-weight:700}
+.rr-mini4{display:flex;gap:10px;align-items:center;background:var(--ferro-2);border:1px solid var(--linha);border-radius:10px;padding:8px 10px;cursor:pointer;min-width:0}
+.rr-mini4:hover{border-color:var(--ferro-4)}
+.rr-mini4 .tag{width:44px;height:36px;flex:none}
+.rr-mini4 .tt{min-width:0;display:flex;flex-direction:column;gap:2px}
+.rr-mini4 .tt b{font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rr-mini4 .tt small{font-size:12px;color:var(--aco);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rr-grupo .lista{gap:6px}
+.rr-grupo > h2{display:flex;align-items:center;gap:8px;margin:14px 0 6px;font-size:13px;font-family:var(--fb);font-weight:700;color:var(--aco-2)}
+.rr-grupo > h2 .ct{font-size:11px;background:var(--ferro-3);border-radius:999px;padding:1px 7px;color:var(--aco)}

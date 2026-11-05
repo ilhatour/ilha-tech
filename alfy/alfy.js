@@ -1,4 +1,4 @@
-// ALFY · Mapa de Rotas · Ilha Tech · v2.14.0 · 04/11/2026 · Painel de Ferro · 📱 WhatsApp nos Comandos, com O que importa
+// ALFY · Mapa de Rotas · Ilha Tech · v2.15.0 · 04/11/2026 · Painel de Ferro · Passagem rápida (cartão fixo, atalhos)
 // Tudo passa pelas funções alfy_* do banco, sempre com a chave pessoal de quem está usando.
 // O banco decide o que cada pessoa vê; a tela só desenha o que voltou.
 // A IA e os comandos são pedidos numa fila (alfy.pedido) que o robô do Mac atende.
@@ -376,9 +376,14 @@ async function enviarRascunho(rt) {
   s.rascunhoLinha = { ...(s.rascunhoLinha || {}), [rt]: "" }; if (ta) ta.value = "";
   return true;
 }
+function rrNoLugar() {
+  const d = $("#rr-deck"); if (!d) return;
+  d.scrollIntoView({ block: "start" });
+  const ta = d.querySelector("textarea"); if (ta && matchMedia("(min-width:901px)").matches) ta.focus({ preventScroll: true });
+}
 function rrTirar(rt, onde) {
   s.rr[onde] = { ...s.rr[onde], [rt]: true }; s.rr.foco = null; rrSalvar(); render();
-  setTimeout(() => $(".rr-item.foco")?.scrollIntoView({ block: "start", behavior: "smooth" }), 40);
+  setTimeout(rrNoLugar, 20);
 }
 function rrNovidade(r) {
   const i = s.rr.itens[r.rt];
@@ -440,7 +445,12 @@ function vistaRotaARota() {
     <p class="rr-conta"><b>${fila.length}</b> na fila · ✓ ${nFeitas} vistas · ⏭ ${nDepois} para depois${nDepois ? ` <button class="mini" type="button" data-acao="rr-voltar">Trazer de volta</button>` : ""}${nFeitas ? ` <button class="mini" type="button" data-acao="rr-zerar">Recomeçar a passada</button>` : ""}</p></section>`;
   if (!fila.length) return painel + `<div class="vazio rr-fim">🏁 Passada completa. ${nFeitas} vistas${nDepois ? `, ${nDepois} ficaram para depois` : ""}.</div>`;
   if (r.formato === "kanban") return painel + `<div class="kanban rr-kanban" style="grid-template-columns:repeat(${gs.length},minmax(230px,1fr))">${gs.map(([n, l]) => `<section class="coluna"><header><b>${esc(n)}</b><span>${l.length}</span></header><div class="cartoes">${l.map(rrCartao).join("")}</div></section>`).join("")}</div>`;
-  return painel + gs.map(([n, l]) => `<section class="grupo-frente rr-grupo"><h2>${esc(n)}<span class="ct">${l.length}</span></h2><div class="lista">${l.map((x) => rrItem(x, x.rt === foco)).join("")}</div></section>`).join("");
+  const fx = fila.find((x) => x.rt === foco);
+  const mini = (x) => `<div class="rr-mini4" role="button" tabindex="0" data-rrfoco="${x.rt}">${tag(x)}<span class="tt"><b>${esc(x.titulo)}</b><small>${esc(ST[x.status].um)} · ${esc(prazoInfo(x).txt)} · ${esc(curto(nomeDe(x.responsavel_id)))}${rrTem(x.rt) ? " · 📡 novidade" : ""}${x.como_esta ? " · " + esc(x.como_esta.slice(0, 110)) : ""}</small></span></div>`;
+  const resto = gs.map(([n, l]) => { const ll = l.filter((x) => x.rt !== foco); return ll.length ? `<section class="rr-grupo"><h2>${esc(n)}<span class="ct">${ll.length}</span></h2><div class="lista">${ll.map(mini).join("")}</div></section>` : ""; }).join("");
+  return painel + (fx ? `<div class="rr-deck" id="rr-deck">${rrItem(fx, true)}</div>` : "")
+    + `<p class="rr-dica">Atalhos: <kbd>⌘ Enter</kbd> comenta e passa · <kbd>⌘ Shift Enter</kbd> pede ao ALFY e passa · <kbd>→</kbd> próxima · <kbd>D</kbd> depois · <kbd>C</kbd> concluir</p>`
+    + (resto ? `<h3 class="rr-fila-t">Na fila · ${fila.length - (fx ? 1 : 0)}</h3>${resto}` : "");
 }
 
 
@@ -1444,7 +1454,7 @@ document.addEventListener("click", async (e) => {
     if (d.vista) { s.vista = d.vista; if (d.vista === "rar") await rrCarregar(); render(); return; }
     if (d.rrordem) { s.rr.ordem = d.rrordem; s.rr.foco = null; rrSalvar(); render(); return; }
     if (d.rrformato) { s.rr.formato = d.rrformato; rrSalvar(); render(); return; }
-    if (d.rrfoco) { s.rr.foco = d.rrfoco; render(); setTimeout(() => $("#cl-" + d.rrfoco.replace(/\W/g, ""))?.focus({ preventScroll: true }), 30); return; }
+    if (d.rrfoco) { s.rr.foco = d.rrfoco; render(); setTimeout(rrNoLugar, 20); return; }
     if (d.irf) { const c = $("#corpo-folha"), el = $("#f-" + d.irf); if (c && el) c.scrollTo({ top: el.offsetTop - ($(".cab3")?.offsetHeight || 0) - 6 }); return; }
     if (d.fnav) { const ord = s.ordemFolha || [], k = ord.indexOf(s.aberta) + +d.fnav; if (ord[k]) { await abrir(ord[k], true); $("#corpo-folha")?.scrollTo({ top: 0 }); aviso(nomeRota(ord[k])); } return; }
     if (d.lemq) { const q = LEM_RAPIDOS().find(([n]) => n === d.lemq); if (q) await lembrar(q[1]); return; }
@@ -1496,7 +1506,7 @@ document.addEventListener("click", async (e) => {
     if (d.copiarmapa) { copiar(mapaPessoa(d.copiarmapa).txt); s.mapasCopiados = { ...(s.mapasCopiados || {}), [d.copiarmapa]: new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) }; render(); return; }
     if (d.baixar) { aviso("Baixando…"); const x = await chamar("alfy_anexo_baixar", { p_id: +d.baixar }); const bin = atob(x.base64), u8 = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i); const url = URL.createObjectURL(new Blob([u8], { type: x.tipo || "application/octet-stream" })); const l = document.createElement("a"); l.href = url; l.download = x.nome; document.body.append(l); l.click(); l.remove(); setTimeout(() => URL.revokeObjectURL(url), 5000); return; }
     if (d.tiraranexo) { s.cartao = await chamar("alfy_anexo_tirar", { p_id: +d.tiraranexo }); refolha(); await recarregar(); render(); aviso("Anexo tirado da rota"); return; }
-    if (d.rapido) { const rt = d.rrt; if (s.aba === "rotas" && s.vista === "rar") await enviarRascunho(rt); await chamar("alfy_mover", { p_rt: rt, p_status: d.rapido }); if (d.rapido === "concluida" && s.rr.feitas) { s.rr.feitas = { ...s.rr.feitas, [rt]: true }; rrSalvar(); } aviso(d.rapido === "concluida" ? `✓ ${nomeRota(rt)} concluída` : `${nomeRota(rt)} em andamento`); await recarregar(); render(); return; }
+    if (d.rapido) { const rt = d.rrt; if (s.aba === "rotas" && s.vista === "rar") await enviarRascunho(rt); await chamar("alfy_mover", { p_rt: rt, p_status: d.rapido }); if (d.rapido === "concluida" && s.rr.feitas) { s.rr.feitas = { ...s.rr.feitas, [rt]: true }; s.rr.foco = null; rrSalvar(); if (s.vista === "rar") setTimeout(rrNoLugar, 60); } aviso(d.rapido === "concluida" ? `✓ ${nomeRota(rt)} concluída` : `${nomeRota(rt)} em andamento`); await recarregar(); render(); return; }
     if (d.rastrear) { const rt = d.rastrear; s.linhasAbertas = { ...(s.linhasAbertas || {}), [rt]: true }; s.respLinha = { ...(s.respLinha || {}), [rt]: "" }; s.sugLinha = { ...(s.sugLinha || {}), [rt]: "" }; s.rastreando = { ...(s.rastreando || {}), [rt]: true }; s.pedRastreio = { ...(s.pedRastreio || {}), [rt]: await pedir("rastrear", "rota:" + rt, {}, "rota:" + rt) }; render(); return; }
     if (d.aplicarsug) { const rt = d.aplicarsug, t = s.sugLinha[rt]; s.sugLinha[rt] = ""; s.respLinha[rt] = ""; s.rastreando[rt] = false; await pedir("ia", "rota:" + rt, { texto: t, agir: true }, "rota:" + rt); render(); return; }
     if (d.linhacaixa) { s.linhasAbertas = { ...(s.linhasAbertas || {}), [d.linhacaixa]: !s.linhasAbertas?.[d.linhacaixa] }; render(); setTimeout(() => $("#cl-" + d.linhacaixa.replace(/\W/g, ""))?.focus(), 30); return; }
@@ -1648,6 +1658,21 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "Enter" && e.target.classList?.contains("linha2")) { abrir(e.target.dataset.rt); return; }
   if (e.key === "Enter" && e.target.dataset?.rrfoco) { e.target.click(); return; }
   if (e.key === "Escape" && $("#veu")) fechar();
+  if (s.aba === "rotas" && s.vista === "rar" && !$("#veu") && $("#rr-deck")) {
+    const deck = $("#rr-deck"), aperta = (sel) => { const b = deck.querySelector(sel); if (b) { e.preventDefault(); b.click(); } };
+    const noCampo = e.target.tagName === "TEXTAREA" || e.target.tagName === "INPUT" || e.target.tagName === "SELECT";
+    if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && e.target.closest?.("#rr-deck")) {
+      if (e.shiftKey) { const rt = s.rr.foco; aperta("[data-clmodo=alfy]"); setTimeout(() => { if (s.rr.foco === rt) rrTirar(rt, "feitas"); }, 400); }
+      else aperta("[data-rrfeita]");
+      return;
+    }
+    if (!noCampo && !e.metaKey && !e.ctrlKey && !e.altKey) {
+      if (e.key === "ArrowRight" || e.key === "j") aperta("[data-rrfeita]");
+      else if (e.key === "d" || e.key === "D") aperta("[data-rrdepois]");
+      else if (e.key === "c" || e.key === "C") aperta('[data-rapido="concluida"]');
+      else if (e.key === "e" || e.key === "/") { e.preventDefault(); deck.querySelector("textarea")?.focus(); }
+    }
+  }
   if (e.key === "Enter" && !e.shiftKey && e.target.id === "t-chat-rota") { e.preventDefault(); falarNaRota(e.target.value); }
 });
 document.addEventListener("focusout", () => { if (s.pendente) setTimeout(() => { if (!ativo()) { s.pendente = false; render(); } }, 150); });
