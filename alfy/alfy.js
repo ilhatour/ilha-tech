@@ -1,4 +1,4 @@
-// ALFY · Mapa de Rotas · Ilha Tech · v2.12.0 · 04/11/2026 · Painel de Ferro · cartão polegar + lembretes
+// ALFY · Mapa de Rotas · Ilha Tech · v2.12.1 · 04/11/2026 · Painel de Ferro · comandos sem repetição
 // Tudo passa pelas funções alfy_* do banco, sempre com a chave pessoal de quem está usando.
 // O banco decide o que cada pessoa vê; a tela só desenha o que voltou.
 // A IA e os comandos são pedidos numa fila (alfy.pedido) que o robô do Mac atende.
@@ -56,6 +56,7 @@ const IC = {
   bomdia: svg('<circle cx="12" cy="13" r="4"/><path d="M12 3v3M4.2 7.2l2 2M19.8 7.2l-2 2M2 17h20M6 21h12"/>'),
   ronda: svg('<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>'),
   virada: svg('<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4M9 15l2 2 4-4"/>'),
+  aprendi: svg('<path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-4 10.5c.7.6 1 1.5 1 2.5h6c0-1 .3-1.9 1-2.5A6 6 0 0 0 12 3z"/>'),
   perguntar: svg('<path d="M21 12a9 9 0 1 1-4-7.5"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14M12 17.5v.01"/>'),
   x: svg('<path d="M6 6l12 12M18 6 6 18"/>', 'width="18" height="18" stroke-width="2.2"'),
   filtro: svg('<path d="M4 6h16M7 12h10M10 18h4"/>', 'width="18" height="18"'),
@@ -620,14 +621,10 @@ const zap = (t) => esc(t).replace(/\*([^*\n]+)\*/g, "<b>$1</b>");
 // ---------------------------------------------------------------- comandos (só o Miguel, por enquanto)
 const CMDS = [
   { g: "Despejar", k: "despejo", n: "Despejo", faz: "Joga aqui o que vier na cabeça: texto, áudio gravado na hora, áudio ou arquivo. O ALFY separa em rota, pauta, arquivo ou lembrete.", quando: "quando você quiser", onde: "mac" },
-  { g: "Ler", k: "whatsapp", n: "Ler o WhatsApp", faz: "Lê suas conversas das últimas 24 horas: quem respondeu rota (citou o número) e o que pode virar rota nova.", quando: "quando você pedir", onde: "mac" },
-  { g: "Ler", k: "grupos", n: "Atualizar os grupos", faz: "A mesma leitura, olhando os últimos 7 dias de todas as conversas e grupos de trabalho.", quando: "quando você pedir", onde: "mac" },
+  { g: "Ler", k: "whatsapp", n: "Ler o WhatsApp", faz: "Lê suas conversas (24 horas ou 7 dias): o retorno de rota entra sozinho na rota e o que pode virar rota nova aparece aqui.", quando: "quando você pedir", onde: "mac" },
   { g: "Ler", k: "email", n: "Ler o e-mail e a agenda", faz: "Lê a caixa miguel@ilha.tours e faz o mesmo que com o WhatsApp: retorno de rota e o que pode virar rota.", quando: "a cada 15 min", onde: "mac" },
-  { g: "Mandar", k: "mapa", n: "Lançar o Mapa de Rotas", faz: "A mensagem oficial do Mapa de Rotas de uma pessoa ou de um setor, pronta para colar no WhatsApp.", quando: "na hora", onde: "nuvem" },
-  { g: "Mandar", k: "cobrar", n: "Cobrar as vencidas", faz: "Uma mensagem por pessoa só com as rotas vencidas dela.", quando: "na hora", onde: "nuvem" },
-  { g: "Mandar", k: "bomdia", n: "Bom dia do Miguel", faz: "O seu dia numa tela: reuniões, o que vence hoje, o que venceu e quem respondeu.", quando: "na hora", onde: "nuvem" },
-  { g: "Organizar", k: "ronda", n: "Fazer a ronda agora", faz: "Dá prazo para rota com prioridade e sem data, lê o WhatsApp das últimas 24 h e os e-mails novos.", quando: "8h, 11h, 14h, 17h e 20h", onde: "mac" },
-  { g: "Organizar", k: "diario", n: "Relatórios do ALFY", faz: "O Bom dia, o Relatório do dia e o 📡 Grupos hoje que as rotinas do ALFY escrevem.", quando: "8h (Bom dia) e de hora em hora", onde: "mac" },
+  { g: "Mandar", k: "mapa", n: "Lançar o Mapa de Rotas", faz: "A mensagem oficial do Mapa de Rotas de uma pessoa, de um grupo ou de um setor, ou só as vencidas para cobrar, pronta para colar no WhatsApp.", quando: "na hora", onde: "nuvem" },
+  { g: "Organizar", k: "bomdia", n: "📰 Resumos do dia", faz: "O seu dia numa tela (reuniões, o que vence hoje, o que venceu, quem respondeu) e os resumos que o ALFY escreve: Bom dia, Relatório do dia e Grupos hoje.", quando: "na hora", onde: "nuvem" },
   { g: "Pensar", k: "aprendi", n: "🧠 O que o ALFY aprendeu", faz: "Como você fala, instrui e decide, e como cada rota concluída foi resolvida. O ALFY usa isso em toda resposta. Apague o que estiver errado.", quando: "de 30 em 30 minutos", onde: "mac" },
   { g: "Pensar", k: "perguntar", n: "Perguntar ao ALFY", faz: "Pergunte qualquer coisa sobre as rotas e as pautas. O ALFY responde com os dados do painel.", quando: "quando você pedir", onde: "mac" },
 ];
@@ -640,6 +637,7 @@ function filaHTML() {
 }
 function vistaComandos() {
   if (!comando()) return `<div class="vazio">Por enquanto os comandos são só do Miguel.</div>`;
+  if (!CMDS.some((x) => x.k === s.cmd)) s.cmd = s.cmd === "cobrar" ? (s.mapaModo = "cobrar", "mapa") : s.cmd === "diario" ? "bomdia" : s.cmd === "grupos" || s.cmd === "ronda" ? "whatsapp" : "despejo";   // comandos que foram juntados
   const c = CMDS.find((x) => x.k === s.cmd);
   const grupos = ["Despejar", "Ler", "Mandar", "Organizar", "Pensar"].map((g) => `<section class="cmd-grupo"><h2>${g}</h2><div class="cmd-grade">${CMDS.filter((x) => x.g === g).map((x) => `<button type="button" class="placa rebites comando2" data-cmd="${x.k}" aria-pressed="${s.cmd === x.k}"><span class="l1"><span class="ic">${IC[x.k]}</span><b>${x.n}</b></span><span class="faz">${x.faz}</span><span class="onde"><span class="selo">⏱ ${x.quando}</span><span class="selo ${x.onde}">${x.onde === "mac" ? "💻 precisa do Mac" : "☁️ direto"}</span>${x.k === "whatsapp" && (M.sugestoes || []).length ? `<span class="selo novo">${M.sugestoes.length}</span>` : ""}</span></button>`).join("")}</div></section>`).join("");
   return `${pulsoHTML()}<div class="painel-cmd cmd2"><div>${grupos}</div><div class="det-cmd" id="det-cmd">${detCmd(c)}${filaHTML()}</div></div>`;
@@ -800,7 +798,7 @@ function detCmd(c) {
   if (c.k === "whatsapp" || c.k === "grupos") {
     const rod = filaRodando("whatsapp"), sug = M.sugestoes || [];
     const ret = sug.filter((x) => x.tipo === "retorno"), nov = sug.filter((x) => x.tipo === "nova");
-    return `<div class="bloco">${h}<button class="btn turq" type="button" data-acao="${c.k}" ${rod ? "disabled" : ""}>${rod ? "Lendo…" : c.k === "whatsapp" ? "Ler as últimas 24 horas" : "Ler os últimos 7 dias"}</button>${rod ? '<p class="estado-fila">🐙 O robô do Mac está lendo as conversas. Leva de 1 a 3 minutos.</p>' : ""}
+    return `<div class="bloco">${h}<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><div class="alterna" role="group" aria-label="Período"><button type="button" data-wahoras="24" aria-pressed="${(s.waHoras || 24) === 24}">24 horas</button><button type="button" data-wahoras="168" aria-pressed="${s.waHoras === 168}">7 dias</button></div><button class="btn turq" type="button" data-acao="whatsapp" ${rod ? "disabled" : ""}>${rod ? "Lendo…" : "Ler agora"}</button></div>${rod ? '<p class="estado-fila">🐙 O robô do Mac está lendo as conversas. Leva de 1 a 3 minutos.</p>' : ""}
       <p class="rotulo" style="margin-top:14px">Responderam rotas · ${ret.length}</p>${ret.map((x) => { const r = rotaDe(x.rt); return `<div class="retorno">${r ? tag(r) : ""}<div class="bal"><small><b style="color:var(--texto)">${esc(x.quem || "")}</b> · ${esc(x.quando || "")} · ${esc(x.conversa || "")}</small><br><p>${esc(rotaTxt(x.texto))}</p><br><span style="display:inline-flex;gap:6px;flex-wrap:wrap">${r ? `<button class="btn turq peq" type="button" data-sug="${x.id}" data-sugacao="comentar">Pôr na conversa da ${esc(nomeRota(x.rt))}</button><button class="btn peq" type="button" data-rt="${x.rt}">Abrir</button>` : ""}<button class="btn peq" type="button" data-sug="${x.id}" data-sugacao="descartar">Descartar</button></span></div></div>`; }).join("") || '<div class="vazio">Nenhum retorno novo</div>'}
       <p class="rotulo" style="margin-top:14px">Podem virar rota · ${nov.length}</p>${nov.map((x) => `<div class="sugestao"><div class="tx"><b style="white-space:pre-wrap">${esc(rotaTxt(x.texto))}</b><small>${esc(x.quem || "")}${x.conversa ? " · " + esc(x.conversa) : ""}${x.quando ? " · " + esc(x.quando) : ""}</small></div><button class="btn turq peq" type="button" data-sug="${x.id}" data-sugacao="rota">Virar rota</button><button class="btn peq" type="button" data-sug="${x.id}" data-sugacao="descartar">Descartar</button></div>`).join("") || '<div class="vazio">Nada novo</div>'}</div>`;
   }
@@ -817,20 +815,21 @@ function detCmd(c) {
   if (c.k === "mapa" || c.k === "cobrar") {
     const pessoasAlvo = (M.pessoas || []).filter((p) => p.papel !== "comando" && p.nome !== "ALFY" && (M.rotas || []).some((r) => r.responsavel_id === p.id && mapeavel(r)));
     const setores = FRENTES.filter((f) => f !== "🧍 Pessoal" && (M.rotas || []).some((r) => r.frente === f && mapeavel(r)));
-    const modo = c.k === "cobrar" ? "pessoa" : s.mapaModo || "rapido";
+    const cobrando = c.k === "cobrar" || s.mapaModo === "cobrar";
+    const modo = cobrando ? "pessoa" : s.mapaModo || "rapido";
     if (modo === "pessoa" && !pessoasAlvo.some((p) => p.id === s.alvo)) s.alvo = pessoasAlvo[0]?.id || null;
     if (modo === "setor" && !setores.includes(s.alvo)) s.alvo = setores[0] || null;
     s.grupo = (s.grupo || []).filter((id) => pessoasAlvo.some((p) => p.id === id));
     if (modo === "rapido") {
       const lista = pessoasAlvo.map((p) => { const rs = (M.rotas || []).filter((r) => mapeavel(r) && r.responsavel_id === p.id); return { p, n: rs.length, v: rs.filter(vencida).length }; }).sort((x, y) => y.v - x.v || y.n - x.n);
       const env = s.mapasCopiados || {};
-      return `<div class="bloco">${h}<div class="alterna" role="group" style="margin-bottom:12px"><button type="button" data-mapamodo="rapido" aria-pressed="true">Todos</button><button type="button" data-mapamodo="pessoa" aria-pressed="false">Pessoa</button><button type="button" data-mapamodo="grupo" aria-pressed="false">Grupo</button><button type="button" data-mapamodo="setor" aria-pressed="false">Setor</button></div>
+      return `<div class="bloco">${h}<div class="alterna" role="group" style="margin-bottom:12px"><button type="button" data-mapamodo="rapido" aria-pressed="true">Todos</button><button type="button" data-mapamodo="pessoa" aria-pressed="false">Pessoa</button><button type="button" data-mapamodo="grupo" aria-pressed="false">Grupo</button><button type="button" data-mapamodo="setor" aria-pressed="false">Setor</button><button type="button" data-mapamodo="cobrar" aria-pressed="false">Vencidas</button></div>
         <p class="nota" style="margin:0 0 8px">Cada botão copia o Mapa de Rotas da pessoa, só com as rotas dela, no formato oficial. Cole no privado dela no WhatsApp.</p>
         ${lista.map(({ p, n, v }) => `<div class="sugestao ${env[p.id] ? "feita" : ""}"><span class="avatar" style="width:30px;height:30px;font-size:12px">${ini(p.nome)}</span><div class="tx"><b>${esc(p.nome)}</b><small>${n} ${n === 1 ? "rota aberta" : "rotas abertas"}${v ? ` · <span style="color:#FF9A9C">${v} ${v === 1 ? "vencida" : "vencidas"}</span>` : ""}${env[p.id] ? " · copiado " + env[p.id] : ""}</small></div><button class="btn ${env[p.id] ? "" : "turq"} peq" type="button" data-copiarmapa="${p.id}">${env[p.id] ? "Copiar de novo" : "Copiar mapa"}</button></div>`).join("") || '<div class="vazio">Ninguém com rota aberta.</div>'}</div>`;
     }
-    const m = modo === "grupo" ? (s.grupo.length ? mapaGrupo(s.grupo) : { n: 0, txt: "Escolha as pessoas do grupo." }) : !s.alvo ? { n: 0, txt: "" } : modo === "setor" ? mapaSetor(s.alvo) : mapaPessoa(s.alvo, c.k === "cobrar");
-    const chipsPessoa = (sel, attr) => pessoasAlvo.map((p) => `<button class="chip" type="button" ${attr}="${p.id}" aria-pressed="${sel(p.id)}">${esc(curto(p.nome))}${c.k === "cobrar" ? ` · ${(M.rotas || []).filter((r) => mapeavel(r) && r.responsavel_id === p.id && vencida(r)).length}` : ""}</button>`).join("");
-    return `<div class="bloco">${h}${c.k === "mapa" ? `<div class="alterna" role="group" style="margin-bottom:12px"><button type="button" data-mapamodo="rapido" aria-pressed="${modo === "rapido"}">Todos</button><button type="button" data-mapamodo="pessoa" aria-pressed="${modo === "pessoa"}">Pessoa</button><button type="button" data-mapamodo="grupo" aria-pressed="${modo === "grupo"}">Grupo</button><button type="button" data-mapamodo="setor" aria-pressed="${modo === "setor"}">Setor</button></div>` : ""}
+    const m = modo === "grupo" ? (s.grupo.length ? mapaGrupo(s.grupo) : { n: 0, txt: "Escolha as pessoas do grupo." }) : !s.alvo ? { n: 0, txt: "" } : modo === "setor" ? mapaSetor(s.alvo) : mapaPessoa(s.alvo, cobrando);
+    const chipsPessoa = (sel, attr) => pessoasAlvo.map((p) => `<button class="chip" type="button" ${attr}="${p.id}" aria-pressed="${sel(p.id)}">${esc(curto(p.nome))}${cobrando ? ` · ${(M.rotas || []).filter((r) => mapeavel(r) && r.responsavel_id === p.id && vencida(r)).length}` : ""}</button>`).join("");
+    return `<div class="bloco">${h}${c.k === "mapa" ? `<div class="alterna" role="group" style="margin-bottom:12px"><button type="button" data-mapamodo="rapido" aria-pressed="${modo === "rapido"}">Todos</button><button type="button" data-mapamodo="pessoa" aria-pressed="${modo === "pessoa"}">Pessoa</button><button type="button" data-mapamodo="grupo" aria-pressed="${modo === "grupo"}">Grupo</button><button type="button" data-mapamodo="setor" aria-pressed="${modo === "setor"}">Setor</button><button type="button" data-mapamodo="cobrar" aria-pressed="${cobrando}">Vencidas</button></div>` : ""}
       ${modo === "pessoa" ? `<p class="rotulo">Só as rotas da pessoa</p><div class="alvos">${chipsPessoa((id) => s.alvo === id, "data-alvo")}</div>` : ""}
       ${modo === "grupo" ? `<p class="rotulo">Escolha quem entra (cada um com as rotas dele)</p><div class="alvos">${chipsPessoa((id) => s.grupo.includes(id), "data-grupo")}</div>` : ""}
       ${modo === "setor" ? `<p class="rotulo">Todas as rotas abertas da frente, por pessoa</p><div class="alvos">${setores.map((f) => `<button class="chip" type="button" data-alvo="${esc(f)}" aria-pressed="${s.alvo === f}">${esc(frenteCurta(f))}</button>`).join("")}</div>` : ""}
@@ -849,7 +848,7 @@ function detCmd(c) {
       <p class="rotulo" style="margin-top:14px">Vencem hoje · ${hoje.length}</p><div class="lista">${hoje.map((r) => linha(r)).join("") || '<p class="nota" style="margin:0">Nada</p>'}</div>
       <p class="rotulo" style="margin-top:14px">Suas vencidas · ${venc.length}</p><div class="lista">${venc.map((r) => linha(r)).join("") || '<p class="nota" style="margin:0">Nenhuma</p>'}</div>
       <p class="rotulo" style="margin-top:14px">Budget esperando você · ${bud.length}</p><div class="lista">${bud.map((r) => linha(r)).join("") || '<p class="nota" style="margin:0">Nenhum</p>'}</div>
-      <p class="rotulo" style="margin-top:14px">Responderam nas últimas 24 h · ${resp.length}</p>${resp.slice(0, 8).map((e) => `<button type="button" class="ev" data-rt="${e.rt}"><span class="ic-ev">${EV_IC[e.tipo]}</span><span class="c"><span class="l1"><b>${esc(curto(e.quem))}</b> · ${esc(nomeRota(e.rt))}</span><p>${esc((e.texto || "").slice(0, 200))}</p></span></button>`).join("") || '<p class="nota" style="margin:0">Ninguém</p>'}</div>`;
+      <p class="rotulo" style="margin-top:14px">Responderam nas últimas 24 h · ${resp.length}</p>${resp.slice(0, 8).map((e) => `<button type="button" class="ev" data-rt="${e.rt}"><span class="ic-ev">${EV_IC[e.tipo]}</span><span class="c"><span class="l1"><b>${esc(curto(e.quem))}</b> · ${esc(nomeRota(e.rt))}</span><p>${esc((e.texto || "").slice(0, 200))}</p></span></button>`).join("") || '<p class="nota" style="margin:0">Ninguém</p>'}</div>` + diarioHTML("<h3>Resumos que o ALFY escreveu</h3>");
   }
   if (c.k === "ronda") { const rod = filaRodando(c.k); return `<div class="bloco">${h}<p style="margin:0 0 10px">${c.faz}</p><button class="btn turq" type="button" data-acao="${c.k}" ${rod ? "disabled" : ""}>${rod ? "Rodando…" : "Rodar a ronda agora"}</button></div>`; }
   if (c.k === "perguntar") {
@@ -1287,7 +1286,7 @@ async function recarregar() {
     }
   }
   if (comando()) s.robo = await chamar("alfy_robo").catch(() => s.robo);
-  if (s.cmd === "diario" && s.aba === "comandos") s.diario = await chamar("alfy_diario", { p_dias: 3 }).catch(() => s.diario);
+  if ((s.cmd === "diario" || s.cmd === "bomdia") && s.aba === "comandos") s.diario = await chamar("alfy_diario", { p_dias: 3 }).catch(() => s.diario);
   if (s.aba === "agenda") await carregarAgenda();
   if (cuidaPessoas()) s.fichas = await chamar("alfy_fichas").catch(() => s.fichas);
   if (s.reuniao) await carregarReuniao();
@@ -1471,8 +1470,10 @@ document.addEventListener("click", async (e) => {
     if (d.convite) { const p = s.equipe.find((x) => x.id === d.convite); copiar(convite(p)); return; }
     if (d.acessode) { await gerarAcesso(d.acessode); return; }
     if (d.tiraraprendi) { s.aprendi = await chamar("alfy_aprendizado_tirar", { p_id: +d.tiraraprendi }); render(); aviso("Esquecido"); return; }
+    if (d.cmd === "bomdia") s.diario = await chamar("alfy_diario", { p_dias: 3 }).catch(() => s.diario);
     if (d.cmd) { s.cmd = d.cmd; if (d.cmd === "aprendi") s.aprendi = await chamar("alfy_aprendizado"); if (d.cmd === "equipe") s.equipe = await chamar("alfy_equipe"); if (d.cmd === "diario") s.diario = await chamar("alfy_diario", { p_dias: 3 }); if (d.cmd === "perguntar" && !s.chatGeral) s.chatGeral = await chamar("alfy_ia_conversa", { p_escopo: "geral" }); if (d.cmd === "bomdia") FEED = await chamar("alfy_feed", { p_limite: 150 }); render(); if (matchMedia("(max-width:900px)").matches) setTimeout(() => $("#det-cmd")?.scrollIntoView({ behavior: "smooth" }), 30); return; }
     if (d.alvo) { s.alvo = d.alvo; render(); return; }
+    if (d.wahoras) { s.waHoras = +d.wahoras; render(); return; }
     if (d.mapamodo) { s.mapaModo = d.mapamodo; render(); return; }
     if (d.grupo) { s.grupo = s.grupo || []; s.grupo = s.grupo.includes(d.grupo) ? s.grupo.filter((x) => x !== d.grupo) : [...s.grupo, d.grupo]; render(); return; }
     if (d.col) { const k = $("#kanban"), w = k.querySelector(".coluna").offsetWidth + 10; k.scrollTo({ left: +d.col * w, behavior: "smooth" }); return; }
@@ -1512,9 +1513,9 @@ document.addEventListener("click", async (e) => {
     if (a === "copiar-ata") { copiar(reuniaoDe(s.reuniao)?.ata || ""); return; }
     if (a === "despejar") { despejar(); return; }
     if (a === "gravar") { gravar(); return; }
-    if (a === "whatsapp" || a === "grupos") { await pedir("whatsapp", null, { horas: a === "whatsapp" ? 24 : 168 }); render(); aviso("Pedido na fila do robô"); return; }
+    if (a === "whatsapp" || a === "grupos") { await pedir("whatsapp", null, { horas: a === "grupos" ? 168 : s.waHoras || 24 }); render(); aviso("Lendo o WhatsApp… leva de 1 a 3 minutos"); return; }
     if (a === "ronda") { await pedir(a, null, {}); render(); aviso("Pedido na fila do robô"); return; }
-    if (a === "copiar-mapa") { const c = s.cmd, modo = c === "cobrar" ? "pessoa" : s.mapaModo || "pessoa"; copiar((modo === "grupo" ? mapaGrupo(s.grupo || []) : modo === "setor" ? mapaSetor(s.alvo) : mapaPessoa(s.alvo, c === "cobrar")).txt); return; }
+    if (a === "copiar-mapa") { const cob = s.cmd === "cobrar" || s.mapaModo === "cobrar", modo = cob ? "pessoa" : s.mapaModo || "pessoa"; copiar((modo === "grupo" ? mapaGrupo(s.grupo || []) : modo === "setor" ? mapaSetor(s.alvo) : mapaPessoa(s.alvo, cob)).txt); return; }
     if (a === "sair") { sair(); return; }
     if (a === "lembrar") { s.lembrando = true; refolha(); return; }
     if (a === "lem-escolhido") { const dd = $("#lem-dia").value, hh = $("#lem-hora").value || "09:00"; if (!dd) { aviso("Escolha o dia"); return; } await lembrar(new Date(`${dd}T${hh}:00-03:00`)); return; }
