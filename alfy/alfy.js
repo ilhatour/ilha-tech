@@ -319,7 +319,7 @@ function ligarKanban() {
   const k = $("#kanban"); if (!k) return;
   k.addEventListener("dragstart", (e) => { const el = e.target.closest(".cartao"); if (!el) return; el.classList.add("arrastando"); e.dataTransfer.setData("text/plain", el.dataset.rt); });
   k.addEventListener("dragend", (e) => { const el = e.target.closest(".cartao"); el && el.classList.remove("arrastando"); });
-  k.querySelectorAll(".coluna").forEach((col) => {
+  k.querySelectorAll(".agk-col").forEach((col) => {
     col.addEventListener("dragover", (e) => { e.preventDefault(); col.classList.add("alvo"); });
     col.addEventListener("dragleave", () => col.classList.remove("alvo"));
     col.addEventListener("drop", (e) => { e.preventDefault(); col.classList.remove("alvo"); mover(e.dataTransfer.getData("text/plain"), col.dataset.colSt); });
@@ -336,20 +336,48 @@ function entregaHTML(e, comDono) {
   const pt = e.pt || {}, prazo = pt.mod === 1 ? "no prazo" : pt.mod === 0.5 ? "fora do prazo, vale metade" : "muito fora do prazo, não pontua";
   return `<button type="button" class="ent6" data-rt="${e.rt}"><span class="ent6n ${pt.mod === 1 ? "" : pt.mod === 0.5 ? "meio" : "zero"}">${(+pt.pontos || 0).toLocaleString("pt-BR")}</span><span class="ent6b"><b>${esc(e.titulo)}</b><small>${esc(nomeRota(e.rt))} · ${ddmm(pt.concluida_em)}${comDono ? " · " + esc(curto(nomeDe(e.resp))) + (e.co ? " + " + esc(curto(nomeDe(e.co))) : "") : ""} · ${prazo}</small><small class="ent6c">Impacto ${pt.impacto} + Dificuldade ${pt.dificuldade} + Qualidade ${pt.qualidade}</small></span></button>`;
 }
+// quanto a rota vale no Placar (mesma conta do banco, alfy._pontos): (Impacto + Dificuldade + Qualidade) × prazo
+function valorRota(r) {
+  if ((r.tipo || "").includes("Compromisso") || (r.frente || "").includes("Pessoal")) return null;
+  const i = { Alto: 3, Baixo: 1 }[r.impacto] || 2, d = { "Muito difícil": 4, "Difícil": 3, Alto: 3, "Fácil": 1, Baixo: 1 }[r.esforco] || 2, q = { Acima: 3, Abaixo: 1 }[r.qualidade] || 2, base = i + d + q;
+  if (r.pontos) return { i, d, q, base, pts: +r.pontos.pontos, feito: true, mod: r.pontos.mod };
+  const atraso = r.prazo && pcod(r.prioridade) !== "P5" ? (Date.now() - new Date(r.prazo)) / 864e5 : -1, mod = atraso <= 0.5 ? 1 : atraso <= 7 ? 0.5 : 0;
+  return { i, d, q, base, pts: base * mod, mod, feito: false };
+}
+function valeHTML(r) {
+  const v = valorRota(r); if (!v) return `<p class="vale4 nao">🏆 Não pontua no Placar (${(r.tipo || "").includes("Compromisso") ? "compromisso" : "frente Pessoal"}).</p>`;
+  const n = (x) => x.toLocaleString("pt-BR"), pad = (k) => !r[k] ? " (vazio, conta 2)" : "";
+  const agora = v.feito ? `Valeu <b>${n(v.pts)} pts</b>${v.mod === 1 ? ", entregue no prazo" : v.mod === 0.5 ? ", entregue fora do prazo (metade)" : ", entregue muito fora do prazo (zero)"}.`
+    : v.mod === 1 ? `Concluída no prazo vale <b>${n(v.base)} pts</b>. Até 7 dias fora vale ${n(v.base / 2)}; depois, zero.` : v.mod === 0.5 ? `Já passou do prazo: se concluir até 7 dias depois dele vale <b>${n(v.base / 2)} pts</b> (metade). Depois, zero.` : `Passou mais de 7 dias do prazo: <b>não pontua mais</b>.`;
+  return `<p class="vale4">🏆 ${agora}<small>Impacto ${v.i}${pad("impacto")} + Dificuldade ${v.d}${pad("esforco")} + Qualidade ${v.q}${pad("qualidade")} = ${v.base}</small></p>`;
+}
 function vistaPlacar() {
   const pl = s.placar; if (!pl) return `<div class="carregando">Carregando o placar…</div>`;
   const mes = pl.mes, ant = new Date(mes + "T12:00:00-03:00"); ant.setMonth(ant.getMonth() - 1); const prox = new Date(mes + "T12:00:00-03:00"); prox.setMonth(prox.getMonth() + 1);
   const ehMesAtual = mes.slice(0, 7) === hojeDia().slice(0, 7), mesTxt = MES_TXT(mes).toLowerCase().replace(/^./, (c) => c.toUpperCase());
-  const nav = `<div class="pl6nav"><button class="pl6seta" type="button" data-plmes="${ant.toLocaleDateString("en-CA")}" aria-label="Mês anterior">‹</button><b>${mesTxt}</b><button class="pl6seta" type="button" data-plmes="${prox.toLocaleDateString("en-CA")}" ${ehMesAtual ? "disabled" : ""} aria-label="Próximo mês">›</button></div>`;
-  const eu_ = pl.eu || {}, minhas = pl.minhas || [];
-  const meu = comando() ? "" : `<section class="pl6eu"><span class="pl6pos">${eu_.pos ? `${eu_.pos}º` : "–"}</span><div><p class="pl6de">de ${pl.total} na equipe</p><p><b>${(+eu_.pontos || 0).toLocaleString("pt-BR")} pts</b> · ${eu_.entregas || 0} ${eu_.entregas === 1 ? "entrega" : "entregas"}${eu_.faltas ? ` · <span class="venc">${eu_.faltas} fora do prazo</span>` : ""}</p></div></section>`;
-  const rank = pl.rank || [], com = rank.filter((r) => r.pontos > 0 || r.entregas > 0), sem = rank.filter((r) => !(r.pontos > 0 || r.entregas > 0));
-  const linha = (r) => `<div class="rk6 ${r.pos <= 3 && r.pontos > 0 ? "top p" + r.pos : ""}"><span class="rk6p">${r.pos}º</span><span class="rk6b"><b>${esc(r.nome)}</b><small>${r.entregas} ${r.entregas === 1 ? "entrega" : "entregas"}${r.faltas ? ` · ${r.faltas} fora do prazo` : ""}</small></span><span class="rk6n">${(+r.pontos).toLocaleString("pt-BR")}<small> pts</small></span></div>`;
-  const lista = comando() ? `<section class="pl6sec"><h3>Ranking</h3>${com.map(linha).join("") || '<p class="nota">Ninguém entregou neste mês ainda.</p>'}${sem.length ? `<p class="pl6sem">Sem entregas: ${sem.map((r) => esc(curto(r.nome))).join(", ")}</p>` : ""}</section>` : "";
-  const ents = (pl.entregas || []).filter((e) => !s.plBusca || (e.titulo + " " + nomeDe(e.resp) + " " + nomeDe(e.co)).toLowerCase().includes(s.plBusca.toLowerCase()));
-  const banco = comando() ? `<section class="pl6sec"><div class="pl6h"><h3>Entregas do mês · ${(pl.entregas || []).length}</h3><button class="lk" type="button" data-verconc="1">✓ Ver rotas concluídas</button><input class="busca" id="pl-busca" placeholder="Buscar entrega ou pessoa" value="${esc(s.plBusca || "")}"></div>${ents.map((e) => entregaHTML(e, true)).join("") || '<p class="nota">Nenhuma entrega neste mês.</p>'}</section>`
-    : `<section class="pl6sec"><h3>Suas entregas · ${minhas.length}</h3>${minhas.map((e) => entregaHTML(e)).join("") || '<p class="nota">Nenhuma entrega neste mês ainda. Cada rota concluída vale até 10 pontos.</p>'}</section>`;
-  return `<div class="pl6">${nav}${meu}${lista}${banco}<p class="nota pl6regra">Como pontua: (Impacto 1 a 3 + Dificuldade 1 a 4 + Qualidade 1 a 3) × prazo. Campo vazio conta como regular (2 + 2 + 2). No prazo vale inteiro, até 7 dias fora vale metade, mais que isso vale zero. Responsável e co-responsável pontuam. Compromisso não conta.</p></div>`;
+  const fimMes = new Date(prox.getFullYear(), prox.getMonth(), 1), faltam = Math.ceil((fimMes - new Date()) / 864e5);
+  const pts = (n) => (+n || 0).toLocaleString("pt-BR");
+  const nav = `<div class="pl7nav"><button class="pl6seta" type="button" data-plmes="${ant.toLocaleDateString("en-CA")}" aria-label="Mês anterior">‹</button><b>${mesTxt}</b><button class="pl6seta" type="button" data-plmes="${prox.toLocaleDateString("en-CA")}" ${ehMesAtual ? "disabled" : ""} aria-label="Próximo mês">›</button><span class="espaco"></span><small>${ehMesAtual ? `🏁 fecha em ${faltam} ${faltam === 1 ? "dia" : "dias"}` : "mês fechado"}</small></div>`;
+  const ents = pl.entregas || pl.minhas || [], noPrazo = ents.filter((e) => e.pt?.mod === 1).length, media = ents.length ? ents.reduce((n, e) => n + (+e.pt?.pontos || 0), 0) / ents.length : 0;
+  const nums = (l) => `<div class="pl7nums">${l.map(([v, t]) => `<div><b>${v}</b><small>${t}</small></div>`).join("")}</div>`;
+  let topo = "";
+  if (comando()) {
+    const rank = pl.rank || [], pod = rank.filter((r) => r.pontos > 0).slice(0, 3);
+    const placa = (r, k) => `<div class="pod7 m${k}"><span class="pod7pos">${k}º</span><span class="pod7av">${ini(r.nome)}</span><b class="pod7nm">${esc(curto(r.nome))}</b><span class="pod7pt">${pts(r.pontos)}<small> pts</small></span><small class="pod7mt">${r.entregas} ${r.entregas === 1 ? "entrega" : "entregas"}</small></div>`;
+    topo = (pod.length ? `<section class="pl7pod">${[1, 0, 2].filter((k) => pod[k]).map((k) => placa(pod[k], pod[k].pos)).join("")}</section>` : `<p class="nota">Ninguém pontuou neste mês ainda.</p>`)
+      + nums([[ents.length, "entregas no mês"], [ents.length ? Math.round(100 * noPrazo / ents.length) + "%" : "–", "no prazo"], [media.toLocaleString("pt-BR", { maximumFractionDigits: 1 }), "pontos por entrega"]]);
+    const max = Math.max(1, ...rank.map((r) => +r.pontos || 0)), com = rank.filter((r) => r.pontos > 0 || r.entregas > 0), sem = rank.filter((r) => !(r.pontos > 0 || r.entregas > 0));
+    topo += `<section class="pl6sec"><h3>Ranking</h3>${com.map((r) => `<div class="rk7 ${r.pos <= 3 && r.pontos > 0 ? "m" + r.pos : ""}"><span class="rk6p">${r.pos}º</span><span class="rk7b"><span class="rk7l"><b>${esc(r.nome)}</b><small>${r.entregas} ${r.entregas === 1 ? "entrega" : "entregas"}${r.faltas ? ` · ${r.faltas} fora do prazo` : ""}</small></span><i class="rk7bar"><i style="width:${Math.max(3, Math.round(100 * (+r.pontos || 0) / max))}%"></i></i></span><span class="rk6n">${pts(r.pontos)}<small> pts</small></span></div>`).join("")}${sem.length ? `<p class="pl6sem">Ainda sem entrega: ${sem.map((r) => esc(curto(r.nome))).join(", ")}</p>` : ""}</section>`;
+  } else {
+    const eu_ = pl.eu || {};
+    topo = `<section class="pl7eu"><div class="pl7eupos"><b>${eu_.pos ? eu_.pos + "º" : "–"}</b><small>de ${pl.total} na equipe</small></div><div class="pl7eupt"><b>${pts(eu_.pontos)}</b><small>pontos no mês</small></div></section>`
+      + nums([[eu_.entregas || 0, eu_.entregas === 1 ? "entrega" : "entregas"], [ents.length ? Math.round(100 * noPrazo / ents.length) + "%" : "–", "no prazo"], [media.toLocaleString("pt-BR", { maximumFractionDigits: 1 }), "pontos por entrega"]])
+      + `<p class="nota" style="margin:0">Os pontos dos outros não aparecem: só a sua posição.</p>`;
+  }
+  const lista = comando() ? (pl.entregas || []).filter((e) => !s.plBusca || (e.titulo + " " + nomeDe(e.resp) + " " + nomeDe(e.co)).toLowerCase().includes(s.plBusca.toLowerCase())) : (pl.minhas || []);
+  const banco = `<section class="pl6sec"><div class="pl6h"><h3>${comando() ? "Entregas do mês" : "Suas entregas"} · ${(comando() ? pl.entregas : pl.minhas || []).length}</h3><button class="lk" type="button" data-verconc="1">✓ Ver rotas concluídas</button>${comando() ? `<input class="busca" id="pl-busca" placeholder="Buscar entrega ou pessoa" value="${esc(s.plBusca || "")}">` : ""}</div>${lista.map((e) => entregaHTML(e, comando())).join("") || '<p class="nota">Nenhuma entrega neste mês ainda. Cada rota concluída vale até 10 pontos.</p>'}</section>`;
+  const regra = `<details class="pl7regra"><summary>Como pontua</summary><div class="pl7tab"><div><b>Impacto</b><span>Alto 3 · Médio 2 · Baixo 1</span></div><div><b>Dificuldade</b><span>Muito difícil 4 · Difícil 3 · Simples 2 · Fácil 1</span></div><div><b>Qualidade</b><span>Acima 3 · Como esperado 2 · Abaixo 1</span></div><div><b>Prazo</b><span>No prazo ×1 · até 7 dias fora ×½ · mais que isso ×0</span></div></div><p class="nota" style="margin:8px 0 0">Pontos = (Impacto + Dificuldade + Qualidade) × prazo, até 10 por rota. Campo vazio conta como o do meio (2 + 2 + 2 = 6). Responsável e co-responsável pontuam. Compromisso e frente Pessoal não contam.</p></details>`;
+  return `<div class="pl6 pl7">${nav}${topo}${banco}${regra}</div>`;
 }
 
 // ---------------------------------------------------------------- 🔁 Rotinas
@@ -568,17 +596,26 @@ function zapHTML(h) {
       ${ab ? `<div class="z6d">${forte && z.resumo ? `<p>${esc(z.resumo)}</p>` : ""}<p class="z6u"><small>Última · ${esc(u.quem || "")} · ${esc(u.em || "")}</small>${esc((u.txt || "").slice(0, 300))}</p>
         ${forte ? `<div class="rapidas3"><button class="chip" type="button" data-zapvisto="${z.id}">${z.visto ? "↺ Voltar para pendentes" : "✓ Já respondi"}</button><button class="chip" type="button" data-zaprota="${z.id}">🗺️ Virar rota</button></div>` : ""}</div>` : ""}</div>`; };
   const vis = s.zapTodas ? resto : resto.slice(0, 10);
+  const sugs = modo === "pessoal" ? [] : nov, sugVis = s.zapSugTodas ? sugs : sugs.slice(0, 6);
+  const negrito = (x) => { const i = x.indexOf(": "); return i > 0 && i < 60 ? `<b>${esc(x.slice(0, i))}</b>${esc(x.slice(i))}` : esc(x); };
+  const impl = imp.flatMap(([tt, l]) => (l || []).map((x) => [tt, x])), impVis = s.zapImpTudo ? impl : impl.slice(0, 3);
+  const sugHTML = (x) => { const [tit, ...resto_] = rotaTxt(x.texto).split("\n"), cit = resto_.join(" ").replace(/^[“"]|[”"]$/g, "").trim(), nm = nomeZap(x.conversa || "");
+    return `<div class="z7s"><div class="z7st"><b>${esc(tit)}</b>${cit ? `<q>${esc(cit)}</q>` : ""}<small>${esc(x.quem || "")}${nm.nome && nm.nome !== x.quem ? " · " + esc(nm.nome) : ""}${x.quando ? " · " + esc(x.quando) : ""}</small></div>
+      <div class="z7sa"><button class="btn turq peq" type="button" data-sug="${x.id}" data-sugacao="rota">＋ Virar rota</button><button class="lk" type="button" data-sug="${x.id}" data-sugacao="descartar">Descartar</button></div></div>`; };
+  const conta = (n, txt, alvo, cls) => `<button type="button" class="z7c ${cls} ${n ? "" : "zero"}" data-zapir="${alvo}"><b>${n}</b><span>${txt}</span></button>`;
   return `<div class="z6tela">${h}
     <div class="z6top"><div class="seg5" role="group" aria-label="O que ver">${[["trabalho", "💼 Trabalho"], ["pessoal", "🏠 Pessoal"], ["tudo", "Tudo"]].map(([k, n]) => `<button type="button" data-zapmodo="${k}" aria-pressed="${modo === k}">${n}</button>`).join("")}</div>
       <span class="z6est">${estado}</span><span class="espaco"></span>
       <button class="btn turq peq" type="button" data-zapler="" ${zapRodando() ? "disabled" : ""}>📡 Atualizar</button><button class="lk" type="button" data-zapler="168" ${zapRodando() ? "disabled" : ""} title="Lê todas as conversas dos últimos 7 dias">🧹 Limpeza geral</button></div>
     ${ped?.status === "feito" ? `
-    ${imp.some(([, l]) => (l || []).length) ? `<section class="z6sec"><h4>📰 O que importa</h4>${imp.map(([t, l]) => (l || []).length ? `${t ? `<p class="z5sub">${t}</p>` : ""}<ul class="z5imp">${l.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>` : "").join("")}</section>` : ""}
-    <section class="z6sec"><div class="f4h"><h4>⏳ Esperando você · ${esp.length}</h4>${esp.length > 1 ? `<button class="lk" type="button" data-acao="zap-todas">✓ Marcar todas</button>` : ""}</div>
+    <div class="z7conta">${conta(esp.length, esp.length === 1 ? "esperando você" : "esperando você", "z-esp", "esp")}${modo !== "pessoal" ? conta(sugs.length, sugs.length === 1 ? "pode virar rota" : "podem virar rota", "z-sug", "sug") : ""}${conta(resto.length, "conversas com movimento", "z-conv", "")}</div>
+    ${impl.length ? `<section class="z6sec"><h4>📰 O que importa</h4><ul class="z7imp">${impVis.map(([tt, x]) => `<li>${tt && modo === "tudo" ? `<span class="z7tag">${tt}</span>` : ""}${negrito(x)}</li>`).join("")}</ul>${impl.length > impVis.length ? `<button class="lk" type="button" data-acao="zap-imp-tudo">Ver mais ${impl.length - impVis.length}</button>` : ""}</section>` : ""}
+    <section class="z6sec" id="z-esp"><div class="f4h"><h4>⏳ Esperando você · ${esp.length}</h4>${esp.length > 1 ? `<button class="lk" type="button" data-acao="zap-todas">✓ Marcar todas</button>` : ""}</div>
       ${esp.map((z) => linha6(z, true)).join("") || '<p class="nota" style="margin:0">Ninguém esperando resposta. 🎉</p>'}
       ${vistos.length ? `<details><summary class="nota" style="cursor:pointer">Já respondidas · ${vistos.length}</summary>${vistos.map((z) => linha6(z, true)).join("")}</details>` : ""}</section>
-    <section class="z6sec"><h4>💬 Conversas · ${resto.length}</h4>${vis.map((z) => linha6(z)).join("") || '<p class="nota" style="margin:0">Nada novo.</p>'}${resto.length > vis.length ? `<button class="lk" type="button" data-acao="zap-ver-todas">Ver mais ${resto.length - vis.length}</button>` : ""}</section>
-    ${modo !== "pessoal" && nov.length ? `<details class="z6sec"><summary><h4>🗺️ Pode virar rota · ${nov.length}</h4></summary>${nov.map((x) => `<div class="sugestao"><div class="tx"><b style="white-space:pre-wrap">${esc(rotaTxt(x.texto))}</b><small>${esc(x.quem || "")}${x.conversa ? " · " + esc(nomeZap(x.conversa).nome) : ""}</small></div><button class="btn turq peq" type="button" data-sug="${x.id}" data-sugacao="rota">Virar rota</button><button class="btn peq" type="button" data-sug="${x.id}" data-sugacao="descartar">Descartar</button></div>`).join("")}</details>` : ""}` : ""}</div>`;
+    ${modo !== "pessoal" ? `<section class="z6sec z7sug" id="z-sug"><h4>🗺️ Pode virar rota · ${sugs.length}</h4><p class="nota" style="margin:0 0 8px">O ALFY achou nas conversas. Vira rota com um toque (você revisa antes de salvar) ou descarta.</p>
+      ${sugVis.map(sugHTML).join("") || '<p class="nota" style="margin:0">Nada novo para virar rota.</p>'}${sugs.length > sugVis.length ? `<button class="lk" type="button" data-acao="zap-sug-todas">Ver mais ${sugs.length - sugVis.length}</button>` : ""}</section>` : ""}
+    <section class="z6sec" id="z-conv"><h4>💬 Conversas · ${resto.length}</h4>${vis.map((z) => linha6(z)).join("") || '<p class="nota" style="margin:0">Nada novo.</p>'}${resto.length > vis.length ? `<button class="lk" type="button" data-acao="zap-ver-todas">Ver mais ${resto.length - vis.length}</button>` : ""}</section>` : ""}</div>`;
 }
 // ---------------------------------------------------------------- feed
 const EV_IC = { comentario: "💬", orientacao: "🧭", whatsapp: "📱", status: "🔀", nova: "🗺️", ideia: "💡", editar: "✏️", budget: "💰", pauta_ligar: "🗓️", reuniao_ligar: "🗓️", pauta_desligar: "🗓️", reuniao_desligar: "🗓️" };
@@ -1094,7 +1131,7 @@ function folha() {
       <nav class="ancoras3" aria-label="Seções">${SECOES_F.map(([k, n]) => `<button type="button" data-irf="${k}" aria-current="${k === "fazer"}">${n}${k === "interagir" ? (novas ? ` <small class="novas4">${novas} nova${novas > 1 ? "s" : ""}</small>` : tempo.length ? ` <small>${tempo.length}</small>` : "") : ""}${k === "lembrete" && lem ? " ⏰" : ""}</button>`).join("")}</nav></div></div>
     <div class="col3">
       <section class="secao3" id="f-fazer">
-        <div class="selos4"><span class="sl4 st-${r.status}"><i></i>${ST[r.status].um}</span>${r.prioridade ? `<span class="sl4">${prioTxt(r.prioridade)}</span>` : ""}<span class="sl4 ${pz.cls}">📅 ${pz.txt}</span><span class="sl4">👤 ${esc(curto(nomeDe(r.responsavel_id)))}${r.co_responsavel_id ? " + " + esc(curto(nomeDe(r.co_responsavel_id))) : ""}</span>${r.pontos ? `<span class="sl4 pts">🏆 ${ptsTxt(r.pontos.pontos)}</span>` : ""}${r.repete ? `<span class="sl4">🔁 ${REPETE_TXT[r.repete]}</span>` : ""}${r.sensivel ? '<span class="sl4">🔒 só eu</span>' : ""}</div>
+        <div class="selos4"><span class="sl4 st-${r.status}"><i></i>${ST[r.status].um}</span>${r.prioridade ? `<span class="sl4">${prioTxt(r.prioridade)}</span>` : ""}<span class="sl4 ${pz.cls}">📅 ${pz.txt}</span><span class="sl4">👤 ${esc(curto(nomeDe(r.responsavel_id)))}${r.co_responsavel_id ? " + " + esc(curto(nomeDe(r.co_responsavel_id))) : ""}</span>${(() => { const v = valorRota(r); return v ? `<button type="button" class="sl4 pts" data-irf="det-tipo" title="Quanto esta rota vale no Placar">🏆 ${v.feito ? "" : "vale "}${(v.feito || v.mod === 1 ? (v.feito ? v.pts : v.base) : v.pts).toLocaleString("pt-BR")} pts</button>` : ""; })()}${r.repete ? `<span class="sl4">🔁 ${REPETE_TXT[r.repete]}</span>` : ""}${r.sensivel ? '<span class="sl4">🔒 só eu</span>' : ""}</div>
         ${campo4(r, "assist", "resumo4")}${campo4(r, "instr")}${campo4(r, "resultado")}
         ${campo4(r, "como_esta", "agora4")}
       </section>
@@ -1112,7 +1149,7 @@ function folha() {
           ${r.repete === "semanal" ? `<div class="dias-sem" style="padding:0 12px 10px">${DIAS_SEM.map((n, k) => `<label><input type="checkbox" data-repetedia="1" value="${k + 1}" ${(r.repete_dias || []).includes(k + 1) ? "checked" : ""}>${n}</label>`).join("")}</div>` : ""}
           ${linhaD("💰", "Custo", `<input data-bud="1" value="${esc(r.budget_valor || "")}" placeholder="sem custo">`)}
           ${r.budget_valor || r.budget_status !== "sem custo" ? `<div class="bud3">${BUDGET_ST.map((x) => `<button type="button" class="chip" data-budst="${x}" aria-pressed="${r.budget_status === x}" ${(x === "aprovado" || x === "recusado") && !comando() ? "disabled" : ""}>${x}</button>`).join("")}</div>` : ""}</div>
-        <div class="grupo3"><small>Tipo</small>${linhaD("🏷️", "Tipo", `<select data-prop="tipo">${opc(TIPOS, r.tipo, "Sem tipo")}</select>`)}${linhaD("🧭", "Natureza", `<select data-prop="natureza">${opc(NATUREZAS, r.natureza, "Sem natureza")}</select>`)}${linhaD("💥", "Impacto", `<select data-prop="impacto">${opc(NIVEIS, r.impacto, "Sem")}</select>`)}${linhaD("🏋️", "Dificuldade", `<select data-prop="esforco">${opc(["Fácil", "Simples", "Difícil", "Muito difícil"].concat(["Baixo", "Médio", "Alto"].includes(r.esforco) ? [r.esforco] : []), r.esforco, "Sem")}</select>`)}${comando() ? linhaD("⭐", "Qualidade da entrega", `<select data-prop="qualidade">${opc(["Acima", "Como esperado", "Abaixo"], r.qualidade, "Como esperado (padrão)")}</select>`) : ""}</div>
+        <div class="grupo3" id="f-det-tipo"><small>Tipo e pontos</small>${linhaD("🏷️", "Tipo", `<select data-prop="tipo">${opc(TIPOS, r.tipo, "Sem tipo")}</select>`)}${linhaD("🧭", "Natureza", `<select data-prop="natureza">${opc(NATUREZAS, r.natureza, "Sem natureza")}</select>`)}${linhaD("💥", "Impacto", `<select data-prop="impacto">${opc(NIVEIS, r.impacto, "Sem")}</select>`)}${linhaD("🏋️", "Dificuldade", `<select data-prop="esforco">${opc(["Fácil", "Simples", "Difícil", "Muito difícil"].concat(["Baixo", "Médio", "Alto"].includes(r.esforco) ? [r.esforco] : []), r.esforco, "Sem")}</select>`)}${comando() ? linhaD("⭐", "Qualidade da entrega", `<select data-prop="qualidade">${opc(["Acima", "Como esperado", "Abaixo"], r.qualidade, "Como esperado (padrão)")}</select>`) : ""}${valeHTML(r)}</div>
         <div class="grupo3"><small>📎 Arquivos</small>${(r.anexos || []).map((x) => `<div class="lin3"><span class="ic">${/pdf/.test(x.tipo || "") ? "📄" : /image/.test(x.tipo || "") ? "🖼️" : "📎"}</span><span class="rot" style="min-width:0;overflow:hidden;text-overflow:ellipsis">${esc(x.nome)}</span><span class="val"><button class="mini" type="button" data-baixar="${x.id}">Baixar</button><button class="mini" type="button" data-tiraranexo="${x.id}" aria-label="Tirar">✕</button></span></div>`).join("")}
           <label class="lin3" style="cursor:pointer"><span class="ic">＋</span><span class="rot">Anexar arquivo</span><input type="file" id="rota-arq" multiple hidden></label><span id="rota-arq-prog" class="nota3"></span></div>
         <div class="grupo3"><small>🗓️ Pauta e reunião</small><div class="lin3"><span class="rot">Levar para</span><span class="val val-w">${(r.pautas || []).map((id) => { const p = (M.pautas || []).find((x) => x.id === id); return p ? `<button class="chip" type="button" data-irpauta="${id}">${esc(p.titulo)}</button>` : ""; }).join("")}${(r.reunioes || []).map((id) => { const x = reuniaoDe(id); return x ? `<button class="chip" type="button" data-irreuniao="${id}">${esc(x.titulo)}</button>` : ""; }).join("")}${pode ? `<button class="chip" type="button" data-acao="pauta-da-rota">＋ pauta</button>${reus.length ? `<select data-levarreuniao="1"><option value="">＋ reunião</option>${reus.filter((x) => !(r.reunioes || []).includes(x.id)).map((x) => `<option value="${x.id}">${esc(x.titulo)}</option>`).join("")}</select>` : ""}` : ""}</span></div>
@@ -1345,13 +1382,13 @@ function agCartao(it, hoje, agora) {
   const abre = it.k === "rota" || it.k === "rotina" ? `data-rt="${it.rt}"` : `data-agabrir="${esc(it.chave)}"`;
   const arrasta = it.rt && !it.virtual ? `draggable="true" data-agarrasta="${it.rt}"` : "";
   const podeHora = it.rt && !it.virtual && (manda() || (rotaDe(it.rt) && podeMexer(rotaDe(it.rt))));
-  if (!it.ini && !it.diaTodo) return `<div role="button" tabindex="0" class="agk-card agk-sem k-${it.k}" ${abre} ${arrasta}><span class="agk-rt">${esc(nomeRota(it.rt))} · ${ic} ${nome}</span><span class="agk-tt">${esc(it.titulo)}</span>${podeHora ? `<button class="agk-dar" type="button" data-agdar="${it.rt}">📅 Dar horário</button>` : ""}</div>`;
+  if (!it.ini && !it.diaTodo) return `<div role="button" tabindex="0" class="agk-card agk-sem k-${it.k}" ${abre} ${arrasta}><span class="agk-rt">${ic} ${esc(nomeRota(it.rt))}</span><span class="agk-tt">${esc(it.titulo)}</span>${podeHora ? `<button class="agk-dar" type="button" data-agdar="${it.rt}">📅 Dar horário</button>` : ""}</div>`;
   const d0 = dia(it.quando), fimMin = it.fim ? agMin(it.fim) : agMin(it.ini) + 60;
   const passou = it.st === "concluida" || d0 < hoje || (d0 === hoje && fimMin <= agora), agoraJa = d0 === hoje && agMin(it.ini) <= agora && agora < fimMin;
   const meta = [it.onde && "📍 " + it.onde, (it.gente || []).length > 1 && "👥 " + it.gente.length].filter(Boolean).join("  ·  ");
   const chips = (it.rotas.length ? `<span>📍 ${it.rotas.length} ${it.rotas.length > 1 ? "rotas" : "rota"}</span>` : "") + (it.pautas.length ? `<span>💬 ${it.pautas.length} ${it.pautas.length > 1 ? "pautas" : "pauta"}</span>` : "");
   return `<div role="button" tabindex="0" class="agk-card k-${it.k} ${passou ? "passou" : ""} ${agoraJa ? "agora" : ""} ${it.virtual ? "virtual" : ""}" ${abre} ${arrasta}>
-    <span class="agk-l1"><span class="agk-hora">${it.ini || "Dia todo"}${it.fim ? `<span class="agk-fim"> – ${it.fim}</span>` : ""}</span><span class="agk-tipo">${ic} ${nome}</span></span>
+    <span class="agk-l1"><span class="agk-hora">${it.ini || "Dia todo"}${it.fim ? `<span class="agk-fim"> – ${it.fim}</span>` : ""}</span><span class="agk-ic" title="${nome}">${ic}</span></span>
     <span class="agk-tt">${esc(it.titulo)}</span>${meta ? `<span class="agk-mt">${esc(meta)}</span>` : ""}${chips ? `<span class="agk-chips">${chips}</span>` : ""}</div>`;
 }
 // detalhe do compromisso, da reunião ou do evento do Google, por cima da agenda
@@ -1424,6 +1461,11 @@ async function agLigar(campos) {
 // arrastar o cartão para outro dia: mantém o horário (ou muda o prazo, se ainda não tem horário)
 function ligarAgendaKanban() {
   const k = $("#ag-semana"); if (!k || k.dataset.ligado) return; k.dataset.ligado = "1";
+  let x0 = null;   // celular: deslizar troca o dia dentro da semana
+  k.addEventListener("touchstart", (e) => { x0 = e.touches[0].clientX; }, { passive: true });
+  k.addEventListener("touchend", (e) => { if (x0 === null) return; const dx = e.changedTouches[0].clientX - x0; x0 = null; if (Math.abs(dx) < 70) return;
+    const bs = [...document.querySelectorAll("[data-agsel]")], i = bs.findIndex((b) => b.getAttribute("aria-selected") === "true"), j = i + (dx < 0 ? 1 : -1);
+    if (bs[j]) { s.agDia = bs[j].dataset.agsel; render(); } }, { passive: true });
   k.addEventListener("dragstart", (e) => { const el = e.target.closest("[data-agarrasta]"); if (!el) return; el.classList.add("arrastando"); e.dataTransfer.setData("text/plain", el.dataset.agarrasta); });
   k.addEventListener("dragend", (e) => { const el = e.target.closest("[data-agarrasta]"); el && el.classList.remove("arrastando"); });
   k.querySelectorAll(".coluna").forEach((col) => {
@@ -1454,11 +1496,18 @@ function vistaAgenda() {
     return barra + `<div class="ag-mes">${DIAS_SEM.map((n) => `<div class="ag-cab">${n}</div>`).join("")}${dias.map((x) => { const k = diaISO(x), l = por[k] || []; return `<div class="ag-dia ${x.getMonth() !== mes ? "fora" : ""} ${k === hoje ? "hoje" : ""}"><span class="n">${x.getDate()}</span>${l.slice(0, 4).map(itemAgendaHTML).join("")}${l.length > 4 ? `<button class="ag-mais" type="button" data-agdia="${k}">+${l.length - 4}</button>` : ""}</div>`; }).join("")}</div>`;
   }
   const dias = Array.from({ length: 7 }, (_, i) => { const x = new Date(de); x.setDate(x.getDate() + i); return x; });
-  const agora = agMin(hhmm(new Date().toISOString()));
-  return barra + `<div class="kanban ag-semana agk" id="ag-semana">${dias.map((x, i) => {
-    const k = diaISO(x), l = por[k] || [], com = l.filter((it) => it.ini || it.diaTodo), sem = l.filter((it) => !it.ini && !it.diaTodo);
-    return `<section class="coluna ${k === hoje ? "hoje" : ""}" data-agcoldia="${k}"><header><b>${DIAS_SEM[i]}</b><span>${ddmm(x.toISOString())}</span></header>
-      <div class="cartoes">${com.map((it) => agCartao(it, hoje, agora)).join("") || (sem.length ? "" : '<div class="vazio">Livre</div>')}${sem.length ? `<div class="agk-divisa">Sem horário</div>${sem.map((it) => agCartao(it, hoje, agora)).join("")}` : ""}</div></section>`;
+  const agora = agMin(hhmm(new Date().toISOString())), ks = dias.map(diaISO);
+  const sel = ks.includes(s.agDia) ? s.agDia : ks.includes(hoje) ? hoje : ks[0];   // no celular: um dia por vez, escolhido na faixa
+  const faixa = `<div class="agk-dias" role="tablist">${dias.map((x, i) => { const k = ks[i], n = (por[k] || []).length;
+    return `<button type="button" role="tab" data-agsel="${k}" aria-selected="${k === sel}" class="${k === hoje ? "hoje" : ""} ${k < hoje ? "foi" : ""}"><small>${DIAS_SEM[i]}</small><b>${x.getDate()}</b><i>${"•".repeat(Math.min(n, 3))}</i></button>`; }).join("")}</div>`;
+  return barra + faixa + `<div class="agk7" id="ag-semana">${dias.map((x, i) => {
+    const k = ks[i], l = por[k] || [], com = l.filter((it) => it.ini || it.diaTodo), sem = l.filter((it) => !it.ini && !it.diaTodo);
+    let marca = k === hoje ? com.findIndex((it) => !it.diaTodo && agMin(it.ini) > agora) : -2; if (marca === -1) marca = com.length;
+    const linhaAgora = `<div class="agk-agora"><span>${hhmm(new Date().toISOString())}</span></div>`;
+    const cards = com.map((it, j) => (j === marca ? linhaAgora : "") + agCartao(it, hoje, agora)).join("") + (marca === com.length && com.length ? linhaAgora : "");
+    return `<section class="agk-col ${k === hoje ? "hoje" : ""} ${k < hoje ? "foi" : ""} ${k === sel ? "agk-on" : ""}" data-agcoldia="${k}">
+      <header><span class="agk-dn">${DIAS_SEM[i]}</span><b class="agk-dd">${x.getDate()}</b><span class="espaco"></span><button class="agk-mais" type="button" data-agnovo="${k}" title="Compromisso neste dia" aria-label="Compromisso em ${ddmm(x.toISOString())}">＋</button></header>
+      <div class="agk-lista">${cards || (sem.length ? "" : '<p class="agk-vazio">Livre</p>')}${sem.length ? `<div class="agk-divisa">Sem horário · ${sem.length}</div>${sem.map((it) => agCartao(it, hoje, agora)).join("")}` : ""}</div></section>`;
   }).join("")}</div>`;
 }
 
@@ -1539,7 +1588,7 @@ function render() {
   const c = $("#conteudo");
   c.innerHTML = { rotinas: vistaAbaRotinas, placar: vistaPlacar, zap: () => `<div style="max-width:900px">${zapHTML("")}</div>`, rotas: () => (s.vista === "rar" && comando() ? vistaRotaARota() : s.vista === "kanban" ? vistaKanban() : vistaLista()), feed: vistaFeed, agenda: vistaAgenda, equipe: vistaEquipe, pautas: vistaPautas, comandos: vistaComandos, eu: vistaEu }[s.aba]();
   if (s.aba === "rotas" && s.vista === "kanban") ligarKanban();
-  if (s.aba === "agenda") { const k = $("#ag-semana"), h = k && k.querySelector(".coluna.hoje"); if (k && h && !s.agRolou) { k.scrollLeft = h.offsetLeft - k.offsetLeft - 8; s.agRolou = true; } ligarAgendaKanban(); }
+  if (s.aba === "agenda") ligarAgendaKanban();
   try { localStorage.setItem("alfy-vista", JSON.stringify({ vista: s.vista, agrupar: s.agrupar, v28: true })); } catch (_) { /* privado */ }
 }
 // não redesenha o que a pessoa está digitando: espera ela sair do campo
@@ -1744,8 +1793,11 @@ document.addEventListener("click", async (e) => {
     if (d.rrdepois) { const foi = await enviarRascunho(d.rrdepois); rrTirar(d.rrdepois, "depois"); aviso(nomeRota(d.rrdepois) + " ficou para depois" + (foi ? " · comentário enviado" : "")); return; }
     if (d.rrlista) { s.rr.formato = "lista"; s.rr.foco = d.rrlista; rrSalvar(); render(); setTimeout(() => $(".rr-item.foco")?.scrollIntoView({ block: "start", behavior: "smooth" }), 40); return; }
     if (d.rraplicar) { const rt = d.rraplicar, t = s.rr.itens[rt]?.sugestao; if (!t) return; s.rr.itens[rt].sugestao = ""; s.rr.foco = rt; s.respLinha = { ...(s.respLinha || {}), [rt]: "" }; await pedir("ia", "rota:" + rt, { texto: t, agir: true }, "rota:" + rt); render(); return; }
+    if (d.zapir) { document.getElementById(d.zapir)?.scrollIntoView({ behavior: "smooth", block: "start" }); return; }
+    if (d.agsel) { s.agDia = d.agsel; render(); return; }
+    if (d.agnovo) { novaRota({ compromisso: true, dia: d.agnovo }); return; }
     if (d.agvista) { s.agVista = d.agvista; s.agDados = null; render(); await carregarAgenda(); render(); return; }
-    if (d.agnav !== undefined) { const n = +d.agnav, b = s.agBase || segundaDe(new Date()); if (n === 0) s.agBase = segundaDe(new Date()); else if (s.agVista === "mes") { const m = new Date(b.getTime() + 6 * 864e5); m.setMonth(m.getMonth() + n, 1); s.agBase = segundaDe(m); } else { const x = new Date(b); x.setDate(x.getDate() + 7 * n); s.agBase = x; } s.agDados = null; s.agRolou = n !== 0; render(); await carregarAgenda(); render(); return; }
+    if (d.agnav !== undefined) { const n = +d.agnav, b = s.agBase || segundaDe(new Date()); if (n === 0) { s.agBase = segundaDe(new Date()); s.agDia = hojeDia(); } else if (s.agVista === "mes") { const m = new Date(b.getTime() + 6 * 864e5); m.setMonth(m.getMonth() + n, 1); s.agBase = segundaDe(m); } else { const x = new Date(b); x.setDate(x.getDate() + 7 * n); s.agBase = x; } s.agDados = null; s.agRolou = n !== 0; render(); await carregarAgenda(); render(); return; }
     if (d.agdia) { s.agVista = "semana"; s.agBase = segundaDe(new Date(d.agdia + "T12:00:00-03:00")); s.agDados = null; render(); await carregarAgenda(); render(); return; }
     if (d.google !== undefined) { if (d.google) window.open(d.google, "_blank", "noopener"); else aviso("Compromisso do Google Agenda"); return; }
     if (d.atarota !== undefined) { const r = s.reuniaoDet.ata_json.rotas[+d.atarota], rid = s.reuniao; novaRota({ titulo: r.titulo, assist: r.o_que_fazer, responsavel_id: pessoaPorNome(r.responsavel) || eu().id, prazo: r.prazo || "", depois: async (rt) => { await chamar("alfy_reuniao_rota", { p_reuniao: rid, p_rt: rt, p_ligar: true }); } }); return; }
@@ -1859,6 +1911,8 @@ document.addEventListener("click", async (e) => {
     }
     if (a === "ir-escrever" || a === "ir-alfy") { const el = a === "ir-alfy" ? ($(".alfy4") || $("#f-coment")) : $("#f-coment"), c = $("#corpo-folha"); if (el && c) c.scrollTo({ top: el.offsetTop - ($(".cab3")?.offsetHeight || 0) - 10 }); setTimeout(() => $("#t-coment")?.focus({ preventScroll: true }), 50); if (a === "ir-alfy") aviso("Escolha uma ação do ALFY ou escreva o pedido"); return; }
     if (a === "zap-ver-todas") { s.zapTodas = true; render(); return; }
+    if (a === "zap-sug-todas") { s.zapSugTodas = true; render(); return; }
+    if (a === "zap-imp-tudo") { s.zapImpTudo = true; render(); return; }
     if (a === "zap-todas") { for (const z of (s.zap?.itens || []).filter((x) => x.precisa && !x.visto && zapNoModo(x))) s.zap = await chamar("alfy_zap_visto", { p_id: z.id }); render(); aviso("Tudo marcado como respondido"); return; }
     if (a === "nova-rotina") { novaRota({ repete: "semanal", semIA: false }); return; }
     if (a === "lem-outro") { s.lemOutro = !s.lemOutro; refolha(); return; }
