@@ -1464,3 +1464,6 @@ button.pil{font:inherit;cursor:pointer;border:inherit}
 /* 2.31 · ++ pedido da equipe */
 .z7s.mm .z7st b{color:var(--texto)}
 .mm-selo{align-self:flex-start;font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#06201E;background:var(--amber);border-radius:6px;padding:2px 7px}
+.z7vezes{color:var(--aco-2)!important}
+.z7volta{color:var(--amber)!important;font-weight:600}
+.alerta-ia{margin:0 0 14px;padding:10px 14px;border-radius:10px;background:rgba(246,178,74,.12);border:1px solid rgba(246,178,74,.45);color:#F6D7A4;font-size:14px;line-height:1.45}
