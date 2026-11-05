@@ -1013,3 +1013,19 @@ details.z5bloco[open] > summary::after{content:" ▴"}
 .rapidas3 input[type=date],.rapidas3 input[type=time]{background:var(--ferro-1);border:1px solid var(--linha);border-radius:9px;padding:6px 8px;font-size:16px;color:var(--texto);color-scheme:dark}
 @media (max-width:900px){.lem5 .btn{flex:1}.seg5{width:100%;justify-content:space-between}}
 .c4h .novo4{color:#2A0F02}
+
+/* ---------- 2.19 · gaveta: pílulas sob as abas, conversa em faixa própria, apagar, barra completa ---------- */
+#f-fazer > .selos4{margin-bottom:2px}
+.f4c.agora4 .f4h h4{color:#C9A76A}
+.f4c.agora4 p{color:#F3DDB8}
+.conv-sec{background:var(--ferro-0);border:1px solid var(--linha);border-radius:14px;padding:18px 16px!important;margin:12px 0}
+.conv-sec .conv4{background:var(--ferro-1);border:1px solid var(--linha);border-radius:12px;padding:2px 12px}
+.apaga4{margin-left:auto;display:inline-flex;gap:6px;align-items:center;font-size:12px;color:#FF9A9C;font-weight:700}
+.apaga4 button{border:1px solid #5A2A2C;background:#2A1416;color:#FF9A9C;border-radius:6px;padding:2px 8px;font-size:12px;font-weight:700}
+.apaga4 button:last-child{border-color:var(--ferro-4);background:var(--ferro-2);color:var(--aco-2)}
+.menu4 button[data-apagar]{color:#FF9A9C;border-color:#5A2A2C}
+.barra3-in{gap:2px}
+.b3{font-size:11.5px;min-height:54px;padding:0 2px}
+.b3 span{font-size:18px}
+.b3.ia{color:#7FD3CB}
+@media (max-width:420px){.b3{font-size:10.5px}.b3 span{font-size:17px}.seta3{font-size:22px}}
