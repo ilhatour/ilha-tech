@@ -1,4 +1,4 @@
-// ALFY · Mapa de Rotas · Ilha Tech · v2.28.0 · 05/11/2026 · Painel de Ferro · Passagem com Filtros (prioridade, etapa, prazo, pessoa, frente)
+// ALFY · Mapa de Rotas · Ilha Tech · v2.28.1 · 05/11/2026 · Painel de Ferro · filtros da Passagem à mostra no painel
 // Tudo passa pelas funções alfy_* do banco, sempre com a chave pessoal de quem está usando.
 // O banco decide o que cada pessoa vê; a tela só desenha o que voltou.
 // A IA e os comandos são pedidos numa fila (alfy.pedido) que o robô do Mac atende.
@@ -455,15 +455,15 @@ function rrPassaFiltro(x) {
     && (!f.prazo.length || f.prazo.includes(pz) || (f.prazo.includes("semana") && (pz === "hoje")));
 }
 const rrNFiltros = () => Object.values(rrF()).reduce((n, l) => n + l.length, 0) + (s.pessoa ? 1 : 0) + (s.frente ? 1 : 0);
-function rrFiltrosHTML() {
-  const f = rrF(), n = rrNFiltros(), aberto = !!s.rrFAberto;
-  const tokens = [...Object.entries(RR_FILTROS).flatMap(([k, [, ops]]) => ops.filter(([v]) => f[k].includes(v)).map(([v, nm]) => `<button type="button" class="rrf-tk" data-rrf="${k}" data-rrfv="${v}" title="Tirar">${nm}<i>✕</i></button>`)),
-    s.pessoa ? `<button type="button" class="rrf-tk" data-rrftira="pessoa">👤 ${s.pessoa === "semdono" ? "Sem dono" : esc(curto(nomeDe(s.pessoa)))}<i>✕</i></button>` : "",
-    s.frente ? `<button type="button" class="rrf-tk" data-rrftira="frente">${esc(frenteCurta(s.frente))}<i>✕</i></button>` : ""].join("");
-  const pes = gente().sort((a, b) => a[1].localeCompare(b[1]));
-  return `<div class="rrf"><button type="button" class="rrf-bt ${n ? "on" : ""}" data-acao="rr-filtros" aria-expanded="${aberto}"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M7 12h10M10 18h4"/></svg>Filtros${n ? `<b>${n}</b>` : ""}</button>${tokens}${n ? `<button type="button" class="lk" data-acao="rr-filtros-limpar">Limpar</button>` : ""}</div>
-    ${aberto ? `<div class="rrf-painel">${Object.entries(RR_FILTROS).map(([k, [nome, ops]]) => `<div class="rrf-g"><small>${nome}</small><div>${ops.map(([v, nm]) => `<button type="button" class="rrf-op" data-rrf="${k}" data-rrfv="${v}" aria-pressed="${f[k].includes(v)}">${nm}</button>`).join("")}</div></div>`).join("")}
-      <div class="rrf-g"><small>Quem e onde</small><div class="rrf-sel"><select class="busca" data-rrsel="pessoa" aria-label="Pessoa">${opc([["semdono", "👻 Sem dono"], ...pes], s.pessoa, "Todas as pessoas")}</select><select class="busca" data-rrsel="frente" aria-label="Frente">${opc(FRENTES.map((x) => [x, x]), s.frente, "Todas as frentes")}</select></div></div></div>` : ""}`;
+function rrFiltrosHTML() {   // filtros à mostra: grupos curtos numa linha (no celular, desliza para o lado)
+  const f = rrF(), n = rrNFiltros(), pes = gente().sort((a, b) => a[1].localeCompare(b[1]));
+  const curto_ = { P1: "🚨 P1", P2: "⚡ P2", P3: "⏳ P3", P4: "💤 P4", P5: "⏸️ P5", sem: "Sem" };
+  const grupo = (k, rot, ops) => `<div class="rrf2-g" role="group" aria-label="${rot}"><small>${rot}</small>${ops.map(([v, nm]) => `<button type="button" class="rrf-op" data-rrf="${k}" data-rrfv="${v}" aria-pressed="${f[k].includes(v)}">${nm}</button>`).join("")}</div>`;
+  return `<div class="rrf2">${grupo("prio", "Prioridade", RR_FILTROS.prio[1].map(([v]) => [v, curto_[v]]))}
+    ${grupo("st", "Etapa", [["rota", "🔴 Não iniciada"], ["andamento", "🟡 Andamento"], ["pausada", "🟠 Pausada"]])}
+    ${grupo("prazo", "Prazo", [["venc", "Vencidas"], ["hoje", "Hoje"], ["semana", "7 dias"], ["sem", "Sem prazo"]])}
+    <div class="rrf2-g"><select class="rrf2-sel ${s.pessoa ? "on" : ""}" data-rrsel="pessoa" aria-label="Pessoa">${opc([["semdono", "👻 Sem dono"], ...pes], s.pessoa, "👤 Todas as pessoas")}</select><select class="rrf2-sel ${s.frente ? "on" : ""}" data-rrsel="frente" aria-label="Frente">${opc(FRENTES.map((x) => [x, frenteCurta(x)]), s.frente, "🗺️ Todas as frentes")}</select></div>
+    ${n ? `<button type="button" class="lk rrf2-limpa" data-acao="rr-filtros-limpar">Limpar ${n}</button>` : ""}</div>`;
 }
 // as rotas abertas (com os filtros do topo), na ordem escolhida, já em grupos
 function rrGrupos(todas, tudoMesmo) {

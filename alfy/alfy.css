@@ -1410,3 +1410,19 @@ button.sl4{border:0}
 .rrf-sel{flex-direction:column}
 .rrf-sel select{width:100%;height:36px;font-size:14px}
 .rrf-g>div.rrf-sel{flex-wrap:nowrap;align-items:stretch}.rrf-sel select{flex:0 0 auto!important;height:36px!important;min-height:0!important;padding-top:0;padding-bottom:0}
+
+/* 2.28.1 · filtros da Passagem à mostra (sem abrir e fechar) */
+.rrf2{display:flex;align-items:center;gap:6px 18px;flex-wrap:wrap;margin:12px 0 2px}
+.rrf2-g{display:flex;align-items:center;gap:4px;flex:0 0 auto}
+.rrf2-g>small{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--aco);margin-right:4px}
+.rrf2 .rrf-op{height:30px;padding:0 9px;font-size:13px;white-space:nowrap}
+.rrf2-sel{height:30px;border-radius:8px;border:1px solid var(--linha);background:var(--ferro-1);color:var(--aco-2);font:inherit;font-size:13px;padding:0 8px;max-width:190px}
+.rrf2-sel.on{border-color:var(--turq);color:var(--texto);background:rgba(43,175,166,.1)}
+.rrf2-limpa{font-size:13px}
+@media (max-width:760px){
+  .rrf2{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin-left:-4px;margin-right:-4px;padding:2px 4px;gap:14px;-webkit-mask-image:linear-gradient(90deg,#000 88%,transparent)}
+  .rrf2::-webkit-scrollbar{display:none}
+  .rrf2 .rrf-op{height:34px;font-size:14px}
+  .rrf2-sel{height:34px;font-size:14px}
+}
+@media (max-width:760px){.rr-painel .rr-l2{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;-webkit-mask-image:linear-gradient(90deg,#000 88%,transparent)}.rr-painel .rr-l2::-webkit-scrollbar{display:none}.rr-painel .rr-l2>*{flex:0 0 auto}.rr-painel .rr-l2 .espaco{display:none}}
