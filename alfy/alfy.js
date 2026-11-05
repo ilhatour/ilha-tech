@@ -253,7 +253,7 @@ function caixaLinha(r, forcar) {
   return `<div class="caixa-linha"><form class="cl-form ${forcar ? "so-campo" : ""}" id="${fid}" data-clform="${r.rt}"><textarea class="busca" id="cl-${r.rt.replace(/\W/g, "")}" rows="2" placeholder="${comando() ? "Comente o que aconteceu ou o próximo passo (o ALFY atualiza a rota), ou peça: muda o dono para a Karol · P1 até sexta · faz a mensagem cobrando" : "Conte como está ou o próximo passo. O ALFY atualiza a rota."}">${esc(s.rascunhoLinha?.[r.rt] || "")}</textarea>
     ${forcar ? "" : `<span class="cl-bot"><button class="btn peq" type="submit" data-clmodo="comentar">💬 Comentar</button>${comando() ? '<button class="btn turq peq" type="submit" data-clmodo="alfy">🐙 Pedir ao ALFY</button>' : ""}</span>`}</form>
     ${rod ? `<div class="ia-saida pensando">${s.rastreando?.[r.rt] ? "📡 rastreando WhatsApp e e-mail desta rota… (até 1 minuto)" : "🐙 o ALFY está lendo e atualizando a rota… (uns 10 segundos)"}</div>` : ""}
-    ${resp ? `<div class="ia-saida">${textoAlfy(resp)}<div class="usar">${s.sugLinha?.[r.rt] ? `<button class="mini ia" type="button" data-aplicarsug="${r.rt}">🐙 Aplicar a sugestão</button>` : ""}<button class="mini" type="button" data-copiartxt="${r.rt}">Copiar</button><button class="mini" type="button" data-rt="${r.rt}">Abrir a rota</button></div></div>` : ""}</div>`;
+    ${resp ? `<div class="ia-saida">${textoAlfy(resp)}<div class="usar">${s.sugLinha?.[r.rt] ? `<button class="mini ia" type="button" data-aplicarsug="${r.rt}">🐙 Aplicar a sugestão</button>` : ""}${/---MENSAGEM---|^\s*🐙 Alfy/.test(resp) ? "" : `<button class="mini" type="button" data-copiartxt="${r.rt}">Copiar</button>`}<button class="mini" type="button" data-rt="${r.rt}">Abrir a rota</button></div></div>` : ""}</div>`;
 }
 function linha(r, semPessoa) {
   return `<div class="linha-wrap"><div role="button" tabindex="0" class="linha2" data-rt="${r.rt}">${tag(r)}<span class="tt"><b>${esc(r.titulo)}</b>${r.assist && r.assist !== r.titulo ? `<span class="res">${esc(r.assist)}</span>` : ""}${metaLinha(r, semPessoa)}</span>${acoesLinha(r)}</div>${caixaLinha(r)}</div>`;
@@ -815,7 +815,7 @@ function textoAlfy(t) {
 const soMsgs = (t) => { const l = [...String(t || "").matchAll(/---MENSAGEM---\s*\n([\s\S]*?)\n\s*---FIM---/g)].map((m) => assinar(m[1])); return l.length ? l.join("\n\n") : String(t || ""); };
 function msgBalao(x) {
   const txt = assinar(x); let i = MSGS.indexOf(txt); if (i < 0) i = MSGS.push(txt) - 1;
-  return `<div class="msg5"><div class="msg5t">${zap(txt)}</div><button class="msg5c" type="button" data-copiarbloco="${i}">📋 Copiar</button></div>`;
+  return `<div class="msg6"><button class="msg6c" type="button" data-copiarbloco="${i}" title="Copiar a mensagem" aria-label="Copiar a mensagem">⧉</button><p>${zap(txt)}</p></div>`;
 }
 // ---------------------------------------------------------------- comandos (só o Miguel, por enquanto)
 const CMDS = [
@@ -1848,7 +1848,7 @@ document.addEventListener("click", async (e) => {
     if (d.iacampo) { const c = CAMPOS[d.iacampo], nome = c.rot.split(" ").slice(1).join(" "), atual = d.iacampo === "instr" ? instrDe(s.cartao) : s.cartao[COLUNA[d.iacampo]]; s.rascunhoRota = atual ? `Melhore o campo ${nome}: ` : `Escreva o campo ${nome} com o que já sabemos. `; refolha(); const t = $("#t-coment"); $("#f-interagir")?.scrollIntoView({ block: "start" }); t.focus(); t.setSelectionRange(t.value.length, t.value.length); return; }
     if (d.rap) { falarNaRota(d.rap); return; }
     if (d.usar) { const m = (s.cartao.ia || []).find((y) => String(y.id) === d.usar); if (m) { s.abaFolha = "ficha"; editar({ [COLUNA[d.campo]]: m.texto }, "Colocado em " + CAMPOS[d.campo].rot.split(" ").slice(1).join(" ")); } return; }
-    if (d.copiarbloco !== undefined) { const m = MSGS[+d.copiarbloco]; if (m) { copiar(m); b.textContent = "✓ Copiado"; setTimeout(() => { b.textContent = "📋 Copiar"; }, 1600); } return; }
+    if (d.copiarbloco !== undefined) { const m = MSGS[+d.copiarbloco]; if (m) { copiar(m); b.textContent = "✓"; b.classList.add("ok"); setTimeout(() => { b.textContent = "⧉"; b.classList.remove("ok"); }, 1600); } return; }
     if (d.copiarmsg) { const m = (s.cartao.ia || []).find((y) => String(y.id) === d.copiarmsg); if (m) copiar(soMsgs(m.texto)); return; }
     if (d.budst) { s.cartao = await chamar("alfy_budget", { p_rt: s.aberta, p_valor: $("[data-bud]")?.value || "", p_status: d.budst }); refolha(); await recarregar(); render(); return; }
     if (d.irpauta) { const id = +d.irpauta; fechar(); s.aba = "pautas"; s.reuniao = null; abrirPauta(id); return; }

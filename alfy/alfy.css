@@ -1379,3 +1379,10 @@ button.sl4{border:0}
   .lateral .eu .quem{display:none}
   .nav button{padding:8px 9px}
 }
+/* 2.26.2 · mensagem do ALFY: texto corrido como antes, com um botãozinho de copiar no canto */
+.msg6{position:relative;margin:2px 0}
+.msg6 p{margin:0;white-space:pre-wrap;padding-right:34px}
+.msg6c{position:absolute;top:-2px;right:0;width:28px;height:28px;border-radius:8px;border:1px solid var(--linha);background:var(--ferro-2);color:var(--aco-2);font-size:15px;line-height:1;cursor:pointer;display:grid;place-items:center}
+.msg6c:hover{color:var(--texto);border-color:var(--turq)}
+.msg6c.ok{color:var(--turq);border-color:var(--turq)}
+.ia-saida .msg6,p+.msg6{margin-top:8px}
