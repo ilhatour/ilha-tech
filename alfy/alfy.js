@@ -2107,3 +2107,16 @@ addEventListener("hashchange", () => { const m = location.hash.match(/k=([0-9a-f
   if (k) entrar(k).then(() => { if (!token) $("#tela-entrada").hidden = false; });
   else $("#tela-entrada").hidden = false;
 })();
+
+// versão nova no ar: recarrega sozinho (a cada 3 min e ao voltar para a aba), nunca com texto sendo digitado
+const VERSAO = (document.querySelector('script[src*="alfy.js?v="]')?.getAttribute("src") || "").split("v=")[1];
+async function conferirVersao() {
+  if (!VERSAO || document.hidden) return;
+  try {
+    const html = await (await fetch("index.html?x=" + Date.now(), { cache: "no-store" })).text(), v = (html.match(/alfy\.js\?v=(\d+)/) || [])[1];
+    const digitando = [...document.querySelectorAll("textarea,input[type=text],input:not([type])")].some((e) => e.value && e.offsetParent && e.id !== "busca");
+    if (v && v !== VERSAO && !digitando && !grav.ctx) location.reload();
+  } catch (_) { /* sem rede: tenta depois */ }
+}
+setInterval(conferirVersao, 180000);
+document.addEventListener("visibilitychange", () => { if (!document.hidden) conferirVersao(); });
