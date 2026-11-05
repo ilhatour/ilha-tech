@@ -1,4 +1,4 @@
-// ALFY · Mapa de Rotas · Ilha Tech · v2.19.0 · 05/11/2026 · Painel de Ferro · gaveta: pílulas sob as abas, apagar comentário, barra completa, sem envio repetido
+// ALFY · Mapa de Rotas · Ilha Tech · v2.20.0 · 05/11/2026 · Painel de Ferro · 🔁 Rotinas + aba 📱 WhatsApp com limpeza geral
 // Tudo passa pelas funções alfy_* do banco, sempre com a chave pessoal de quem está usando.
 // O banco decide o que cada pessoa vê; a tela só desenha o que voltou.
 // A IA e os comandos são pedidos numa fila (alfy.pedido) que o robô do Mac atende.
@@ -161,6 +161,7 @@ function navItens() {
   const pautas = (M?.pautas || []).filter((p) => p.status === "aberta").length;
   const it = [["rotas", "Rotas", IC.rotas, abertas], ["agenda", "Agenda", IC.agenda, ""], ["feed", "Feed", IC.feed, ""], ["pautas", "Pautas", IC.pautas, pautas || ""]];
   if (cuidaPessoas()) it.push(["equipe", "Equipe", IC.eu, (s.fichas || []).filter((f) => f.status === "pendente").length || ""]);
+  if (comando()) it.push(["zap", "WhatsApp", IC.whatsapp, (s.zap?.itens || []).filter((z) => z.precisa && !z.visto).length || ""]);
   if (comando()) it.push(["comandos", "Comandos", IC.comandos, ""]);
   return it;
 }
@@ -192,7 +193,7 @@ function topo() {
   fi.className = "filtros" + (s.filtrosAbertos ? " aberto" : "");
   const vivo = `<span class="ao-vivo"><i></i>ao vivo</span>`;
   if (s.aba === "rotas") {
-    const alt = `<div class="alterna" role="group" aria-label="Visão"><button type="button" data-vista="lista" aria-pressed="${s.vista === "lista"}">Lista</button><button type="button" data-vista="kanban" aria-pressed="${s.vista === "kanban"}">Kanban</button>${comando() ? `<button type="button" data-vista="rar" aria-pressed="${s.vista === "rar"}" title="Passagem de Rotas">🧭<span class="rr-txt"> Passagem</span></button>` : ""}</div>`;
+    const alt = `<div class="alterna" role="group" aria-label="Visão"><button type="button" data-vista="lista" aria-pressed="${s.vista === "lista"}">Lista</button><button type="button" data-vista="kanban" aria-pressed="${s.vista === "kanban"}">Kanban</button><button type="button" data-vista="rotinas" aria-pressed="${s.vista === "rotinas"}" title="Rotinas">🔁<span class="rr-txt"> Rotinas</span></button>${comando() ? `<button type="button" data-vista="rar" aria-pressed="${s.vista === "rar"}" title="Passagem de Rotas">🧭<span class="rr-txt"> Passagem</span></button>` : ""}</div>`;
     l1.innerHTML = `<h1>Rotas<small>${comando() ? "todas as frentes" : curto(eu().nome)}</small></h1>${alt}<span class="espaco"></span>${vivo}<button class="cta" type="button" data-acao="nova">＋ Nova rota</button>`;
     $("#alterna-cel").innerHTML = alt;
     fi.innerHTML = filtrosHTML(`<button class="chip alerta" type="button" id="f-venc" aria-pressed="${s.venc}">Só vencidas</button>` +
@@ -232,7 +233,7 @@ function tag(r) {
 const semEmoji = (t) => (t || "").replace(/^\S+\s/, "");
 function metaLinha(r, semPessoa) {
   const pz = prazoInfo(r), b = r.budget_valor || r.budget_status !== "sem custo";
-  return `<span class="meta2">${semPessoa ? "" : `<span>👤 ${esc(curto(nomeDe(r.responsavel_id)))}${r.co_responsavel_id ? " + " + esc(curto(nomeDe(r.co_responsavel_id))) : ""}</span>`}${r.repete ? `<span style="color:var(--turq)">🔁 ${{ diaria: "diária", semanal: "semanal", quinzenal: "quinzenal", mensal: "mensal" }[r.repete]}</span>` : ""}${r.prioridade ? `<span>${prioTxt(r.prioridade)}</span>` : ""}<span class="${pz.cls}">📅 ${pz.txt}</span>${r.natureza ? `<span>🧭 ${esc(semEmoji(r.natureza))}</span>` : ""}${r.tipo ? `<span>🏷️ ${esc(semEmoji(r.tipo))}</span>` : ""}${b && r.budget_status !== "sem custo" ? `<span class="bud ${r.budget_status === "aprovado" ? "ok" : ""}">💰 ${esc(r.budget_valor || "")} ${r.budget_status}</span>` : ""}${r.comentarios ? `<span style="color:var(--turq)">💬 ${r.comentarios}</span>` : ""}${r.n_anexos ? `<span>📎 ${r.n_anexos}</span>` : ""}${tocando(r) ? `<span class="sino">🔔 lembrete</span>` : ""}${temNova(r) ? `<span class="nova-l">💬 nova resposta</span>` : ""}${ultLinha(r)}</span>`;
+  return `<span class="meta2">${semPessoa ? "" : `<span>👤 ${esc(curto(nomeDe(r.responsavel_id)))}${r.co_responsavel_id ? " + " + esc(curto(nomeDe(r.co_responsavel_id))) : ""}</span>`}${r.repete ? `<span style="color:var(--turq)">🔁 ${{ diaria: "diária", semanal: "semanal", quinzenal: "quinzenal", mensal: "mensal", sob_demanda: "quando precisar" }[r.repete]}</span>` : ""}${r.prioridade ? `<span>${prioTxt(r.prioridade)}</span>` : ""}<span class="${pz.cls}">📅 ${pz.txt}</span>${r.natureza ? `<span>🧭 ${esc(semEmoji(r.natureza))}</span>` : ""}${r.tipo ? `<span>🏷️ ${esc(semEmoji(r.tipo))}</span>` : ""}${b && r.budget_status !== "sem custo" ? `<span class="bud ${r.budget_status === "aprovado" ? "ok" : ""}">💰 ${esc(r.budget_valor || "")} ${r.budget_status}</span>` : ""}${r.comentarios ? `<span style="color:var(--turq)">💬 ${r.comentarios}</span>` : ""}${r.n_anexos ? `<span>📎 ${r.n_anexos}</span>` : ""}${tocando(r) ? `<span class="sino">🔔 lembrete</span>` : ""}${temNova(r) ? `<span class="nova-l">💬 nova resposta</span>` : ""}${ultLinha(r)}</span>`;
 }
 const podeMexer = (r) => manda() || r.responsavel_id === eu().id || r.co_responsavel_id === eu().id;
 function acoesLinha(r) {
@@ -319,6 +320,21 @@ function ligarKanban() {
     col.addEventListener("drop", (e) => { e.preventDefault(); col.classList.remove("alvo"); mover(e.dataTransfer.getData("text/plain"), col.dataset.colSt); });
   });
   k.addEventListener("scroll", () => { const w = k.querySelector(".coluna").offsetWidth + 10, i = Math.round(k.scrollLeft / w); if (i !== s.colMovel) { s.colMovel = i; document.querySelectorAll(".abas-col .chip").forEach((b, j) => b.setAttribute("aria-pressed", j === i)); } }, { passive: true });
+}
+
+// ---------------------------------------------------------------- 🔁 Rotinas
+// tarefa que se repete: ao concluir, o ALFY abre a próxima com as mesmas instruções; "quando precisar" volta com um toque
+const REPETE_TXT = { diaria: "Todo dia", semanal: "Toda semana", quinzenal: "A cada 15 dias", mensal: "Todo mês", sob_demanda: "Quando precisar" };
+async function carregarRotinas() { s.rotinas = await chamar("alfy_rotinas").catch(() => s.rotinas); }
+function vistaRotinas() {
+  const rs = s.rotinas;
+  if (!rs) return `<div class="carregando">Carregando as rotinas…</div>`;
+  const card = (x) => { const ab = x.aberta, pz = ab ? prazoInfo({ ...rotaDe(ab.rt) || {}, prazo: ab.prazo, status: ab.status, prioridade: "" }) : null;
+    return `<div class="rot5"><div class="rot5t"><b>${esc(x.titulo)}</b><span class="sl4">🔁 ${REPETE_TXT[x.repete] || x.repete}${x.repete === "semanal" && (x.repete_dias || []).length ? " · " + x.repete_dias.map((d) => DIAS_SEM[d - 1]).join(", ") : ""}</span></div>
+      <p class="rot5m">👤 ${esc(curto(nomeDe(x.responsavel_id)))}${x.frente ? " · " + esc(frenteCurta(x.frente)) : ""} · feita ${x.feitas} ${x.feitas === 1 ? "vez" : "vezes"}${x.ultima_feita ? " · última " + quandoFoi(x.ultima_feita) : ""}</p>
+      <div class="rot5a">${ab ? `<span class="rot5s"><i class="pt4 st-${ab.status}"></i>Aberta: ${esc(nomeRota(ab.rt))}${pz ? " · " + pz.txt : ""}</span><button class="btn peq" type="button" data-rt="${ab.rt}">Abrir</button>` : `<span class="rot5s">Nenhuma aberta agora</span><button class="btn turq peq" type="button" data-rodarrotina="${x.serie}">▶ Rodar agora</button>`}<button class="lk" type="button" data-rt="${x.ultima_rt}">Editar modelo</button></div></div>`; };
+  return `<div class="rot5-tela"><div class="f4h"><p class="nota" style="margin:0">Rotina é uma rota que volta sozinha: ao concluir, o ALFY abre a próxima com as mesmas instruções e a mesma lista. "Quando precisar" volta quando você toca em ▶ Rodar agora.</p><button class="cta" type="button" data-acao="nova-rotina">＋ Nova rotina</button></div>
+    ${rs.length ? rs.map(card).join("") : '<div class="vazio">Nenhuma rotina ainda. Crie a primeira (ex.: compra do mercado, fechamento de caixa).</div>'}</div>`;
 }
 
 // ---------------------------------------------------------------- 🧭 Passagem de Rotas
@@ -493,11 +509,11 @@ function zapHTML(h) {
       <span class="z5b"><button class="mini" type="button" data-zapvisto="${z.id}">${z.visto ? "↺ Pendente" : "✓ Já respondi"}</button><button class="mini" type="button" data-zaprota="${z.id}">🗺️ Virar rota</button></span></div>`;
   return `<div class="bloco">${h}
     <div class="z5top"><div class="alterna" role="group" aria-label="O que ver">${[["trabalho", "💼 Trabalho"], ["pessoal", "🏠 Pessoal"], ["tudo", "Tudo"]].map(([k, n]) => `<button type="button" data-zapmodo="${k}" aria-pressed="${modo === k}">${n}</button>`).join("")}</div>
-      <span class="espaco"></span><button class="btn turq" type="button" data-zapler="" ${zapRodando() ? "disabled" : ""}>📡 Atualizar</button><button class="btn" type="button" data-zapler="72" ${zapRodando() ? "disabled" : ""}>3 dias</button></div>
+      <span class="espaco"></span><button class="btn turq" type="button" data-zapler="" ${zapRodando() ? "disabled" : ""}>📡 Atualizar</button><button class="btn" type="button" data-zapler="168" ${zapRodando() ? "disabled" : ""} title="Lê todas as conversas dos últimos 7 dias">🧹 Limpeza geral</button></div>
     <p class="nota" style="margin:6px 0 12px">${estado}</p>
     ${ped?.status === "feito" ? `
     <div class="z5bloco"><h4>📰 O que importa</h4>${imp.map(([t, l]) => (l || []).length ? `${t ? `<p class="z5sub">${t}</p>` : ""}<ul class="z5imp">${l.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>` : "").join("") || '<p class="nota" style="margin:0">Nada relevante neste período.</p>'}</div>
-    <div class="z5bloco"><h4>⏳ Esperando você · ${esp.length}</h4>${esp.map(linhaEsp).join("") || '<p class="nota" style="margin:0">Ninguém esperando resposta. 🎉</p>'}${vistos.length ? `<details><summary class="nota" style="cursor:pointer">Já respondidas · ${vistos.length}</summary>${vistos.map(linhaEsp).join("")}</details>` : ""}</div>
+    <div class="z5bloco"><div class="f4h"><h4>⏳ Esperando você · ${esp.length}</h4>${esp.length > 1 ? `<button class="lk" type="button" data-acao="zap-todas">✓ Marcar todas como respondidas</button>` : ""}</div>${esp.map(linhaEsp).join("") || '<p class="nota" style="margin:0">Ninguém esperando resposta. 🎉</p>'}${vistos.length ? `<details><summary class="nota" style="cursor:pointer">Já respondidas · ${vistos.length}</summary>${vistos.map(linhaEsp).join("")}</details>` : ""}</div>
     <details class="z5bloco"><summary><h4>💬 Conversa por conversa · ${resto.length}</h4></summary>${resto.map((z) => `<div class="z5conv"><b>${z.prioritario ? "⭐ " : ""}${z.grupo ? "👥" : "💬"} ${esc(z.conversa)}</b><span>${z.n} msg${z.n === 1 ? "" : "s"}</span><p>${esc(z.resumo || "")}</p></div>`).join("")}</details>
     ${modo !== "pessoal" ? `<details class="z5bloco"><summary><h4>🗺️ Pode virar rota · ${nov.length}</h4></summary>${ped.retornos ? `<p class="nota" style="margin:0 0 6px">${esc(ped.retornos)}</p>` : ""}${nov.map((x) => `<div class="sugestao"><div class="tx"><b style="white-space:pre-wrap">${esc(rotaTxt(x.texto))}</b><small>${esc(x.quem || "")}${x.conversa ? " · " + esc(x.conversa) : ""}</small></div><button class="btn turq peq" type="button" data-sug="${x.id}" data-sugacao="rota">Virar rota</button><button class="btn peq" type="button" data-sug="${x.id}" data-sugacao="descartar">Descartar</button></div>`).join("") || '<p class="nota">Nada novo.</p>'}</details>` : ""}` : ""}</div>`;
 }
@@ -1003,7 +1019,7 @@ function folha() {
       <nav class="ancoras3" aria-label="Seções">${SECOES_F.map(([k, n]) => `<button type="button" data-irf="${k}" aria-current="${k === "fazer"}">${n}${k === "interagir" ? (novas ? ` <small class="novas4">${novas} nova${novas > 1 ? "s" : ""}</small>` : tempo.length ? ` <small>${tempo.length}</small>` : "") : ""}${k === "lembrete" && lem ? " ⏰" : ""}</button>`).join("")}</nav></div></div>
     <div class="col3">
       <section class="secao3" id="f-fazer">
-        <div class="selos4"><span class="sl4 st-${r.status}"><i></i>${ST[r.status].um}</span>${r.prioridade ? `<span class="sl4">${prioTxt(r.prioridade)}</span>` : ""}<span class="sl4 ${pz.cls}">📅 ${pz.txt}</span><span class="sl4">👤 ${esc(curto(nomeDe(r.responsavel_id)))}${r.co_responsavel_id ? " + " + esc(curto(nomeDe(r.co_responsavel_id))) : ""}</span>${r.sensivel ? '<span class="sl4">🔒 só eu</span>' : ""}</div>
+        <div class="selos4"><span class="sl4 st-${r.status}"><i></i>${ST[r.status].um}</span>${r.prioridade ? `<span class="sl4">${prioTxt(r.prioridade)}</span>` : ""}<span class="sl4 ${pz.cls}">📅 ${pz.txt}</span><span class="sl4">👤 ${esc(curto(nomeDe(r.responsavel_id)))}${r.co_responsavel_id ? " + " + esc(curto(nomeDe(r.co_responsavel_id))) : ""}</span>${r.repete ? `<span class="sl4">🔁 ${REPETE_TXT[r.repete]}</span>` : ""}${r.sensivel ? '<span class="sl4">🔒 só eu</span>' : ""}</div>
         ${campo4(r, "assist", "resumo4")}${campo4(r, "instr")}${campo4(r, "resultado")}
         ${campo4(r, "como_esta", "agora4")}
       </section>
@@ -1017,7 +1033,7 @@ function folha() {
           <div class="acoes4b"><button class="btn turq peq" type="submit" data-tipoc="comentario">💬 Comentar</button>${comando() ? `<button class="lk" type="button" data-acao="coment-alfy">🐙 Pedir ao ALFY</button>` : ""}${pode ? `<button class="lk" type="submit" data-tipoc="orientacao">🧭 Dar como orientação</button>` : ""}</div></form></section>
       <section class="secao3" id="f-detalhes"><div class="f4h"><h3>Detalhes</h3>${comando() ? `<button class="anel4" type="button" data-acao="det-alfy" title="O ALFY preenche os detalhes com o que entendeu da rota">🐙<span>Preencher</span></button>` : ""}</div><div class="det3 ${pode ? "" : "so-leitura"}">
         <div class="grupo3"><small>Quem</small>${linhaD("🗺️", "Frente", `<select data-prop="frente">${opc(FRENTES.map((f) => [f, frenteCurta(f)]), r.frente, "Sem frente")}</select>`)}${linhaD("👤", "Responsável", `<select data-prop="responsavel_id">${opc(gente(), r.responsavel_id, "Sem dono")}</select>`)}${linhaD("🤝", "Junto com", `<select data-prop="co_responsavel_id">${opc(gente(), r.co_responsavel_id, "Ninguém")}</select>`)}${comando() ? `<div class="lin3"><span class="ic">${r.sensivel ? "🔒" : "👥"}</span><span class="rot">Quem vê</span><span class="val"><button class="chip" type="button" data-acao="sensivel" aria-pressed="${!!r.sensivel}">${r.sensivel ? "Só eu" : "Equipe da rota"}</button></span></div>` : ""}${ger ? `<p class="nota3">Gerente da frente: ${esc(ger.nome)}</p>` : ""}</div>
-        <div class="grupo3"><small>Quando e quanto</small>${linhaD("⚡", "Prioridade", `<select data-prop="prioridade">${opc(PRIORIDADES, r.prioridade, "Sem prioridade")}</select>`)}${linhaD("📅", "Prazo", `<input type="date" data-prop="prazo" value="${dia(r.prazo)}">`)}${linhaD("🔁", "Repete", `<select data-prop="repete">${opc([["", "Pontual"], ["diaria", "Diária"], ["semanal", "Semanal"], ["quinzenal", "Quinzenal"], ["mensal", "Mensal"]], r.repete || "")}</select>`)}
+        <div class="grupo3"><small>Quando e quanto</small>${linhaD("⚡", "Prioridade", `<select data-prop="prioridade">${opc(PRIORIDADES, r.prioridade, "Sem prioridade")}</select>`)}${linhaD("📅", "Prazo", `<input type="date" data-prop="prazo" value="${dia(r.prazo)}">`)}${linhaD("🔁", "Repete", `<select data-prop="repete">${opc([["", "Pontual"], ["diaria", "Diária"], ["semanal", "Semanal"], ["quinzenal", "Quinzenal"], ["mensal", "Mensal"], ["sob_demanda", "Quando precisar"]], r.repete || "")}</select>`)}
           ${r.repete === "semanal" ? `<div class="dias-sem" style="padding:0 12px 10px">${DIAS_SEM.map((n, k) => `<label><input type="checkbox" data-repetedia="1" value="${k + 1}" ${(r.repete_dias || []).includes(k + 1) ? "checked" : ""}>${n}</label>`).join("")}</div>` : ""}
           ${linhaD("💰", "Custo", `<input data-bud="1" value="${esc(r.budget_valor || "")}" placeholder="sem custo">`)}
           ${r.budget_valor || r.budget_status !== "sem custo" ? `<div class="bud3">${BUDGET_ST.map((x) => `<button type="button" class="chip" data-budst="${x}" aria-pressed="${r.budget_status === x}" ${(x === "aprovado" || x === "recusado") && !comando() ? "disabled" : ""}>${x}</button>`).join("")}</div>` : ""}</div>
@@ -1111,7 +1127,7 @@ function novaRota(pre = {}) {
       <label><p class="rotulo">Título</p><input id="n-tit" class="busca" style="width:100%" value="${esc(pre.titulo || "")}" placeholder="Ex.: Trocar a contabilidade"></label>
       <label><p class="rotulo">🎯 O que fazer · é o texto que vai no Mapa de Rotas</p><textarea id="n-assist" class="busca" rows="4" style="width:100%" placeholder="${comando() ? "Escreva do seu jeito, pode ser corrido: quem faz, o quê, até quando, contexto. O ALFY organiza." : "Na sua voz, falando com quem faz."}">${esc(pre.assist || "")}</textarea></label>
       ${comando() ? `<label class="chip ia-org" style="cursor:pointer;align-self:flex-start;white-space:normal"><input type="checkbox" id="n-ia" ${pre.semIA ? "" : "checked"} style="margin-right:6px">🐙 O ALFY organiza: arruma o título e o O que fazer, preenche Instruções e Resultado e acerta dono, frente, prioridade e prazo pelo que você escreveu. Desmarque para salvar exatamente como está.</label>` : ""}
-      <div class="form-linha"><label><p class="rotulo">🔁 Pontual ou recorrente?</p><select id="n-rep" class="busca" style="width:100%">${opc([["", "Pontual (uma vez só)"], ["diaria", "🔁 Diária"], ["semanal", "🔁 Semanal"], ["quinzenal", "🔁 Quinzenal"], ["mensal", "🔁 Mensal"]], pre.repete || "")}</select></label><div id="n-dias" hidden><p class="rotulo">Em quais dias</p><div class="dias-sem">${DIAS_SEM.map((n, i) => `<label><input type="checkbox" class="n-dia-sem" value="${i + 1}">${n}</label>`).join("")}</div></div></div>
+      <div class="form-linha"><label><p class="rotulo">🔁 Pontual ou recorrente?</p><select id="n-rep" class="busca" style="width:100%">${opc([["", "Pontual (uma vez só)"], ["diaria", "🔁 Diária"], ["semanal", "🔁 Semanal"], ["quinzenal", "🔁 Quinzenal"], ["mensal", "🔁 Mensal"], ["sob_demanda", "🔁 Quando precisar (reativo com um toque)"]], pre.repete || "")}</select></label><div id="n-dias" hidden><p class="rotulo">Em quais dias</p><div class="dias-sem">${DIAS_SEM.map((n, i) => `<label><input type="checkbox" class="n-dia-sem" value="${i + 1}">${n}</label>`).join("")}</div></div></div>
       ${manda() ? `<div class="cadeia"><div class="elo"><small>🗺️ Frente</small><select id="n-frente">${opc(FRENTES.map((f) => [f, frenteCurta(f)]), pre.frente || (eu().frentes || [])[0] || "", "Sem frente")}</select></div><span class="seta">›</span>
         <div class="elo"><small>👤 Responsável</small><select id="n-resp">${opc(gente(), pre.responsavel_id || eu().id)}</select></div><span class="seta">›</span>
         <div class="elo"><small>🤝 Co-responsável</small><select id="n-co">${opc(gente(), "", "Ninguém")}</select></div></div>
@@ -1133,7 +1149,7 @@ function novaRota(pre = {}) {
     const organizar = !!$("#n-ia")?.checked, tit0 = campos.titulo, txt0 = campos.assist;
     if (!campos.titulo && !campos.assist) { aviso("Escreva o título ou o que fazer", true); solta(); return; }
     if (!campos.titulo) campos.titulo = campos.assist.split("\n")[0].slice(0, 90);
-    if (campos.repete && !campos.prazo) campos.prazo = hojeDia() + "T18:00:00-03:00";
+    if (campos.repete && campos.repete !== "sob_demanda" && !campos.prazo) campos.prazo = hojeDia() + "T18:00:00-03:00";
     if ($("#n-comp")?.checked && v("n-dia")) Object.assign(campos, { inicio: `${v("n-dia")}T${v("n-hi") || "09:00"}:00-03:00`, fim: v("n-hf") ? `${v("n-dia")}T${v("n-hf")}:00-03:00` : "", onde: v("n-onde"), tipo: "📅 Compromisso", status: "rota", prioridade: campos.prioridade, frente: campos.frente || (comando() ? "🧍 Pessoal" : "") });
     try {
       const c = await chamar("alfy_nova_rota", { p_campos: campos });
@@ -1334,7 +1350,7 @@ function render() {
   if (!M) return;
   casca(); topo(); medidores(); bolhas();
   const c = $("#conteudo");
-  c.innerHTML = { rotas: () => (s.vista === "rar" && comando() ? vistaRotaARota() : s.vista === "kanban" ? vistaKanban() : vistaLista()), feed: vistaFeed, agenda: vistaAgenda, equipe: vistaEquipe, pautas: vistaPautas, comandos: vistaComandos, eu: vistaEu }[s.aba]();
+  c.innerHTML = { zap: () => `<div style="max-width:900px">${zapHTML("")}</div>`, rotas: () => (s.vista === "rar" && comando() ? vistaRotaARota() : s.vista === "rotinas" ? vistaRotinas() : s.vista === "kanban" ? vistaKanban() : vistaLista()), feed: vistaFeed, agenda: vistaAgenda, equipe: vistaEquipe, pautas: vistaPautas, comandos: vistaComandos, eu: vistaEu }[s.aba]();
   if (s.aba === "rotas" && s.vista === "kanban") ligarKanban();
   if (s.aba === "agenda") { const k = $("#ag-semana"), h = k && k.querySelector(".coluna.hoje"); if (k && h && !s.agRolou) { k.scrollLeft = h.offsetLeft - k.offsetLeft - 8; s.agRolou = true; } }
   try { localStorage.setItem("alfy-vista", JSON.stringify({ vista: s.vista, agrupar: s.agrupar, v28: true })); } catch (_) { /* privado */ }
@@ -1502,8 +1518,8 @@ document.addEventListener("click", async (e) => {
   b.classList.add("ocupado"); b.setAttribute("aria-busy", "true");
   try {
     if (b.id === "eu-av-cel") { s.aba = "eu"; render(); return; }
-    if (d.aba) { s.aba = d.aba; s.pauta = null; s.reuniao = null; if (d.aba === "agenda") { render(); await carregarAgenda(); } if (d.aba === "equipe") { s.aprovado = null; if ((s.naveBusca || "").trim()) s.naveRes = await chamar("alfy_nave_buscar", { p_q: s.naveBusca }).catch(() => null); s.fichas = await chamar("alfy_fichas"); if (comando()) s.equipe = await chamar("alfy_equipe"); } if (d.aba === "feed") FEED = await chamar("alfy_feed", { p_limite: 150 }); if (d.aba === "zap") await carregarZap(); if (d.aba === "comandos" && s.cmd === "perguntar" && !s.chatGeral) s.chatGeral = await chamar("alfy_ia_conversa", { p_escopo: "geral" }); render(); scrollTo(0, 0); return; }
-    if (d.vista) { s.vista = d.vista; if (d.vista === "rar") await rrCarregar(); render(); return; }
+    if (d.aba) { s.aba = d.aba; s.pauta = null; s.reuniao = null; if (d.aba === "agenda") { render(); await carregarAgenda(); } if (d.aba === "equipe") { s.aprovado = null; if ((s.naveBusca || "").trim()) s.naveRes = await chamar("alfy_nave_buscar", { p_q: s.naveBusca }).catch(() => null); s.fichas = await chamar("alfy_fichas"); if (comando()) s.equipe = await chamar("alfy_equipe"); } if (d.aba === "feed") FEED = await chamar("alfy_feed", { p_limite: 150 }); if (d.aba === "zap") await carregarZap(); if (d.aba === "rotas" && s.vista === "rotinas") await carregarRotinas(); if (d.aba === "comandos" && s.cmd === "perguntar" && !s.chatGeral) s.chatGeral = await chamar("alfy_ia_conversa", { p_escopo: "geral" }); render(); scrollTo(0, 0); return; }
+    if (d.vista) { s.vista = d.vista; if (d.vista === "rar") await rrCarregar(); if (d.vista === "rotinas") await carregarRotinas(); render(); return; }
     if (d.rrordem) { s.rr.ordem = d.rrordem; s.rr.foco = null; rrSalvar(); render(); return; }
     if (d.rrformato) { s.rr.formato = d.rrformato; rrSalvar(); render(); return; }
     if (d.rrfoco) { s.rr.foco = d.rrfoco; render(); setTimeout(rrNoLugar, 20); return; }
@@ -1520,6 +1536,7 @@ document.addEventListener("click", async (e) => {
     if (d.lemdia) { s.lemDia = d.lemdia; refolha(); return; }
     if (d.lemhora) { s.lemHora = +d.lemhora; s.lemHoraTxt = ""; refolha(); return; }
     if (d.zapmodo) { s.zapModo = d.zapmodo; render(); return; }
+    if (d.rodarrotina) { const r = await chamar("alfy_rotina_rodar", { p_serie: d.rodarrotina }); await recarregar(); await carregarRotinas(); render(); aviso(r.ja_aberta ? `Já tem uma aberta: ${nomeRota(r.rt)}` : `🔁 Rotina aberta: ${nomeRota(r.rt)}`); abrir(r.rt); return; }
     if (d.zapvisto) { s.zap = await chamar("alfy_zap_visto", { p_id: +d.zapvisto }); render(); return; }
     if (d.zaprota) { const z = (s.zap?.itens || []).find((x) => String(x.id) === d.zaprota); if (z) novaRota({ titulo: z.pede || z.conversa, assist: `${z.conversa}: ${z.pede || ""}\n${z.resumo || ""}` }); return; }
     if (d.rragendar) { s.rrAg = s.rrAg === d.rragendar ? null : d.rragendar; render(); return; }
@@ -1627,6 +1644,8 @@ document.addEventListener("click", async (e) => {
       await lembrar(q); return;
     }
     if (a === "ir-escrever" || a === "ir-alfy") { const el = a === "ir-alfy" ? ($(".alfy4") || $("#f-coment")) : $("#f-coment"), c = $("#corpo-folha"); if (el && c) c.scrollTo({ top: el.offsetTop - ($(".cab3")?.offsetHeight || 0) - 10 }); setTimeout(() => $("#t-coment")?.focus({ preventScroll: true }), 50); if (a === "ir-alfy") aviso("Escolha uma ação do ALFY ou escreva o pedido"); return; }
+    if (a === "zap-todas") { for (const z of (s.zap?.itens || []).filter((x) => x.precisa && !x.visto && zapNoModo(x))) s.zap = await chamar("alfy_zap_visto", { p_id: z.id }); render(); aviso("Tudo marcado como respondido"); return; }
+    if (a === "nova-rotina") { novaRota({ repete: "semanal", semIA: false }); return; }
     if (a === "lem-outro") { s.lemOutro = !s.lemOutro; refolha(); return; }
     if (a === "comp-editar") { s.compEditando = true; refolha(); return; }
     if (a === "comp-cancelar") { s.compEditando = false; refolha(); return; }
@@ -1785,7 +1804,7 @@ function vigiar() {
       if (v === null) { sair(); return; }
       if (v !== versao || Object.keys(s.esperando).length || s.despejo.pedido) { await recarregar(); renderSeguro(); }
       if (rrRodando() && s.aba === "rotas" && s.vista === "rar") { await rrCarregar(); renderSeguro(); }
-      if (s.aba === "comandos" && s.cmd === "zap" && zapRodando()) { await carregarZap(); renderSeguro(); }
+      if (((s.aba === "comandos" && s.cmd === "zap") || s.aba === "zap") && zapRodando()) { await carregarZap(); renderSeguro(); }
     } catch (_) { /* sem rede: tenta de novo */ }
     agenda();
   };

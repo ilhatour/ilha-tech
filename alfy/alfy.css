@@ -1029,3 +1029,13 @@ details.z5bloco[open] > summary::after{content:" ▴"}
 .b3 span{font-size:18px}
 .b3.ia{color:#7FD3CB}
 @media (max-width:420px){.b3{font-size:10.5px}.b3 span{font-size:17px}.seta3{font-size:22px}}
+/* 2.20 · 🔁 Rotinas */
+.rot5-tela{display:flex;flex-direction:column;gap:10px;max-width:900px}
+.rot5-tela > .f4h{flex-wrap:wrap;margin-bottom:6px}
+.rot5-tela > .f4h .nota{flex:1 1 320px}
+.rot5{background:var(--ferro-2);border:1px solid var(--linha);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:6px}
+.rot5t{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap}
+.rot5t b{font-size:16px;font-weight:600;min-width:0;flex:1 1 240px}
+.rot5m{margin:0;font-size:13px;color:var(--aco)}
+.rot5a{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.rot5s{display:inline-flex;align-items:center;gap:6px;font-size:14px;color:var(--aco-2);flex:1 1 200px}
