@@ -1,4 +1,4 @@
-// ALFY · Mapa de Rotas · Ilha Tech · v2.15.0 · 04/11/2026 · Painel de Ferro · Passagem rápida (cartão fixo, atalhos)
+// ALFY · Mapa de Rotas · Ilha Tech · v2.15.1 · 04/11/2026 · Painel de Ferro · Passagem: setas sem pular a tela
 // Tudo passa pelas funções alfy_* do banco, sempre com a chave pessoal de quem está usando.
 // O banco decide o que cada pessoa vê; a tela só desenha o que voltou.
 // A IA e os comandos são pedidos numa fila (alfy.pedido) que o robô do Mac atende.
@@ -376,10 +376,11 @@ async function enviarRascunho(rt) {
   s.rascunhoLinha = { ...(s.rascunhoLinha || {}), [rt]: "" }; if (ta) ta.value = "";
   return true;
 }
+// a tela não pula: só rola se o cartão da vez saiu de vista; o cursor não vai para o campo (as setas continuam passando)
 function rrNoLugar() {
   const d = $("#rr-deck"); if (!d) return;
-  d.scrollIntoView({ block: "start" });
-  const ta = d.querySelector("textarea"); if (ta && matchMedia("(min-width:901px)").matches) ta.focus({ preventScroll: true });
+  const t = d.getBoundingClientRect().top;
+  if (t < 0 || t > innerHeight * 0.6) d.scrollIntoView({ block: "start" });
 }
 function rrTirar(rt, onde) {
   s.rr[onde] = { ...s.rr[onde], [rt]: true }; s.rr.foco = null; rrSalvar(); render();
@@ -449,7 +450,7 @@ function vistaRotaARota() {
   const mini = (x) => `<div class="rr-mini4" role="button" tabindex="0" data-rrfoco="${x.rt}">${tag(x)}<span class="tt"><b>${esc(x.titulo)}</b><small>${esc(ST[x.status].um)} · ${esc(prazoInfo(x).txt)} · ${esc(curto(nomeDe(x.responsavel_id)))}${rrTem(x.rt) ? " · 📡 novidade" : ""}${x.como_esta ? " · " + esc(x.como_esta.slice(0, 110)) : ""}</small></span></div>`;
   const resto = gs.map(([n, l]) => { const ll = l.filter((x) => x.rt !== foco); return ll.length ? `<section class="rr-grupo"><h2>${esc(n)}<span class="ct">${ll.length}</span></h2><div class="lista">${ll.map(mini).join("")}</div></section>` : ""; }).join("");
   return painel + (fx ? `<div class="rr-deck" id="rr-deck">${rrItem(fx, true)}</div>` : "")
-    + `<p class="rr-dica">Atalhos: <kbd>⌘ Enter</kbd> comenta e passa · <kbd>⌘ Shift Enter</kbd> pede ao ALFY e passa · <kbd>→</kbd> próxima · <kbd>D</kbd> depois · <kbd>C</kbd> concluir</p>`
+    + `<p class="rr-dica">Atalhos: <kbd>⌘ Enter</kbd> comenta e passa · <kbd>⌘ Shift Enter</kbd> pede ao ALFY e passa · <kbd>→</kbd> próxima · <kbd>D</kbd> depois · <kbd>C</kbd> concluir · <kbd>E</kbd> escrever · <kbd>Esc</kbd> sai do campo</p>`
     + (resto ? `<h3 class="rr-fila-t">Na fila · ${fila.length - (fx ? 1 : 0)}</h3>${resto}` : "");
 }
 
@@ -1660,17 +1661,19 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "Escape" && $("#veu")) fechar();
   if (s.aba === "rotas" && s.vista === "rar" && !$("#veu") && $("#rr-deck")) {
     const deck = $("#rr-deck"), aperta = (sel) => { const b = deck.querySelector(sel); if (b) { e.preventDefault(); b.click(); } };
-    const noCampo = e.target.tagName === "TEXTAREA" || e.target.tagName === "INPUT" || e.target.tagName === "SELECT";
+    const noCampo = (e.target.tagName === "TEXTAREA" && e.target.value.trim()) || e.target.tagName === "INPUT" || e.target.tagName === "SELECT";   // campo de texto vazio não segura as setas
+    if (e.key === "Escape" && e.target.tagName === "TEXTAREA") { e.target.blur(); return; }
     if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && e.target.closest?.("#rr-deck")) {
       if (e.shiftKey) { const rt = s.rr.foco; aperta("[data-clmodo=alfy]"); setTimeout(() => { if (s.rr.foco === rt) rrTirar(rt, "feitas"); }, 400); }
       else aperta("[data-rrfeita]");
       return;
     }
     if (!noCampo && !e.metaKey && !e.ctrlKey && !e.altKey) {
-      if (e.key === "ArrowRight" || e.key === "j") aperta("[data-rrfeita]");
-      else if (e.key === "d" || e.key === "D") aperta("[data-rrdepois]");
-      else if (e.key === "c" || e.key === "C") aperta('[data-rapido="concluida"]');
-      else if (e.key === "e" || e.key === "/") { e.preventDefault(); deck.querySelector("textarea")?.focus(); }
+      const naCaixa = e.target.tagName === "TEXTAREA";   // dentro do campo vazio só a seta passa; letras são texto
+      if (e.key === "ArrowRight" || (!naCaixa && e.key === "j")) { aperta("[data-rrfeita]"); e.target.blur?.(); }
+      else if (!naCaixa && (e.key === "d" || e.key === "D")) aperta("[data-rrdepois]");
+      else if (!naCaixa && (e.key === "c" || e.key === "C")) aperta('[data-rapido="concluida"]');
+      else if (!naCaixa && (e.key === "e" || e.key === "/")) { e.preventDefault(); deck.querySelector("textarea")?.focus({ preventScroll: true }); }
     }
   }
   if (e.key === "Enter" && !e.shiftKey && e.target.id === "t-chat-rota") { e.preventDefault(); falarNaRota(e.target.value); }
