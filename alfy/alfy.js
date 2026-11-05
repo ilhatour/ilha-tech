@@ -1,4 +1,4 @@
-// ALFY · Mapa de Rotas · Ilha Tech · v2.21.0 · 05/11/2026 · Painel de Ferro · 🏆 Placar (pontuação V3, ranking, banco de entregas)
+// ALFY · Mapa de Rotas · Ilha Tech · v2.22.0 · 05/11/2026 · Painel de Ferro · 🔁 Rotinas com passagem própria, fora das rotas, no Mapa · WhatsApp em lista limpa
 // Tudo passa pelas funções alfy_* do banco, sempre com a chave pessoal de quem está usando.
 // O banco decide o que cada pessoa vê; a tela só desenha o que voltou.
 // A IA e os comandos são pedidos numa fila (alfy.pedido) que o robô do Mac atende.
@@ -57,6 +57,7 @@ const IC = {
   ronda: svg('<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>'),
   virada: svg('<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4M9 15l2 2 4-4"/>'),
   zap: svg('<path d="M21 12a9 9 0 0 1-13.4 7.8L3 21l1.3-4.4A9 9 0 1 1 21 12z"/><path d="M9 10h6M9 14h4"/>'),
+  rotinas: svg('<path d="M4 12a8 8 0 0 1 14-5.3L20 9M20 4v5h-5M20 12a8 8 0 0 1-14 5.3L4 15M4 20v-5h5"/>'),
   placar: svg('<path d="M8 21h8M12 17v4M7 4h10v4a5 5 0 0 1-10 0V4z"/><path d="M17 5h3a3 3 0 0 1-3 4M7 5H4a3 3 0 0 0 3 4"/>'),
   aprendi: svg('<path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-4 10.5c.7.6 1 1.5 1 2.5h6c0-1 .3-1.9 1-2.5A6 6 0 0 0 12 3z"/>'),
   perguntar: svg('<path d="M21 12a9 9 0 1 1-4-7.5"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14M12 17.5v.01"/>'),
@@ -114,6 +115,7 @@ const num = (rt) => String(rt).replace(/^RT-/, "").replace(/^IDEIA-/, "");
 // na tela é sempre "Rota 266", nunca o código RT-266 do banco
 const nomeRota = (rt) => { const r = rotaDe(rt); if (r && ehNova(r)) return "Rota nova"; return String(rt).replace(/^RT-/, "Rota ").replace(/^IDEIA-/, "Ideia "); };
 const rotaDe = (rt) => M?.rotas?.find((r) => r.rt === rt);
+const ehRotina = (r) => !!r.repete;
 const vencida = (r) => r.prazo && ABERTOS.includes(r.status) && pcod(r.prioridade) !== "P5" && dias(r.prazo) < 0;
 const instrDe = (r) => r.instrucoes || [r.detalhamento, r.como_fazer].filter(Boolean).join("\n\n");
 const ordPrio = (a, b) => (pcod(a.prioridade) || "P9").localeCompare(pcod(b.prioridade) || "P9") || (a.prazo || "9").localeCompare(b.prazo || "9") || a.rt.localeCompare(b.rt);
@@ -149,7 +151,7 @@ function filtradas() {
   return (M?.rotas || []).filter((r) =>
     (!q || [r.titulo, nomeRota(r.rt), r.rt, r.assist, instrDe(r)].join(" ").toLowerCase().includes(q)) &&
     (!s.pessoa || (s.pessoa === "semdono" ? !r.responsavel_id : r.responsavel_id === s.pessoa || r.co_responsavel_id === s.pessoa)) &&
-    (!s.frente || r.frente === s.frente) && (!s.venc || vencida(r)) && !adiada(r) && (!s.prio || pcod(r.prioridade) === s.prio || (s.prio === "sem" && !pcod(r.prioridade))));
+    (!s.frente || r.frente === s.frente) && (!s.venc || vencida(r)) && !adiada(r) && !ehRotina(r) && (!s.prio || pcod(r.prioridade) === s.prio || (s.prio === "sem" && !pcod(r.prioridade))));
 }
 const ativo = () => { const a = document.activeElement; return a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName) && a.id !== "busca"; };
 const opc = (lista, atual, vazio) => (vazio !== undefined ? `<option value="">${vazio}</option>` : "") +
@@ -158,9 +160,10 @@ const gente = () => (M?.pessoas || []).filter((p) => p.nome).map((p) => [p.id, p
 
 // ---------------------------------------------------------------- casca
 function navItens() {
-  const abertas = (M?.rotas || []).filter((r) => ABERTOS.includes(r.status)).length;
+  const abertas = (M?.rotas || []).filter((r) => ABERTOS.includes(r.status) && !ehRotina(r)).length;
+  const rotinasAb = (M?.rotas || []).filter((r) => ABERTOS.includes(r.status) && ehRotina(r) && (comando() || r.responsavel_id === eu().id || r.co_responsavel_id === eu().id)).length;
   const pautas = (M?.pautas || []).filter((p) => p.status === "aberta").length;
-  const it = [["rotas", "Rotas", IC.rotas, abertas], ["agenda", "Agenda", IC.agenda, ""], ["feed", "Feed", IC.feed, ""], ["pautas", "Pautas", IC.pautas, pautas || ""], ["placar", "Placar", IC.placar, ""]];
+  const it = [["rotas", "Rotas", IC.rotas, abertas], ["rotinas", "Rotinas", IC.rotinas, rotinasAb || ""], ["agenda", "Agenda", IC.agenda, ""], ["feed", "Feed", IC.feed, ""], ["pautas", "Pautas", IC.pautas, pautas || ""], ["placar", "Placar", IC.placar, ""]];
   if (cuidaPessoas()) it.push(["equipe", "Equipe", IC.eu, (s.fichas || []).filter((f) => f.status === "pendente").length || ""]);
   if (comando()) it.push(["zap", "WhatsApp", IC.whatsapp, (s.zap?.itens || []).filter((z) => z.precisa && !z.visto).length || ""]);
   if (comando()) it.push(["comandos", "Comandos", IC.comandos, ""]);
@@ -169,13 +172,14 @@ function navItens() {
 function casca() {
   const p = eu();
   $("#nav").innerHTML = navItens().map(([k, n, ic, c]) => `<button type="button" data-aba="${k}" aria-current="${s.aba === k}">${ic}<span>${n}</span><span class="n">${c}</span></button>`).join("");
-  const bb = [...navItens().filter(([k]) => k !== "feed" && k !== "equipe"), ["eu", "Eu", IC.eu]];   // no celular Feed e Equipe ficam na aba Eu
+  const fica = comando() ? ["rotas", "rotinas", "agenda", "zap"] : ["rotas", "rotinas", "agenda", "placar"];
+  const bb = [...navItens().filter(([k]) => fica.includes(k)), ["eu", "Mais", svg('<path d="M4 6h16M4 12h16M4 18h16"/>')]];   // no celular o resto fica em Mais
   $("#barra-baixo").innerHTML = bb.map(([k, n, ic]) => `<button type="button" data-aba="${k}" aria-current="${s.aba === k}">${ic}<span>${n}</span></button>`).join("");
   $("#barra-baixo").style.gridTemplateColumns = `repeat(${bb.length},1fr)`;
   $("#eu-av").textContent = ini(p.nome); $("#eu-av-cel").textContent = ini(p.nome);
   $("#eu-nome").textContent = p.nome;
   $("#eu-papel").textContent = papelTxt();
-  $("#titulo-cel").textContent = { placar: "Placar", zap: "WhatsApp", rotas: "Rotas", equipe: "Equipe", agenda: "Agenda", feed: "Feed", pautas: "Pautas", comandos: "Comandos", eu: "Eu" }[s.aba];
+  $("#titulo-cel").textContent = { rotinas: "Rotinas", placar: "Placar", zap: "WhatsApp", rotas: "Rotas", equipe: "Equipe", agenda: "Agenda", feed: "Feed", pautas: "Pautas", comandos: "Comandos", eu: "Eu" }[s.aba];
   $("#fab").hidden = s.aba !== "rotas" || s.vista === "rar";
 }
 const papelTxt = () => comando() ? "Comando · vê tudo" : papel() === "gerente" ? "Gerente · " + (eu().frentes || []).map(frenteCurta).join(", ") : "Vê as rotas dele";
@@ -194,7 +198,7 @@ function topo() {
   fi.className = "filtros" + (s.filtrosAbertos ? " aberto" : "");
   const vivo = `<span class="ao-vivo"><i></i>ao vivo</span>`;
   if (s.aba === "rotas") {
-    const alt = `<div class="alterna" role="group" aria-label="Visão"><button type="button" data-vista="lista" aria-pressed="${s.vista === "lista"}">Lista</button><button type="button" data-vista="kanban" aria-pressed="${s.vista === "kanban"}">Kanban</button><button type="button" data-vista="rotinas" aria-pressed="${s.vista === "rotinas"}" title="Rotinas">🔁<span class="rr-txt"> Rotinas</span></button>${comando() ? `<button type="button" data-vista="rar" aria-pressed="${s.vista === "rar"}" title="Passagem de Rotas">🧭<span class="rr-txt"> Passagem</span></button>` : ""}</div>`;
+    const alt = `<div class="alterna" role="group" aria-label="Visão"><button type="button" data-vista="lista" aria-pressed="${s.vista === "lista"}">Lista</button><button type="button" data-vista="kanban" aria-pressed="${s.vista === "kanban"}">Kanban</button>${comando() ? `<button type="button" data-vista="rar" aria-pressed="${s.vista === "rar"}" title="Passagem de Rotas">🧭<span class="rr-txt"> Passagem</span></button>` : ""}</div>`;
     l1.innerHTML = `<h1>Rotas<small>${comando() ? "todas as frentes" : curto(eu().nome)}</small></h1>${alt}<span class="espaco"></span>${vivo}<button class="cta" type="button" data-acao="nova">＋ Nova rota</button>`;
     $("#alterna-cel").innerHTML = alt;
     fi.innerHTML = filtrosHTML(`<button class="chip alerta" type="button" id="f-venc" aria-pressed="${s.venc}">Só vencidas</button>` +
@@ -205,7 +209,7 @@ function topo() {
     const tipos = [["todos", "Tudo"], ["comentario", "Comentários"], ["orientacao", "Orientações"], ["whatsapp", "WhatsApp"], ["status", "Status"], ["editar", "Edições"], ["nova", "Rotas novas"], ["budget", "Budget"], ["pauta", "Pautas"]];
     fi.innerHTML = filtrosHTML() + `<div style="display:flex;gap:6px;overflow-x:auto;flex-basis:100%;scrollbar-width:none">${tipos.map(([k, n]) => `<button class="chip" type="button" data-ffeed="${k}" aria-pressed="${s.fFeed === k}">${n}</button>`).join("")}</div>`;
   } else {
-    const t = { placar: "🏆 Placar", zap: "📱 WhatsApp", pautas: "Pautas e reuniões", comandos: "Comandos do ALFY", agenda: "Agenda", equipe: "Equipe e cadastro", eu: "Eu" }[s.aba];
+    const t = { rotinas: "🔁 Rotinas", placar: "🏆 Placar", zap: "📱 WhatsApp", pautas: "Pautas e reuniões", comandos: "Comandos do ALFY", agenda: "Agenda", equipe: "Equipe e cadastro", eu: "Eu" }[s.aba];
     l1.innerHTML = `<h1>${t}</h1><span class="espaco"></span>${vivo}${s.aba === "pautas" && manda() ? '<button class="btn" type="button" data-acao="nova-pauta">＋ Nova pauta</button><button class="cta" type="button" data-acao="nova-reuniao">＋ Nova reunião</button>' : ""}`;
     fi.innerHTML = ""; $("#alterna-cel").innerHTML = "";
   }
@@ -362,6 +366,28 @@ function vistaRotinas() {
       <div class="rot5a">${ab ? `<span class="rot5s"><i class="pt4 st-${ab.status}"></i>Aberta: ${esc(nomeRota(ab.rt))}${pz ? " · " + pz.txt : ""}</span><button class="btn peq" type="button" data-rt="${ab.rt}">Abrir</button>` : `<span class="rot5s">Nenhuma aberta agora</span><button class="btn turq peq" type="button" data-rodarrotina="${x.serie}">▶ Rodar agora</button>`}<button class="lk" type="button" data-rt="${x.ultima_rt}">Editar modelo</button></div></div>`; };
   return `<div class="rot5-tela"><div class="f4h"><p class="nota" style="margin:0">Rotina é uma rota que volta sozinha: ao concluir, o ALFY abre a próxima com as mesmas instruções e a mesma lista. "Quando precisar" volta quando você toca em ▶ Rodar agora.</p><button class="cta" type="button" data-acao="nova-rotina">＋ Nova rotina</button></div>
     ${rs.length ? rs.map(card).join("") : '<div class="vazio">Nenhuma rotina ainda. Crie a primeira (ex.: compra do mercado, fechamento de caixa).</div>'}</div>`;
+}
+
+// passagem de rotinas: as vezes abertas, uma por uma (feita · não deu · próxima)
+function vistaAbaRotinas() {
+  const modo = s.rtnModo || "passagem";
+  const seg = `<div class="seg5" role="group" aria-label="Rotinas"><button type="button" data-rtnmodo="passagem" aria-pressed="${modo === "passagem"}">🧭 Passagem</button><button type="button" data-rtnmodo="todas" aria-pressed="${modo === "todas"}">Todas as rotinas</button></div>`;
+  if (modo === "todas") return `<div class="rot5-tela">${seg}${vistaRotinas()}</div>`;
+  const minhas = (M.rotas || []).filter((r) => ehRotina(r) && ABERTOS.includes(r.status) && (comando() || r.responsavel_id === eu().id || r.co_responsavel_id === eu().id) && !(s.rtnPulou || {})[r.rt])
+    .sort((x, y) => (vencida(y) - vencida(x)) || (x.prazo || "9").localeCompare(y.prazo || "9"));
+  const fx = minhas.find((r) => r.rt === s.rtnFoco) || minhas[0], serie = (s.rotinas || []).find((x) => x.serie === (fx?.repete_de || fx?.rt));
+  const fid = fx ? "clf-" + fx.rt.replace(/\W/g, "") : "";
+  const deck = !fx ? `<div class="vazio rr-fim">🏁 Nenhuma rotina aberta${comando() ? "" : " com você"} agora.</div>` : (() => { const pz = prazoInfo(fx);
+    return `<article class="rr-item foco rtn5"><div class="rr-cab">${tag(fx)}<span class="tt"><b>${esc(fx.titulo)}</b><span class="selos3"><span class="selo3">🔁 ${REPETE_TXT[fx.repete]}</span><span class="selo3 ${pz.cls}">📅 ${pz.txt}</span><span class="selo3">👤 ${esc(curto(nomeDe(fx.responsavel_id)))}</span>${serie ? `<span class="selo3">✓ feita ${serie.feitas}×${serie.ultima_feita ? " · última " + quandoFoi(serie.ultima_feita) : ""}</span>` : ""}</span></span></div>
+      ${fx.assist && fx.assist !== fx.titulo ? `<p class="f5-res" style="font-size:16px">${esc(fx.assist)}</p>` : ""}
+      ${instrDe(fx) ? `<div class="rtn5i"><small>📝 Instruções e lista</small><p>${esc(instrDe(fx))}</p></div>` : ""}
+      ${fx.como_esta ? `<div class="rtn5i ag"><small>📍 Em que pé está</small><p>${esc(fx.como_esta)}</p></div>` : ""}
+      ${caixaLinha(fx, true)}
+      <div class="acoes4"><div class="grupo4"><button class="ac ok" type="button" data-rtnfeita="${fx.rt}">✓<span>Feita</span></button><button class="ac" type="button" data-rtnnao="${fx.rt}">✗<span>Não deu</span></button><button class="ac" type="submit" form="${fid}" data-clmodo="comentar">💬<span>Comentar</span></button><button class="ac" type="button" data-rt="${fx.rt}">↗<span>Abrir</span></button></div>
+        <div class="grupo4 dir"><button class="btn turq" type="button" data-rtnpular="${fx.rt}">Próxima →</button></div></div></article>`; })();
+  const fila = minhas.filter((r) => r !== fx).map((x) => `<div class="rr-mini4" role="button" tabindex="0" data-rtnfoco="${x.rt}">${tag(x)}<span class="tt"><b>${esc(x.titulo)}</b><small>🔁 ${REPETE_TXT[x.repete]} · ${esc(prazoInfo(x).txt)} · ${esc(curto(nomeDe(x.responsavel_id)))}</small></span></div>`).join("");
+  return `<div class="rot5-tela">${seg}<p class="nota" style="margin:0">${minhas.length} rotina${minhas.length === 1 ? "" : "s"} aberta${minhas.length === 1 ? "" : "s"}. Feita: some e volta na próxima data. Não deu: fica aberta e, na próxima data, a mesma rotina é renovada (não duplica).</p>
+    ${deck}${fila ? `<h3 class="rr-fila-t">Na fila · ${minhas.length - 1}</h3><div class="lista" style="display:flex;flex-direction:column;gap:6px">${fila}</div>` : ""}</div>`;
 }
 
 // ---------------------------------------------------------------- 🧭 Passagem de Rotas
@@ -522,27 +548,38 @@ function vistaRotaARota() {
 const zapRodando = () => ["fila", "rodando"].includes(s.zap?.pedido?.status);
 async function carregarZap() { s.zap = await chamar("alfy_zap").catch(() => s.zap); }
 const zapNoModo = (z) => s.zapModo === "tudo" ? true : s.zapModo === "pessoal" ? z.trabalho === false && !z.prioritario : z.trabalho !== false || z.prioritario;
+// nome limpo: "🟠 Tático HEAD TIG • Samuel Costa" vira Samuel Costa (com "Tático HEAD TIG" pequeno embaixo)
+function nomeZap(n) {
+  const limpo = (t) => String(t || "").replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{FE0F}\u{200D}]/gu, "").replace(/\s+/g, " ").trim();
+  const partes = String(n || "").split("•");
+  if (partes.length > 1) return { nome: limpo(partes.pop()), sub: limpo(partes.join(" ")) };
+  return { nome: limpo(n), sub: "" };
+}
 function zapHTML(h) {
   const zp = s.zap, ped = zp?.pedido, modo = s.zapModo || "trabalho", it = (zp?.itens || []).filter(zapNoModo);
   const esp = it.filter((z) => z.precisa && !z.visto), vistos = it.filter((z) => z.precisa && z.visto), resto = it.filter((z) => !z.precisa);
-  const br = ped?.briefing || {}, imp = modo === "pessoal" ? [["", br.pessoal]] : modo === "tudo" ? [["💼 Trabalho", br.trabalho], ["🏠 Pessoal", br.pessoal]] : [["", br.trabalho]];
+  const br = ped?.briefing || {}, imp = modo === "pessoal" ? [["", br.pessoal]] : modo === "tudo" ? [["Trabalho", br.trabalho], ["Pessoal", br.pessoal]] : [["", br.trabalho]];
   const nov = (M.sugestoes || []).filter((x) => x.tipo === "nova");
-  const estado = !ped ? "Ainda não li. Aperte Atualizar."
-    : zapRodando() ? `<span class="ao-vivo"><i></i></span> Lendo o WhatsApp… leva uns 2 minutos.`
-    : ped.status === "erro" ? `Deu erro: ${esc((ped.erro || "").slice(0, 140))}`
-    : `Atualizado ${quandoFoi(ped.feito_em)} · desde ${esc(ped.desde || "")}`;
-  const linhaEsp = (z) => `<div class="z5esp ${z.urgencia === "alta" ? "alta" : ""} ${z.visto ? "visto" : ""}"><div class="z5t"><b>${z.prioritario ? "⭐ " : ""}${esc(z.conversa)}</b><span>${z.espera_desde ? "espera " + quandoFoi(z.espera_desde) : ""}</span></div>
-      <p>👉 ${esc(z.pede || z.resumo || "")}</p><small>${esc(z.ultima?.quem || "")}: “${esc((z.ultima?.txt || "").slice(0, 160))}”</small>
-      <span class="z5b"><button class="mini" type="button" data-zapvisto="${z.id}">${z.visto ? "↺ Pendente" : "✓ Já respondi"}</button><button class="mini" type="button" data-zaprota="${z.id}">🗺️ Virar rota</button></span></div>`;
-  return `<div class="bloco">${h}
-    <div class="z5top"><div class="alterna" role="group" aria-label="O que ver">${[["trabalho", "💼 Trabalho"], ["pessoal", "🏠 Pessoal"], ["tudo", "Tudo"]].map(([k, n]) => `<button type="button" data-zapmodo="${k}" aria-pressed="${modo === k}">${n}</button>`).join("")}</div>
-      <span class="espaco"></span><button class="btn turq" type="button" data-zapler="" ${zapRodando() ? "disabled" : ""}>📡 Atualizar</button><button class="btn" type="button" data-zapler="168" ${zapRodando() ? "disabled" : ""} title="Lê todas as conversas dos últimos 7 dias">🧹 Limpeza geral</button></div>
-    <p class="nota" style="margin:6px 0 12px">${estado}</p>
+  const estado = !ped ? "Ainda não li. Toque em Atualizar." : zapRodando() ? `<span class="ao-vivo"><i></i></span> Lendo o WhatsApp… uns 2 minutos.` : ped.status === "erro" ? `Deu erro: ${esc((ped.erro || "").slice(0, 120))}` : `Atualizado ${quandoFoi(ped.feito_em)}`;
+  const linha6 = (z, forte) => { const nm = nomeZap(z.conversa), ab = s.zapAberto === z.id, u = z.ultima || {};
+    return `<div class="z6 ${forte ? "forte" : ""} ${z.urgencia === "alta" && forte ? "alta" : ""} ${z.visto ? "visto" : ""}">
+      <button type="button" class="z6l" data-zapabre="${z.id}" aria-expanded="${ab}"><span class="z6av">${z.grupo ? "👥" : ini(nm.nome)}</span>
+        <span class="z6t"><b>${z.prioritario ? "⭐ " : ""}${esc(nm.nome)}</b>${nm.sub ? `<small>${esc(nm.sub)}</small>` : ""}<span class="z6r">${esc(forte ? z.pede || z.resumo || "" : z.resumo || "")}</span></span>
+        <span class="z6q">${forte && z.espera_desde ? quandoFoi(z.espera_desde) : z.n + " msg"}</span></button>
+      ${ab ? `<div class="z6d">${forte && z.resumo ? `<p>${esc(z.resumo)}</p>` : ""}<p class="z6u"><small>Última · ${esc(u.quem || "")} · ${esc(u.em || "")}</small>${esc((u.txt || "").slice(0, 300))}</p>
+        ${forte ? `<div class="rapidas3"><button class="chip" type="button" data-zapvisto="${z.id}">${z.visto ? "↺ Voltar para pendentes" : "✓ Já respondi"}</button><button class="chip" type="button" data-zaprota="${z.id}">🗺️ Virar rota</button></div>` : ""}</div>` : ""}</div>`; };
+  const vis = s.zapTodas ? resto : resto.slice(0, 10);
+  return `<div class="z6tela">${h}
+    <div class="z6top"><div class="seg5" role="group" aria-label="O que ver">${[["trabalho", "💼 Trabalho"], ["pessoal", "🏠 Pessoal"], ["tudo", "Tudo"]].map(([k, n]) => `<button type="button" data-zapmodo="${k}" aria-pressed="${modo === k}">${n}</button>`).join("")}</div>
+      <span class="z6est">${estado}</span><span class="espaco"></span>
+      <button class="btn turq peq" type="button" data-zapler="" ${zapRodando() ? "disabled" : ""}>📡 Atualizar</button><button class="lk" type="button" data-zapler="168" ${zapRodando() ? "disabled" : ""} title="Lê todas as conversas dos últimos 7 dias">🧹 Limpeza geral</button></div>
     ${ped?.status === "feito" ? `
-    <div class="z5bloco"><h4>📰 O que importa</h4>${imp.map(([t, l]) => (l || []).length ? `${t ? `<p class="z5sub">${t}</p>` : ""}<ul class="z5imp">${l.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>` : "").join("") || '<p class="nota" style="margin:0">Nada relevante neste período.</p>'}</div>
-    <div class="z5bloco"><div class="f4h"><h4>⏳ Esperando você · ${esp.length}</h4>${esp.length > 1 ? `<button class="lk" type="button" data-acao="zap-todas">✓ Marcar todas como respondidas</button>` : ""}</div>${esp.map(linhaEsp).join("") || '<p class="nota" style="margin:0">Ninguém esperando resposta. 🎉</p>'}${vistos.length ? `<details><summary class="nota" style="cursor:pointer">Já respondidas · ${vistos.length}</summary>${vistos.map(linhaEsp).join("")}</details>` : ""}</div>
-    <details class="z5bloco"><summary><h4>💬 Conversa por conversa · ${resto.length}</h4></summary>${resto.map((z) => `<div class="z5conv"><b>${z.prioritario ? "⭐ " : ""}${z.grupo ? "👥" : "💬"} ${esc(z.conversa)}</b><span>${z.n} msg${z.n === 1 ? "" : "s"}</span><p>${esc(z.resumo || "")}</p></div>`).join("")}</details>
-    ${modo !== "pessoal" ? `<details class="z5bloco"><summary><h4>🗺️ Pode virar rota · ${nov.length}</h4></summary>${ped.retornos ? `<p class="nota" style="margin:0 0 6px">${esc(ped.retornos)}</p>` : ""}${nov.map((x) => `<div class="sugestao"><div class="tx"><b style="white-space:pre-wrap">${esc(rotaTxt(x.texto))}</b><small>${esc(x.quem || "")}${x.conversa ? " · " + esc(x.conversa) : ""}</small></div><button class="btn turq peq" type="button" data-sug="${x.id}" data-sugacao="rota">Virar rota</button><button class="btn peq" type="button" data-sug="${x.id}" data-sugacao="descartar">Descartar</button></div>`).join("") || '<p class="nota">Nada novo.</p>'}</details>` : ""}` : ""}</div>`;
+    ${imp.some(([, l]) => (l || []).length) ? `<section class="z6sec"><h4>📰 O que importa</h4>${imp.map(([t, l]) => (l || []).length ? `${t ? `<p class="z5sub">${t}</p>` : ""}<ul class="z5imp">${l.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>` : "").join("")}</section>` : ""}
+    <section class="z6sec"><div class="f4h"><h4>⏳ Esperando você · ${esp.length}</h4>${esp.length > 1 ? `<button class="lk" type="button" data-acao="zap-todas">✓ Marcar todas</button>` : ""}</div>
+      ${esp.map((z) => linha6(z, true)).join("") || '<p class="nota" style="margin:0">Ninguém esperando resposta. 🎉</p>'}
+      ${vistos.length ? `<details><summary class="nota" style="cursor:pointer">Já respondidas · ${vistos.length}</summary>${vistos.map((z) => linha6(z, true)).join("")}</details>` : ""}</section>
+    <section class="z6sec"><h4>💬 Conversas · ${resto.length}</h4>${vis.map((z) => linha6(z)).join("") || '<p class="nota" style="margin:0">Nada novo.</p>'}${resto.length > vis.length ? `<button class="lk" type="button" data-acao="zap-ver-todas">Ver mais ${resto.length - vis.length}</button>` : ""}</section>
+    ${modo !== "pessoal" && nov.length ? `<details class="z6sec"><summary><h4>🗺️ Pode virar rota · ${nov.length}</h4></summary>${nov.map((x) => `<div class="sugestao"><div class="tx"><b style="white-space:pre-wrap">${esc(rotaTxt(x.texto))}</b><small>${esc(x.quem || "")}${x.conversa ? " · " + esc(nomeZap(x.conversa).nome) : ""}</small></div><button class="btn turq peq" type="button" data-sug="${x.id}" data-sugacao="rota">Virar rota</button><button class="btn peq" type="button" data-sug="${x.id}" data-sugacao="descartar">Descartar</button></div>`).join("")}</details>` : ""}` : ""}</div>`;
 }
 // ---------------------------------------------------------------- feed
 const EV_IC = { comentario: "💬", orientacao: "🧭", whatsapp: "📱", status: "🔀", nova: "🗺️", ideia: "💡", editar: "✏️", budget: "💰", pauta_ligar: "🗓️", reuniao_ligar: "🗓️", pauta_desligar: "🗓️", reuniao_desligar: "🗓️" };
@@ -666,7 +703,16 @@ function blocoMapa(r, quem) {
   return partes.join(" · ") + "\n" + t;
 }
 const contagem = (l) => { const v = l.filter(vencida).length, n = l.length; return `${n} rota${n !== 1 ? "s" : ""} aberta${n !== 1 ? "s" : ""}` + (v ? `, ${v} vencida${v !== 1 ? "s" : ""}` : ""); };
-const mapeavel = (r) => ABERTOS.includes(r.status) && !ehNova(r) && !r.rt.startsWith("IDEIA-") && r.frente !== "🧍 Pessoal" && r.tipo !== "📅 Compromisso" && !r.inicio && !/\b[Rr]otina\b/.test(r.titulo);
+const mapeavel = (r) => ABERTOS.includes(r.status) && !ehNova(r) && !r.rt.startsWith("IDEIA-") && r.frente !== "🧍 Pessoal" && r.tipo !== "📅 Compromisso" && !r.inicio && !ehRotina(r) && !/\b[Rr]otina\b/.test(r.titulo);
+// rotinas abertas entram no mapa numa parte própria
+const rotinasMapa = (filtro) => (M.rotas || []).filter((r) => ehRotina(r) && ABERTOS.includes(r.status) && r.frente !== "🧍 Pessoal" && filtro(r)).sort((x, y) => (x.prazo || "9").localeCompare(y.prazo || "9"));
+function blocoRotina(r, quem) {
+  const partes = [`🔁 *${nomeRota(r.rt)}*`, REPETE_TXT[r.repete].toLowerCase()];
+  partes.push(r.prazo && r.repete !== "sob_demanda" ? `${dias(r.prazo) < 0 ? "venceu" : "até"} *${ddmm(r.prazo)}*` : "quando precisar");
+  if (quem) partes.push(`👤 ${quem}`);
+  let t = (r.assist || r.titulo).trim().replace(/\.+$/, ""); if (!/[?!]$/.test(t)) t += ".";
+  return partes.join(" · ") + "\n" + t;
+}
 const dataHoje = () => new Date().toLocaleDateString("pt-BR", { timeZone: FUSO });
 function mapaPessoa(id, soVencidas) {
   const p = pessoa(id);
@@ -677,6 +723,8 @@ function mapaPessoa(id, soVencidas) {
   const l = ["🗺️ *Mapa de Rotas*", "", `👤 *${p?.nome || ""}*`, `📅 ${dataHoje()} · ${contagem(minhas)}`, "", soVencidas ? "*SUAS ROTAS VENCIDAS:*" : "*SUAS ROTAS:*", ""];
   minhas.forEach((r) => l.push(blocoMapa(r), ""));
   if (!minhas.length) l.push(soVencidas ? "Nenhuma rota vencida com você agora." : "Nenhuma rota aberta com você agora.", "");
+  const rotinas = rotinasMapa((r) => r.responsavel_id === id).filter((r) => !soVencidas || vencida(r));
+  if (rotinas.length) { l.push("*SUAS ROTINAS:*", ""); rotinas.forEach((r) => l.push(blocoRotina(r), "")); }
   if (time.length) { l.push("*DA SUA EQUIPE (para acompanhar e cobrar):*", ""); time.forEach((r) => l.push(blocoMapa(r, curto(nomeDe(r.responsavel_id))), "")); }
   l.push(LEGENDA(num((minhas[0] || time[0] || { rt: "RT-374" }).rt)));
   return { n: minhas.length + time.length, txt: l.join("\n") };
@@ -686,7 +734,7 @@ function mapaGrupo(ids) {
   const nomes = ids.map((id) => curto(nomeDe(id)));
   const titulo = nomes.length > 1 ? nomes.slice(0, -1).join(", ") + " e " + nomes[nomes.length - 1] : nomes[0] || "";
   const l = ["🗺️ *Mapa de Rotas*", "", `👥 *${titulo}*`, `📅 ${dataHoje()} · ${contagem(rotas)}`, ""];
-  ids.forEach((id) => { const rs = rotas.filter((r) => r.responsavel_id === id).sort(ordPrio); if (!rs.length) return; l.push(`👤 *${nomeDe(id)}*`, ""); rs.forEach((r) => l.push(blocoMapa(r), "")); });
+  ids.forEach((id) => { const rs = rotas.filter((r) => r.responsavel_id === id).sort(ordPrio), rn = rotinasMapa((r) => r.responsavel_id === id); if (!rs.length && !rn.length) return; l.push(`👤 *${nomeDe(id)}*`, ""); rs.forEach((r) => l.push(blocoMapa(r), "")); rn.forEach((r) => l.push(blocoRotina(r), "")); });
   if (!rotas.length) l.push("Nenhuma rota aberta com essas pessoas agora.", "");
   l.push(LEGENDA(num((rotas[0] || { rt: "RT-374" }).rt)));
   return { n: rotas.length, txt: l.join("\n") };
@@ -967,7 +1015,7 @@ function vistaEu() {
   return `<div class="placa rebites" style="padding:22px 18px;display:flex;gap:14px;align-items:center"><div class="avatar" style="width:52px;height:52px;font-size:18px">${ini(p.nome)}</div><div><b style="font-family:var(--fd);font-size:18px">${esc(p.nome)}</b><div style="color:var(--aco);font-size:14px">${papelTxt()}</div></div></div>
     <div class="bloco" style="margin-top:14px"><h3>Suas rotas abertas <span class="ct">${minhas.length}</span></h3><p style="margin:0;color:var(--aco-2)">${minhas.filter(vencida).length} vencidas · ${minhas.filter((r) => r.prazo && dias(r.prazo) === 0).length} vencem hoje</p></div>
     <div class="bloco" style="margin-top:14px"><h3>No celular</h3><p style="margin:0;color:var(--aco-2)">Para usar como app: no iPhone, toque em Compartilhar › Adicionar à Tela de Início. No Android, menu ⋮ › Adicionar à tela inicial.</p></div>
-    <div class="bloco eu-atalhos" style="margin-top:14px"><h3>Atalhos</h3><div class="rapidas3"><button class="btn" type="button" data-aba="feed">📰 Feed</button>${cuidaPessoas() ? '<button class="btn" type="button" data-aba="equipe">👥 Equipe</button>' : ""}<button class="btn" type="button" data-aba="placar">🏆 Placar</button></div></div>
+    <div class="bloco eu-atalhos" style="margin-top:14px"><h3>Atalhos</h3><div class="rapidas3"><button class="btn" type="button" data-aba="pautas">🗓️ Pautas</button><button class="btn" type="button" data-aba="placar">🏆 Placar</button><button class="btn" type="button" data-aba="feed">📰 Feed</button>${cuidaPessoas() ? '<button class="btn" type="button" data-aba="equipe">👥 Equipe</button>' : ""}${comando() ? '<button class="btn" type="button" data-aba="comandos">⚙️ Comandos</button>' : ""}</div></div>
     <div class="bloco" style="margin-top:14px"><h3>Seu acesso</h3><p style="margin:0 0 10px;color:var(--aco-2)">${p.usuario ? `Você entra com o usuário <b>${esc(p.usuario)}</b> e sua senha, de qualquer aparelho.` : "Crie um usuário e uma senha para entrar de qualquer aparelho, sem precisar do link."}</p><button class="btn turq" type="button" data-acao="meu-acesso">🔑 ${p.usuario ? "Trocar minha senha" : "Criar usuário e senha"}</button></div>
     <div style="margin-top:14px"><button class="btn" type="button" data-acao="sair">Sair deste aparelho</button></div>`;
 }
@@ -1378,7 +1426,7 @@ function render() {
   if (!M) return;
   casca(); topo(); medidores(); bolhas();
   const c = $("#conteudo");
-  c.innerHTML = { placar: vistaPlacar, zap: () => `<div style="max-width:900px">${zapHTML("")}</div>`, rotas: () => (s.vista === "rar" && comando() ? vistaRotaARota() : s.vista === "rotinas" ? vistaRotinas() : s.vista === "kanban" ? vistaKanban() : vistaLista()), feed: vistaFeed, agenda: vistaAgenda, equipe: vistaEquipe, pautas: vistaPautas, comandos: vistaComandos, eu: vistaEu }[s.aba]();
+  c.innerHTML = { rotinas: vistaAbaRotinas, placar: vistaPlacar, zap: () => `<div style="max-width:900px">${zapHTML("")}</div>`, rotas: () => (s.vista === "rar" && comando() ? vistaRotaARota() : s.vista === "kanban" ? vistaKanban() : vistaLista()), feed: vistaFeed, agenda: vistaAgenda, equipe: vistaEquipe, pautas: vistaPautas, comandos: vistaComandos, eu: vistaEu }[s.aba]();
   if (s.aba === "rotas" && s.vista === "kanban") ligarKanban();
   if (s.aba === "agenda") { const k = $("#ag-semana"), h = k && k.querySelector(".coluna.hoje"); if (k && h && !s.agRolou) { k.scrollLeft = h.offsetLeft - k.offsetLeft - 8; s.agRolou = true; } }
   try { localStorage.setItem("alfy-vista", JSON.stringify({ vista: s.vista, agrupar: s.agrupar, v28: true })); } catch (_) { /* privado */ }
@@ -1546,7 +1594,7 @@ document.addEventListener("click", async (e) => {
   b.classList.add("ocupado"); b.setAttribute("aria-busy", "true");
   try {
     if (b.id === "eu-av-cel") { s.aba = "eu"; render(); return; }
-    if (d.aba) { s.aba = d.aba; s.pauta = null; s.reuniao = null; if (d.aba === "agenda") { render(); await carregarAgenda(); } if (d.aba === "equipe") { s.aprovado = null; if ((s.naveBusca || "").trim()) s.naveRes = await chamar("alfy_nave_buscar", { p_q: s.naveBusca }).catch(() => null); s.fichas = await chamar("alfy_fichas"); if (comando()) s.equipe = await chamar("alfy_equipe"); } if (d.aba === "feed") FEED = await chamar("alfy_feed", { p_limite: 150 }); if (d.aba === "zap") await carregarZap(); if (d.aba === "placar") await carregarPlacar(); if (d.aba === "rotas" && s.vista === "rotinas") await carregarRotinas(); if (d.aba === "comandos" && s.cmd === "perguntar" && !s.chatGeral) s.chatGeral = await chamar("alfy_ia_conversa", { p_escopo: "geral" }); render(); scrollTo(0, 0); return; }
+    if (d.aba) { s.aba = d.aba; s.pauta = null; s.reuniao = null; if (d.aba === "agenda") { render(); await carregarAgenda(); } if (d.aba === "equipe") { s.aprovado = null; if ((s.naveBusca || "").trim()) s.naveRes = await chamar("alfy_nave_buscar", { p_q: s.naveBusca }).catch(() => null); s.fichas = await chamar("alfy_fichas"); if (comando()) s.equipe = await chamar("alfy_equipe"); } if (d.aba === "feed") FEED = await chamar("alfy_feed", { p_limite: 150 }); if (d.aba === "zap") await carregarZap(); if (d.aba === "placar") await carregarPlacar(); if (d.aba === "rotinas") await carregarRotinas(); if (d.aba === "rotas" && s.vista === "rotinas") await carregarRotinas(); if (d.aba === "comandos" && s.cmd === "perguntar" && !s.chatGeral) s.chatGeral = await chamar("alfy_ia_conversa", { p_escopo: "geral" }); render(); scrollTo(0, 0); return; }
     if (d.vista) { s.vista = d.vista; if (d.vista === "rar") await rrCarregar(); if (d.vista === "rotinas") await carregarRotinas(); render(); return; }
     if (d.rrordem) { s.rr.ordem = d.rrordem; s.rr.foco = null; rrSalvar(); render(); return; }
     if (d.rrformato) { s.rr.formato = d.rrformato; rrSalvar(); render(); return; }
@@ -1563,7 +1611,13 @@ document.addEventListener("click", async (e) => {
     if (d.menuia) { s.menuIa = s.menuIa === d.menuia ? null : d.menuia; refolha(); return; }
     if (d.lemdia) { s.lemDia = d.lemdia; refolha(); return; }
     if (d.lemhora) { s.lemHora = +d.lemhora; s.lemHoraTxt = ""; refolha(); return; }
+    if (d.zapabre) { s.zapAberto = s.zapAberto === +d.zapabre ? null : +d.zapabre; render(); return; }
     if (d.zapmodo) { s.zapModo = d.zapmodo; render(); return; }
+    if (d.rtnmodo) { s.rtnModo = d.rtnmodo; if (d.rtnmodo === "todas") await carregarRotinas(); render(); return; }
+    if (d.rtnfoco) { s.rtnFoco = d.rtnfoco; render(); return; }
+    if (d.rtnpular) { const t = await enviarRascunho(d.rtnpular); s.rtnPulou = { ...(s.rtnPulou || {}), [d.rtnpular]: true }; s.rtnFoco = null; render(); if (t) aviso("Comentário enviado"); return; }
+    if (d.rtnfeita) { const rt = d.rtnfeita; await enviarRascunho(rt); await chamar("alfy_mover", { p_rt: rt, p_status: "concluida" }); s.rtnFoco = null; await recarregar(); await carregarRotinas(); render(); aviso(`✓ ${nomeRota(rt)} feita. Volta na próxima data.`); return; }
+    if (d.rtnnao) { const rt = d.rtnnao, ta = document.getElementById("cl-" + rt.replace(/\W/g, "")), mot = (ta?.value || "").trim(); if (!mot) { aviso("Escreva no campo por que não deu, e toque de novo"); ta?.focus(); return; } ta.value = ""; await chamar("alfy_comentar", { p_rt: rt, p_texto: "✗ Não deu: " + mot, p_tipo: "comentario" }); s.rtnPulou = { ...(s.rtnPulou || {}), [rt]: true }; s.rtnFoco = null; await recarregar(); render(); aviso("Registrado. A rotina fica aberta."); return; }
     if (d.plmes) { s.placarMes = d.plmes; await carregarPlacar(); render(); return; }
     if (d.rodarrotina) { const r = await chamar("alfy_rotina_rodar", { p_serie: d.rodarrotina }); await recarregar(); await carregarRotinas(); render(); aviso(r.ja_aberta ? `Já tem uma aberta: ${nomeRota(r.rt)}` : `🔁 Rotina aberta: ${nomeRota(r.rt)}`); abrir(r.rt); return; }
     if (d.zapvisto) { s.zap = await chamar("alfy_zap_visto", { p_id: +d.zapvisto }); render(); return; }
@@ -1673,6 +1727,7 @@ document.addEventListener("click", async (e) => {
       await lembrar(q); return;
     }
     if (a === "ir-escrever" || a === "ir-alfy") { const el = a === "ir-alfy" ? ($(".alfy4") || $("#f-coment")) : $("#f-coment"), c = $("#corpo-folha"); if (el && c) c.scrollTo({ top: el.offsetTop - ($(".cab3")?.offsetHeight || 0) - 10 }); setTimeout(() => $("#t-coment")?.focus({ preventScroll: true }), 50); if (a === "ir-alfy") aviso("Escolha uma ação do ALFY ou escreva o pedido"); return; }
+    if (a === "zap-ver-todas") { s.zapTodas = true; render(); return; }
     if (a === "zap-todas") { for (const z of (s.zap?.itens || []).filter((x) => x.precisa && !x.visto && zapNoModo(x))) s.zap = await chamar("alfy_zap_visto", { p_id: z.id }); render(); aviso("Tudo marcado como respondido"); return; }
     if (a === "nova-rotina") { novaRota({ repete: "semanal", semIA: false }); return; }
     if (a === "lem-outro") { s.lemOutro = !s.lemOutro; refolha(); return; }
