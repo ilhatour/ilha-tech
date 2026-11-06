@@ -1,4 +1,4 @@
-// ALFY · Mapa de Rotas · Ilha Tech · v2.35.0 · 06/11/2026 · Painel de Ferro · 📋 copiar uma rota para o WhatsApp; arrastar do kanban e da agenda consertado
+// ALFY · Mapa de Rotas · Ilha Tech · v2.36.0 · 06/11/2026 · Painel de Ferro · equipe cria a própria rota; agenda de outra pessoa e da equipe toda
 // Tudo passa pelas funções alfy_* do banco, sempre com a chave pessoal de quem está usando.
 // O banco decide o que cada pessoa vê; a tela só desenha o que voltou.
 // A IA e os comandos são pedidos numa fila (alfy.pedido) que o robô do Mac atende.
@@ -1227,6 +1227,7 @@ function linhaD(ic, rot, controle) { return `<label class="lin3"><span class="ic
 const NOME_CAMPO4 = { assist: "Resumo", instr: "Instruções", resultado: "Resultado esperado", como_esta: "📍 Em que pé está" };
 function campo4(r, k, cls) {
   const v = k === "instr" ? instrDe(r) : r[COLUNA[k]] || "", ed = s.editando === k;
+  if (!v && !ed && k !== "como_esta" && !podeCampo(k)) return "";   // campo vazio que a pessoa não pode preencher: não ocupa a tela
   return `<div class="f4c ${cls || ""}"><div class="f4h"><h4>${NOME_CAMPO4[k]}</h4>${ed ? "" : `<span>${podeCampo(k) ? `<button class="lk" type="button" data-editar="${k}">Editar</button>` : ""}${comando() ? `<button class="lk ia" type="button" data-iacampo="${k}" title="Pedir ao ALFY para escrever">🐙</button>` : ""}</span>`}</div>
     ${ed ? `<textarea id="ed-${k}" rows="5">${esc(v)}</textarea><div class="b3ed"><button class="btn turq peq" type="button" data-salvar="${k}">Salvar</button><button class="btn peq" type="button" data-cancelar="1">Cancelar</button></div>`
       : `<p class="${v ? "" : "vazio"}">${v ? esc(v) : k === "como_esta" ? "Ninguém contou ainda em que pé está." : "Vazio."}</p>`}</div>`;
@@ -1353,21 +1354,22 @@ function fechar() { $("#camada").innerHTML = ""; s.aberta = null; s.cartao = nul
 // ---------------------------------------------------------------- formulários
 function novaRota(pre = {}) {
   fechar();
-  const st = pre.status || (manda() ? "rota" : "ideia");
+  const st = pre.status || "rota";   // desde 06/11 a equipe cria rota de verdade (a rota é de quem cria)
   $("#camada").innerHTML = `<div class="veu" id="veu"><section class="folha" role="dialog" aria-modal="true" aria-label="Nova rota">
     <div class="cab"><span class="tag nova"><small>ROTA</small><b>＋</b></span><h2>${st === "ideia" ? "Nova ideia" : "Nova rota"}</h2><button class="fechar" type="button" data-acao="fechar" aria-label="Fechar">${IC.x}</button></div>
     <form class="corpo" id="f-nova">
       <label><p class="rotulo">Título</p><input id="n-tit" class="busca" style="width:100%" value="${esc(pre.titulo || "")}" placeholder="Ex.: Trocar a contabilidade"></label>
-      <label><p class="rotulo">🎯 O que fazer · é o texto que vai no Mapa de Rotas</p><textarea id="n-assist" class="busca" rows="4" style="width:100%" placeholder="${comando() ? "Escreva do seu jeito, pode ser corrido: quem faz, o quê, até quando, contexto. O ALFY organiza." : "Na sua voz, falando com quem faz."}">${esc(pre.assist || "")}</textarea></label>
+      <label><p class="rotulo">${manda() ? "🎯 O que fazer · é o texto que vai no Mapa de Rotas" : "📝 Detalhes (opcional)"}</p><textarea id="n-assist" class="busca" rows="4" style="width:100%" placeholder="${comando() ? "Escreva do seu jeito, pode ser corrido: quem faz, o quê, até quando, contexto. O ALFY organiza." : (manda() ? "Na sua voz, falando com quem faz." : "O que precisa ser feito, com quem, o que você já sabe.")}">${esc(pre.assist || "")}</textarea></label>
       ${comando() ? `<label class="chip ia-org" style="cursor:pointer;align-self:flex-start;white-space:normal"><input type="checkbox" id="n-ia" ${pre.semIA ? "" : "checked"} style="margin-right:6px">🐙 O ALFY organiza: arruma o título e o O que fazer, preenche Instruções e Resultado e acerta dono, frente, prioridade e prazo pelo que você escreveu. Desmarque para salvar exatamente como está.</label>` : ""}
       <div class="form-linha"><label><p class="rotulo">🔁 Pontual ou recorrente?</p><select id="n-rep" class="busca" style="width:100%">${opc([["", "Pontual (uma vez só)"], ["diaria", "🔁 Diária"], ["semanal", "🔁 Semanal"], ["quinzenal", "🔁 Quinzenal"], ["mensal", "🔁 Mensal"], ["sob_demanda", "🔁 Quando precisar (reativo com um toque)"]], pre.repete || "")}</select></label><div id="n-dias" hidden><p class="rotulo">Em quais dias</p><div class="dias-sem">${DIAS_SEM.map((n, i) => `<label><input type="checkbox" class="n-dia-sem" value="${i + 1}">${n}</label>`).join("")}</div></div></div>
       ${manda() ? `<div class="cadeia"><div class="elo"><small>🗺️ Frente</small><select id="n-frente">${opc(FRENTES.map((f) => [f, frenteCurta(f)]), pre.frente || (eu().frentes || [])[0] || "", "Sem frente")}</select></div><span class="seta">›</span>
         <div class="elo"><small>👤 Responsável</small><select id="n-resp">${opc(gente(), pre.responsavel_id || eu().id)}</select></div><span class="seta">›</span>
         <div class="elo"><small>🤝 Co-responsável</small><select id="n-co">${opc(gente(), "", "Ninguém")}</select></div></div>
-      <div class="props"><div class="dado"><small>Prioridade</small><select id="n-prio">${opc(PRIORIDADES, pre.prioridade || "⏳ P3 · 7 dias")}</select></div><div class="dado"><small>Prazo</small><input id="n-prazo" type="date" value="${esc(pre.prazo || "")}"></div><div class="dado"><small>Vai para</small><select id="n-st">${opc([["rota", "Rotas"], ["ideia", "Ideias"]], st)}</select></div></div>${comando() ? '<label class="chip" style="cursor:pointer;align-self:flex-start"><input type="checkbox" id="n-sens" style="margin-right:6px">🔒 Só eu vejo (processo, saúde, sócio, assunto sobre gerente)</label>' : ""}` : '<p class="nota" style="margin:0">Entra como ideia. Quem coordena a frente transforma em rota.</p>'}
-      <label class="chip" style="cursor:pointer;align-self:flex-start"><input type="checkbox" id="n-comp" ${pre.compromisso ? "checked" : ""} style="margin-right:6px">📅 É compromisso com dia e hora (vai para a agenda, não entra no Mapa de Rotas)</label>
+      <div class="props"><div class="dado"><small>Prioridade</small><select id="n-prio">${opc(PRIORIDADES, pre.prioridade || "⏳ P3 · 7 dias")}</select></div><div class="dado"><small>Prazo</small><input id="n-prazo" type="date" value="${esc(pre.prazo || "")}"></div><div class="dado"><small>Vai para</small><select id="n-st">${opc([["rota", "Rotas"], ["ideia", "Ideias"]], st)}</select></div></div>${comando() ? '<label class="chip" style="cursor:pointer;align-self:flex-start"><input type="checkbox" id="n-sens" style="margin-right:6px">🔒 Só eu vejo (processo, saúde, sócio, assunto sobre gerente)</label>' : ""}` : `<div class="props"><div class="dado"><small>Prioridade</small><select id="n-prio">${opc(PRIORIDADES, pre.prioridade || "⏳ P3 · 7 dias")}</select></div><div class="dado"><small>Prazo</small><input id="n-prazo" type="date" value="${esc(pre.prazo || "")}"></div></div>
+        <p class="nota" style="margin:0">A rota é sua: aparece na sua lista e na sua agenda. Se escolher a prioridade e deixar o prazo vazio, o prazo sai sozinho (P1 amanhã, P2 em 3 dias, P3 em 7 dias).</p>`}
+      <label class="chip" style="cursor:pointer;align-self:flex-start;white-space:normal;max-width:100%"><input type="checkbox" id="n-comp" ${pre.compromisso ? "checked" : ""} style="margin-right:6px">📅 É compromisso com dia e hora (vai para a agenda, não entra no Mapa de Rotas)</label>
       <div id="n-quando" ${pre.compromisso ? "" : "hidden"} class="form-linha">${quandoCaixa(["n-dia", "n-hi", "n-hf"])}<label><p class="rotulo">Dia</p><input id="n-dia" type="date" class="busca" style="width:100%" value="${esc(pre.dia || hojeDia())}"></label><label><p class="rotulo">Das · às</p><span style="display:flex;gap:6px"><input id="n-hi" type="time" class="busca" style="flex:1" value="09:00"><input id="n-hf" type="time" class="busca" style="flex:1" value="10:00"></span></label><label style="grid-column:1/-1"><p class="rotulo">Onde</p><input id="n-onde" class="busca" style="width:100%" placeholder="Local ou link"></label></div>
-      <p class="nota" style="margin:0">Depois de salvar, a rota abre para você completar Instruções, Resultado esperado e Budget.</p>
+      ${manda() ? '<p class="nota" style="margin:0">Depois de salvar, a rota abre para você completar Instruções, Resultado esperado e Budget.</p>' : ""}
       <div><button class="cta" type="submit">Salvar</button></div></form></section></div>`;
   setTimeout(() => $("#n-tit")?.focus(), 50);
   $("#f-nova").addEventListener("submit", async (ev) => {
@@ -1377,11 +1379,12 @@ function novaRota(pre = {}) {
     const solta = () => { bt.disabled = false; bt.textContent = bt0; };
     const v = (id) => $("#" + id)?.value || "";
     const campos = { titulo: v("n-tit").trim(), assist: v("n-assist").trim(), frente: v("n-frente"), responsavel_id: v("n-resp"), co_responsavel_id: v("n-co"),
-      prioridade: v("n-prio"), prazo: v("n-prazo") ? v("n-prazo") + "T12:00:00-03:00" : "", status: v("n-st") || "ideia", sensivel: !!$("#n-sens")?.checked,
+      prioridade: v("n-prio"), prazo: v("n-prazo") ? v("n-prazo") + "T12:00:00-03:00" : "", status: v("n-st") || "rota", sensivel: !!$("#n-sens")?.checked,
       repete: v("n-rep"), repete_dias: [...document.querySelectorAll(".n-dia-sem:checked")].map((x) => x.value) };
     const organizar = !!$("#n-ia")?.checked, tit0 = campos.titulo, txt0 = campos.assist;
     if (!campos.titulo && !campos.assist) { aviso("Escreva o título ou o que fazer", true); solta(); return; }
     if (!campos.titulo) campos.titulo = campos.assist.split("\n")[0].slice(0, 90);
+    if (!campos.prazo && campos.prioridade && !campos.repete) campos.prazo = prazoDaPrio(pcod(campos.prioridade));   // prioridade acerta o prazo, como nas pílulas
     if (campos.repete && campos.repete !== "sob_demanda" && !campos.prazo) campos.prazo = hojeDia() + "T18:00:00-03:00";
     if ($("#n-comp")?.checked && v("n-dia")) Object.assign(campos, { inicio: `${v("n-dia")}T${v("n-hi") || "09:00"}:00-03:00`, fim: v("n-hf") ? `${v("n-dia")}T${v("n-hf")}:00-03:00` : "", onde: v("n-onde"), tipo: "📅 Compromisso", status: "rota", prioridade: campos.prioridade, frente: campos.frente || (comando() ? "🧍 Pessoal" : "") });
     try {
@@ -1462,7 +1465,9 @@ function intervaloAgenda() {
 async function carregarAgenda() {
   const { de, ate } = intervaloAgenda();
   const de0 = new Date(de); de0.setHours(0, 0, 0, 0); de0.setHours(de0.getHours() - 3);
-  s.agDados = await chamar("alfy_agenda", { p_de: de0.toISOString(), p_ate: new Date(ate.getTime() + 3 * 3600e3).toISOString() }).catch((e) => { falhou(e); return null; });
+  const q = s.agQuem || "";   // "" = a minha · "equipe" = todos (comando) · id = de outra pessoa
+  s.agDados = await chamar("alfy_agenda", { p_de: de0.toISOString(), p_ate: new Date(ate.getTime() + 3 * 3600e3).toISOString(), p_pessoa: q && q !== "equipe" ? q : null, p_equipe: q === "equipe" })
+    .catch((e) => { falhou(e); s.agQuem = ""; return null; });
 }
 // Agenda em kanban (aprovada 05/11): uma coluna por dia, cartões em ordem de horário, "Sem horário" no fim da coluna.
 // k: comp (📅 compromisso) · rota (rota com horário ou sem) · rotina (🔁) · reuniao · google. Detalhe abre por cima (folha).
@@ -1479,7 +1484,7 @@ function itensAgenda() {
     if (!r.inicio && !ABERTOS.includes(r.status)) continue;   // sem horário: só o que ainda está aberto
     const dur = r.inicio && r.fim ? new Date(r.fim) - new Date(r.inicio) : 0;
     const it = (quando, virtual) => ({ chave: "r:" + r.rt + (virtual ? ":" + quando : ""), k, quando, ini: r.inicio ? hhmm(quando) : "", fim: dur ? hhmm(new Date(new Date(quando).getTime() + dur).toISOString()) : "",
-      titulo: r.titulo, rt: r.rt, st: r.status, virtual, onde: r.onde, prazo: r.prazo, rotas: r.liga_rotas || [], pautas: r.liga_pautas || [] });
+      titulo: r.titulo, rt: r.rt, st: r.status, virtual, onde: r.onde, resp: r.responsavel_id, prazo: r.prazo, rotas: r.liga_rotas || [], pautas: r.liga_pautas || [] });
     const b = new Date(base);
     if (b >= de && b < ate) por0(base, it(base, false));
     if (r.repete && ABERTOS.includes(r.status)) {   // próximas da série, só para ver (a rota de verdade abre quando a anterior conclui)
@@ -1593,7 +1598,7 @@ function agCartao(it, hoje, agora) {
   const chips = (it.rotas.length ? `<span>📍 ${it.rotas.length} ${it.rotas.length > 1 ? "rotas" : "rota"}</span>` : "") + (it.pautas.length ? `<span>💬 ${it.pautas.length} ${it.pautas.length > 1 ? "pautas" : "pauta"}</span>` : "");
   return `<div role="button" tabindex="0" class="agk-card k-${it.k} ${passou ? "passou" : ""} ${agoraJa ? "agora" : ""} ${it.virtual ? "virtual" : ""} ${(it.choca || []).length ? "choque" : ""}" ${abre} ${arrasta}>
     <span class="agk-l1"><span class="agk-hora">${it.ini || "Dia todo"}${it.fim ? `<span class="agk-fim"> – ${it.fim}</span>` : ""}</span><span class="agk-ic" title="${nome}">${ic}</span></span>
-    <span class="agk-tt">${esc(it.titulo)}</span>${(it.choca || []).length ? `<span class="agk-choque" title="${esc(it.choca.join(" · "))}">⚠️ Bate com ${esc(it.choca[0])}${it.choca.length > 1 ? ` e mais ${it.choca.length - 1}` : ""}</span>` : ""}${meta ? `<span class="agk-mt">${esc(meta)}</span>` : ""}${chips ? `<span class="agk-chips">${chips}</span>` : ""}</div>`;
+    <span class="agk-tt">${esc(it.titulo)}</span>${s.agQuem === "equipe" && it.resp ? `<span class="agk-quem">👤 ${esc(curto(nomeDe(it.resp)))}</span>` : ""}${(it.choca || []).length ? `<span class="agk-choque" title="${esc(it.choca.join(" · "))}">⚠️ Bate com ${esc(it.choca[0])}${it.choca.length > 1 ? ` e mais ${it.choca.length - 1}` : ""}</span>` : ""}${meta ? `<span class="agk-mt">${esc(meta)}</span>` : ""}${chips ? `<span class="agk-chips">${chips}</span>` : ""}</div>`;
 }
 // detalhe do compromisso, da reunião ou do evento do Google, por cima da agenda
 function agFolha(chave) {
@@ -1685,6 +1690,13 @@ function ligarAgendaKanban() {
     });
   });
 }
+// de quem é a agenda: o comando vê qualquer pessoa ou a equipe toda; o gerente vê quem tem rota na frente dele
+function agQuemOps() {
+  if (comando()) return [["", "📅 Minha agenda"], ["equipe", "👥 Equipe toda"], ...gente().filter(([id]) => id !== eu().id).sort((a, b) => a[1].localeCompare(b[1]))];
+  if (papel() !== "gerente") return [];
+  const ids = [...new Set((M.rotas || []).filter((r) => (eu().frentes || []).includes(r.frente) && r.responsavel_id && r.responsavel_id !== eu().id && (M.pessoas || []).find((x) => x.id === r.responsavel_id)?.papel !== "comando").map((r) => r.responsavel_id))];
+  return ids.length ? [["", "📅 Minha agenda"], ...ids.map((id) => [id, nomeDe(id)]).sort((a, b) => a[1].localeCompare(b[1]))] : [];
+}
 function vistaAgenda() {
   const { de, mes } = intervaloAgenda(), por = itensAgenda(), hoje = hojeDia();
   const titulo = s.agVista === "mes" ? new Date((s.agBase || new Date()).getTime() + 6 * 864e5).toLocaleDateString("pt-BR", { month: "long", year: "numeric", timeZone: FUSO }).replace(/^./, (c) => c.toUpperCase()).replace(" De ", " de ")
@@ -1692,8 +1704,9 @@ function vistaAgenda() {
   const g = s.agDados?.google_em;
   const barra = `<div class="ag-barra"><div class="alterna" role="group"><button type="button" data-agvista="semana" aria-pressed="${s.agVista !== "mes"}">Semana</button><button type="button" data-agvista="mes" aria-pressed="${s.agVista === "mes"}">Mês</button></div>
     <div class="ag-nav"><button class="btn peq" type="button" data-agnav="-1" aria-label="Anterior">‹</button><button class="btn peq" type="button" data-agnav="0">Hoje</button><button class="btn peq" type="button" data-agnav="1" aria-label="Próxima">›</button><b>${esc(titulo)}</b></div>
+    ${agQuemOps().length ? `<select class="ag-quem ${s.agQuem ? "on" : ""}" id="ag-quem" aria-label="Agenda de quem">${opc(agQuemOps(), s.agQuem || "")}</select>` : ""}
     <span class="espaco"></span><button class="cta" type="button" data-acao="novo-compromisso">＋ Compromisso</button></div>
-    ${comando() && !g ? '<p class="nota ag-leg" style="margin:0 0 10px">📆 O Google Agenda ainda não está ligado: Comandos › Ler o e-mail e a agenda.</p>' : ""}`;
+    ${s.agQuem ? `<p class="nota ag-leg" style="margin:0 0 10px">${s.agQuem === "equipe" ? "👥 Vendo os compromissos e as rotas com horário de toda a equipe." : `👤 Vendo a agenda de ${esc(nomeDe(s.agQuem))}.`} <button class="lk" type="button" data-agquem="">Voltar para a minha</button></p>` : ""}`;
   if (!s.agDados) return barra + `<div class="carregando">Carregando a agenda…</div>`;
   if (s.agVista === "mes") {
     const dias = Array.from({ length: 42 }, (_, i) => { const x = new Date(de); x.setDate(x.getDate() + i); return x; });
@@ -2010,7 +2023,8 @@ document.addEventListener("click", async (e) => {
     if (d.copiarrota) { const r = rotaDe(d.copiarrota); if (r) { copiar(textoRota(r)); const tx = b.innerHTML; b.innerHTML = b.innerHTML.replace("📋", "✓"); setTimeout(() => { b.innerHTML = tx; }, 1500); } return; }
     if (d.rrmodo) { s.rr.modo = d.rrmodo; s.rr.foco = null; rrSalvar(); render(); return; }
     if (d.agsel) { s.agDia = d.agsel; render(); return; }
-    if (d.agnovo) { novaRota({ compromisso: true, dia: d.agnovo }); return; }
+    if (d.agnovo) { novaRota({ compromisso: true, dia: d.agnovo, responsavel_id: s.agQuem && s.agQuem !== "equipe" ? s.agQuem : "" }); return; }
+    if (d.agquem !== undefined) { s.agQuem = d.agquem; s.agDados = null; render(); await carregarAgenda(); render(); return; }
     if (d.agvista) { s.agVista = d.agvista; s.agDados = null; render(); await carregarAgenda(); render(); return; }
     if (d.agnav !== undefined) { const n = +d.agnav, b = s.agBase || segundaDe(new Date()); if (n === 0) { s.agBase = segundaDe(new Date()); s.agDia = hojeDia(); } else if (s.agVista === "mes") { const m = new Date(b.getTime() + 6 * 864e5); m.setMonth(m.getMonth() + n, 1); s.agBase = segundaDe(m); } else { const x = new Date(b); x.setDate(x.getDate() + 7 * n); s.agBase = x; } s.agDados = null; s.agRolou = n !== 0; render(); await carregarAgenda(); render(); return; }
     if (d.agdia) { s.agVista = "semana"; s.agBase = segundaDe(new Date(d.agdia + "T12:00:00-03:00")); s.agDados = null; render(); await carregarAgenda(); render(); return; }
@@ -2108,7 +2122,7 @@ document.addEventListener("click", async (e) => {
     if (a === "pauta-da-rota") { const r = s.cartao; formPauta(null, { titulo: r.titulo, frente: r.frente, detalhe: r.assist || "", rt: r.rt }); return; }
     if (a === "nova-opcao") { abrirNovaOpcao(); return; }
     if (a === "ag-prazos") { s.agPrazos = !s.agPrazos; render(); return; }
-    if (a === "novo-compromisso") { novaRota({ compromisso: true }); return; }
+    if (a === "novo-compromisso") { novaRota({ compromisso: true, responsavel_id: s.agQuem && s.agQuem !== "equipe" ? s.agQuem : "" }); return; }
     if (a === "gravar-reuniao") { gravarReuniao(); return; }
     if (a === "ata") { const ch = "ata:" + s.reuniao; await pedir("ata", "reuniao:" + s.reuniao, {}, ch); render(); return; }
     if (a === "copiar-ata") { copiar(reuniaoDe(s.reuniao)?.ata || ""); return; }
@@ -2193,6 +2207,7 @@ document.addEventListener("change", async (e) => {
   try {
     if (t.dataset.pildata) { await pilSalvar(t.dataset.pildata, "prazo", t.value); return; }
     if (t.dataset.pildono) { await pilSalvar(t.dataset.pildono, "dono", t.value); return; }
+    if (t.id === "ag-quem") { s.agQuem = t.value; s.agDados = null; render(); await carregarAgenda(); render(); return; }
     if (t.dataset.rrsel) { s[t.dataset.rrsel] = t.value; s.rr.foco = null; render(); return; }
     if (t.id === "f-pessoa") { s.pessoa = t.value; render(); }
     if (t.id === "f-frente") { s.frente = t.value; render(); }
