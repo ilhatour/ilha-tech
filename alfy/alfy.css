@@ -1528,3 +1528,6 @@ button.pil{font:inherit;cursor:pointer;border:inherit}
 .qc-ops button.on{border-color:var(--turq);background:rgba(43,175,166,.14);font-weight:600}
 .qc-ops button.on::before{content:"✓ ";color:var(--turq)}
 .qc-pe{display:flex;justify-content:flex-end;gap:8px}
+.qc-ops button.nr{color:var(--aco-2);border-style:dashed;margin-top:4px}
+.qc-ops button.nr.on{border-color:var(--verm);background:rgba(229,72,77,.12);color:var(--texto)}
+.qc-ops button.nr.on::before{content:"✕ ";color:var(--verm)}

@@ -1,4 +1,4 @@
-// ALFY · Mapa de Rotas · Ilha Tech · v2.38.0 · 06/11/2026 · Painel de Ferro · sugestão já vem com frente e dono
+// ALFY · Mapa de Rotas · Ilha Tech · v2.38.1 · 06/11/2026 · Painel de Ferro · concluir como cancelada, não realizada
 // Tudo passa pelas funções alfy_* do banco, sempre com a chave pessoal de quem está usando.
 // O banco decide o que cada pessoa vê; a tela só desenha o que voltou.
 // A IA e os comandos são pedidos numa fila (alfy.pedido) que o robô do Mac atende.
@@ -338,22 +338,22 @@ function entregaHTML(e, comDono) {
 }
 // quanto a rota vale no Placar (mesma conta do banco, alfy._pontos): (Impacto + Dificuldade + Qualidade) × prazo
 function valorRota(r) {
-  if ((r.tipo || "").includes("Compromisso") || (r.frente || "").includes("Pessoal")) return null;
+  if ((r.tipo || "").includes("Compromisso") || (r.frente || "").includes("Pessoal") || r.qualidade === "Não realizada") return null;
   const i = { Alto: 3, Baixo: 1 }[r.impacto] || 2, d = { "Muito difícil": 4, "Difícil": 3, Alto: 3, "Fácil": 1, Baixo: 1 }[r.esforco] || 2, q = { Acima: 3, Abaixo: 1 }[r.qualidade] || 2, base = i + d + q;
   if (r.pontos) return { i, d, q, base, pts: +r.pontos.pontos, feito: true, mod: r.pontos.mod };
   const atraso = r.prazo && pcod(r.prioridade) !== "P5" ? (Date.now() - new Date(r.prazo)) / 864e5 : -1, mod = atraso <= 0.5 ? 1 : atraso <= 7 ? 0.5 : 0;
   return { i, d, q, base, pts: base * mod, mod, feito: false };
 }
 // ao concluir, o Comando diz como foi a entrega (vem marcado "Como esperado"); cancelar não conclui
-const QUALIDADES = [["Abaixo", "Abaixo do esperado"], ["Como esperado", "Como esperado"], ["Acima", "Acima do esperado"]];
+const QUALIDADES = [["Abaixo", "Abaixo do esperado"], ["Como esperado", "Como esperado"], ["Acima", "Acima do esperado"], ["Não realizada", "Cancelada, não realizada"]];
 function qualidadeAoConcluir(rt) {
   const r = rotaDe(rt) || (s.cartao?.rt === rt ? s.cartao : null);
-  if (!comando() || !r || !valorRota(r)) return Promise.resolve(true);
+  if (!comando() || !r || !valorRota({ ...r, qualidade: null })) return Promise.resolve(true);
   return new Promise((ok) => {
     let q = r.qualidade || "Como esperado";
     const c = document.createElement("div");
     c.className = "qconc"; c.setAttribute("role", "dialog"); c.setAttribute("aria-label", "Qualidade da entrega");
-    c.innerHTML = `<div class="qc-caixa"><b>Como foi a entrega?</b><small>${esc(nomeRota(rt))} · ${esc(r.titulo)}</small><div class="qc-ops">${QUALIDADES.map(([v, n]) => `<button type="button" data-q="${v}" class="${v === q ? "on" : ""}">${n}</button>`).join("")}</div><div class="qc-pe"><button type="button" class="mini" data-qx="1">Cancelar</button><button type="button" class="cta" data-qok="1">✓ Concluir</button></div></div>`;
+    c.innerHTML = `<div class="qc-caixa"><b>Como foi a entrega?</b><small>${esc(nomeRota(rt))} · ${esc(r.titulo)}</small><div class="qc-ops">${QUALIDADES.map(([v, n]) => `<button type="button" data-q="${v}" class="${v === q ? "on" : ""} ${v === "Não realizada" ? "nr" : ""}">${n}</button>`).join("")}</div><div class="qc-pe"><button type="button" class="mini" data-qx="1">Cancelar</button><button type="button" class="cta" data-qok="1">✓ Concluir</button></div></div>`;
     const fim = async (sim) => {
       c.remove(); document.removeEventListener("keydown", tecla, true);
       if (!sim) return ok(false);
@@ -361,14 +361,14 @@ function qualidadeAoConcluir(rt) {
       ok(true);
     };
     const marca = (v) => { q = v; c.querySelectorAll("[data-q]").forEach((b) => b.classList.toggle("on", b.dataset.q === v)); };
-    const tecla = (e) => { e.stopPropagation(); if (e.key === "Escape") { e.preventDefault(); fim(false); } else if (e.key === "Enter") { e.preventDefault(); fim(true); } else if ("123".includes(e.key) && e.key) marca(QUALIDADES[+e.key - 1][0]); };
+    const tecla = (e) => { e.stopPropagation(); if (e.key === "Escape") { e.preventDefault(); fim(false); } else if (e.key === "Enter") { e.preventDefault(); fim(true); } else if ("1234".includes(e.key) && e.key) marca(QUALIDADES[+e.key - 1][0]); };
     c.addEventListener("click", (e) => { e.stopPropagation(); const b = e.target.closest("button"); if (e.target === c || b?.dataset.qx) fim(false); else if (b?.dataset.qok) fim(true); else if (b?.dataset.q) marca(b.dataset.q); });
     document.addEventListener("keydown", tecla, true);
     document.body.appendChild(c); c.querySelector("[data-qok]").focus();
   });
 }
 function valeHTML(r) {
-  const v = valorRota(r); if (!v) return `<p class="vale4 nao">🏆 Não pontua no Placar (${(r.tipo || "").includes("Compromisso") ? "compromisso" : "frente Pessoal"}).</p>`;
+  const v = valorRota(r); if (!v) return `<p class="vale4 nao">🏆 Não pontua no Placar (${r.qualidade === "Não realizada" ? "cancelada, não realizada" : (r.tipo || "").includes("Compromisso") ? "compromisso" : "frente Pessoal"}).</p>`;
   const n = (x) => x.toLocaleString("pt-BR"), pad = (k) => !r[k] ? " (vazio, conta 2)" : "";
   const agora = v.feito ? `Valeu <b>${n(v.pts)} pts</b>${v.mod === 1 ? ", entregue no prazo" : v.mod === 0.5 ? ", entregue fora do prazo (metade)" : ", entregue muito fora do prazo (zero)"}.`
     : v.mod === 1 ? `Concluída no prazo vale <b>${n(v.base)} pts</b>. Até 7 dias fora vale ${n(v.base / 2)}; depois, zero.` : v.mod === 0.5 ? `Já passou do prazo: se concluir até 7 dias depois dele vale <b>${n(v.base / 2)} pts</b> (metade). Depois, zero.` : `Passou mais de 7 dias do prazo: <b>não pontua mais</b>.`;
@@ -399,7 +399,7 @@ function vistaPlacar() {
   }
   const lista = comando() ? (pl.entregas || []).filter((e) => !s.plBusca || (e.titulo + " " + nomeDe(e.resp) + " " + nomeDe(e.co)).toLowerCase().includes(s.plBusca.toLowerCase())) : (pl.minhas || []);
   const banco = `<section class="pl6sec"><div class="pl6h"><h3>${comando() ? "Entregas do mês" : "Suas entregas"} · ${(comando() ? pl.entregas : pl.minhas || []).length}</h3><button class="lk" type="button" data-verconc="1">✓ Ver rotas concluídas</button>${comando() ? `<input class="busca" id="pl-busca" placeholder="Buscar entrega ou pessoa" value="${esc(s.plBusca || "")}">` : ""}</div>${lista.map((e) => entregaHTML(e, comando())).join("") || '<p class="nota">Nenhuma entrega neste mês ainda. Cada rota concluída vale até 10 pontos.</p>'}</section>`;
-  const regra = `<details class="pl7regra"><summary>Como pontua</summary><div class="pl7tab"><div><b>Impacto</b><span>Alto 3 · Médio 2 · Baixo 1</span></div><div><b>Dificuldade</b><span>Muito difícil 4 · Difícil 3 · Simples 2 · Fácil 1</span></div><div><b>Qualidade</b><span>Acima do esperado 3 · Como esperado 2 · Abaixo do esperado 1</span></div><div><b>Prazo</b><span>No prazo ×1 · até 7 dias fora ×½ · mais que isso ×0</span></div></div><p class="nota" style="margin:8px 0 0">Pontos = (Impacto + Dificuldade + Qualidade) × prazo, até 10 por rota. Campo vazio conta como o do meio (2 + 2 + 2 = 6). Responsável e co-responsável pontuam. Compromisso e frente Pessoal não contam.</p></details>`;
+  const regra = `<details class="pl7regra"><summary>Como pontua</summary><div class="pl7tab"><div><b>Impacto</b><span>Alto 3 · Médio 2 · Baixo 1</span></div><div><b>Dificuldade</b><span>Muito difícil 4 · Difícil 3 · Simples 2 · Fácil 1</span></div><div><b>Qualidade</b><span>Acima do esperado 3 · Como esperado 2 · Abaixo do esperado 1 · Cancelada, não realizada não conta</span></div><div><b>Prazo</b><span>No prazo ×1 · até 7 dias fora ×½ · mais que isso ×0</span></div></div><p class="nota" style="margin:8px 0 0">Pontos = (Impacto + Dificuldade + Qualidade) × prazo, até 10 por rota. Campo vazio conta como o do meio (2 + 2 + 2 = 6). Responsável e co-responsável pontuam. Compromisso e frente Pessoal não contam.</p></details>`;
   return `<div class="pl7">${nav}<div class="pl7grade"><div class="pl7a">${topo}</div><div class="pl7b">${banco}${regra}</div></div></div>`;
 }
 
