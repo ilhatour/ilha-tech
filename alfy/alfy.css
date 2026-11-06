@@ -1467,3 +1467,42 @@ button.pil{font:inherit;cursor:pointer;border:inherit}
 .z7vezes{color:var(--aco-2)!important}
 .z7volta{color:var(--amber)!important;font-weight:600}
 .alerta-ia{margin:0 0 14px;padding:10px 14px;border-radius:10px;background:rgba(246,178,74,.12);border:1px solid rgba(246,178,74,.45);color:#F6D7A4;font-size:14px;line-height:1.45}
+
+/* ---------- 2.33 · menu do topo com os nomes de volta (sem só ícone) ---------- */
+@media (min-width:901px) and (max-width:1360px){
+  .nav button:not([aria-current="true"]) .nl{display:inline}
+  .nav{gap:0}
+  .nav button{padding:8px 8px;font-size:13.5px;gap:6px}
+  .nav button svg{width:16px;height:16px}
+}
+@media (min-width:901px) and (max-width:1100px){
+  .nav button{padding:8px 6px;font-size:13px}
+  .nav button svg{display:none}
+  .lateral .marca{padding:6px 10px}
+}
+/* WhatsApp: navegadores Resumo · Conversas · Possíveis rotas */
+.znav{display:flex;gap:4px;border-bottom:1px solid var(--linha);overflow-x:auto;scrollbar-width:none}
+.znav::-webkit-scrollbar{display:none}
+.znav button{display:inline-flex;align-items:center;gap:8px;border:0;background:none;color:var(--aco);font:inherit;font-size:15px;font-weight:600;padding:10px 14px;cursor:pointer;white-space:nowrap;border-bottom:2px solid transparent;margin-bottom:-1px}
+.znav button:hover{color:var(--texto)}
+.znav button[aria-selected="true"]{color:var(--texto);border-bottom-color:var(--turq)}
+.znav button span{min-width:22px;height:20px;padding:0 7px;border-radius:999px;background:var(--ferro-3);color:var(--aco-2);font-size:12px;font-weight:700;display:inline-grid;place-items:center}
+.znav button[aria-selected="true"] span{background:var(--turq);color:#06201E}
+.z8busca{width:100%;max-width:520px;height:40px}
+@media (min-width:901px) and (max-width:1520px){
+  .nav button:not([aria-current="true"]) .nl{display:inline}
+  .nav{gap:0}
+  .nav button{padding:8px 8px;font-size:13.5px;gap:6px}
+  .nav button svg{width:16px;height:16px;display:block}
+}
+@media (min-width:901px) and (max-width:1260px){
+  .nav button{padding:8px 6px;font-size:13px}
+  .nav button svg{display:none}
+  .lateral .eu .quem{display:none}
+  .lateral{gap:10px;padding-left:14px;padding-right:14px}
+}
+@media (min-width:901px) and (max-width:1000px){ .nav button{padding:8px 4px;font-size:12.5px} .nav .n{display:none} }
+.z8busca{flex:none!important;height:40px!important;min-height:0!important}
+@media (max-width:600px){.znav{gap:0}.znav button{padding:10px 9px;font-size:14px;gap:6px}}
+.znav .zi{font-style:normal}@media (max-width:600px){.znav .zi{display:none}.znav button{padding:10px 8px}}
+@media (max-width:600px){.znav button{padding:10px 6px;font-size:13.5px;gap:5px}.znav button span{min-width:20px;padding:0 5px}}

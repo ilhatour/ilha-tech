@@ -1,4 +1,4 @@
-// ALFY · Mapa de Rotas · Ilha Tech · v2.32.0 · 05/11/2026 · Painel de Ferro · sugestões por assunto (vezes, voltou), dono provável, aviso de IA fora
+// ALFY · Mapa de Rotas · Ilha Tech · v2.33.0 · 06/11/2026 · Painel de Ferro · WhatsApp em navegadores (Resumo, Conversas, Possíveis rotas), menu com nomes
 // Tudo passa pelas funções alfy_* do banco, sempre com a chave pessoal de quem está usando.
 // O banco decide o que cada pessoa vê; a tela só desenha o que voltou.
 // A IA e os comandos são pedidos numa fila (alfy.pedido) que o robô do Mac atende.
@@ -684,20 +684,30 @@ function zapHTML(h) {
       ${(x.vezes || 1) > 1 ? `<small class="z7vezes">💬 Apareceu ${x.vezes} vezes: ${esc([...new Set((x.fontes || []).map((f) => nomeZap(f.conversa || "").nome).filter(Boolean))].slice(0, 4).join(", "))}</small>` : ""}
       ${x.voltou ? `<small class="z7volta">↺ Você já descartou este assunto${x.pos_descarte > 1 ? ` ${x.pos_descarte} vezes` : ""}, e ele voltou a aparecer</small>` : ""}</div>
       <div class="z7sa"><button class="btn turq peq" type="button" data-sug="${x.id}" data-sugacao="rota">＋ Virar rota</button><button class="lk" type="button" data-sug="${x.id}" data-sugacao="descartar">Descartar</button></div></div>`; };
-  const conta = (n, txt, alvo, cls) => `<button type="button" class="z7c ${cls} ${n ? "" : "zero"}" data-zapir="${alvo}"><b>${n}</b><span>${txt}</span></button>`;
-  return `<div class="z6tela">${h}
-    <div class="z6top"><div class="seg5" role="group" aria-label="O que ver">${[["trabalho", "💼 Trabalho"], ["pessoal", "🏠 Pessoal"], ["tudo", "Tudo"]].map(([k, n]) => `<button type="button" data-zapmodo="${k}" aria-pressed="${modo === k}">${n}</button>`).join("")}</div>
+  // três navegadores: Resumo (o que importa e quem espera) · Conversas (grupos e pessoas) · Possíveis rotas
+  const nav = s.zapNav || "resumo", grupos = resto.filter((z) => z.grupo), pessoas = resto.filter((z) => !z.grupo);
+  const q = (s.zapBusca || "").toLowerCase(), acha = (z) => !q || [z.conversa, z.resumo, z.ultima?.txt].join(" ").toLowerCase().includes(q);
+  const aba = (k, nm, n) => { const [ic, ...r] = nm.split(" "); return `<button type="button" role="tab" data-zapnav="${k}" aria-selected="${nav === k}"><i class="zi">${ic}</i>${r.join(" ")}${n ? `<span>${n}</span>` : ""}</button>`; };
+  const topo = `<div class="z6top"><div class="seg5" role="group" aria-label="O que ver">${[["trabalho", "💼 Trabalho"], ["pessoal", "🏠 Pessoal"], ["tudo", "Tudo"]].map(([k, n]) => `<button type="button" data-zapmodo="${k}" aria-pressed="${modo === k}">${n}</button>`).join("")}</div>
       <span class="z6est">${estado}</span><span class="espaco"></span>
       <button class="btn turq peq" type="button" data-zapler="" ${zapRodando() ? "disabled" : ""}>📡 Atualizar</button><button class="lk" type="button" data-zapler="168" ${zapRodando() ? "disabled" : ""} title="Lê todas as conversas dos últimos 7 dias">🧹 Limpeza geral</button></div>
-    ${ped?.status === "feito" ? `
-    <div class="z7conta">${conta(esp.length, esp.length === 1 ? "esperando você" : "esperando você", "z-esp", "esp")}${modo !== "pessoal" ? conta(sugs.length, sugs.length === 1 ? "pode virar rota" : "podem virar rota", "z-sug", "sug") : ""}${conta(resto.length, "conversas com movimento", "z-conv", "")}</div>
-    ${impl.length ? `<section class="z6sec"><h4>📰 O que importa</h4><ul class="z7imp">${impVis.map(([tt, x]) => `<li>${tt && modo === "tudo" ? `<span class="z7tag">${tt}</span>` : ""}${negrito(x)}</li>`).join("")}</ul>${impl.length > impVis.length ? `<button class="lk" type="button" data-acao="zap-imp-tudo">Ver mais ${impl.length - impVis.length}</button>` : ""}</section>` : ""}
-    <section class="z6sec" id="z-esp"><div class="f4h"><h4>⏳ Esperando você · ${esp.length}</h4>${esp.length > 1 ? `<button class="lk" type="button" data-acao="zap-todas">✓ Marcar todas</button>` : ""}</div>
+    <nav class="znav" role="tablist" aria-label="WhatsApp">${aba("resumo", "📰 Resumo", esp.length)}${aba("conversas", "💬 Conversas", resto.length + vistos.length)}${modo !== "pessoal" ? aba("rotas", "🗺️ Possíveis rotas", nov.length) : ""}</nav>`;
+  if (ped?.status !== "feito" && nav !== "rotas") return `<div class="z6tela">${h}${topo}</div>`;
+  let corpo = "";
+  if (nav === "resumo") corpo = `
+    ${impl.length ? `<section class="z6sec"><h4>📰 O que importa</h4><ul class="z7imp">${impl.map(([tt, x]) => `<li>${tt && modo === "tudo" ? `<span class="z7tag">${tt}</span>` : ""}${negrito(x)}</li>`).join("")}</ul></section>` : `<p class="nota">Nada importante desde a última leitura.</p>`}
+    <section class="z6sec"><div class="f4h"><h4>⏳ Esperando você · ${esp.length}</h4>${esp.length > 1 ? `<button class="lk" type="button" data-acao="zap-todas">✓ Marcar todas</button>` : ""}</div>
       ${esp.map((z) => linha6(z, true)).join("") || '<p class="nota" style="margin:0">Ninguém esperando resposta. 🎉</p>'}
-      ${vistos.length ? `<details><summary class="nota" style="cursor:pointer">Já respondidas · ${vistos.length}</summary>${vistos.map((z) => linha6(z, true)).join("")}</details>` : ""}</section>
-    ${modo !== "pessoal" ? `<section class="z6sec z7sug" id="z-sug"><h4>🗺️ Pode virar rota · ${sugs.length}</h4><p class="nota" style="margin:0 0 8px">O ALFY achou nas conversas. Vira rota com um toque (você revisa antes de salvar) ou descarta.</p>
-      ${sugVis.map(sugHTML).join("") || '<p class="nota" style="margin:0">Nada novo para virar rota.</p>'}${sugs.length > sugVis.length ? `<button class="lk" type="button" data-acao="zap-sug-todas">Ver mais ${sugs.length - sugVis.length}</button>` : ""}</section>` : ""}
-    <section class="z6sec" id="z-conv"><h4>💬 Conversas · ${resto.length}</h4>${vis.map((z) => linha6(z)).join("") || '<p class="nota" style="margin:0">Nada novo.</p>'}${resto.length > vis.length ? `<button class="lk" type="button" data-acao="zap-ver-todas">Ver mais ${resto.length - vis.length}</button>` : ""}</section>` : ""}</div>`;
+      ${vistos.length ? `<details><summary class="nota" style="cursor:pointer">Já respondidas · ${vistos.length}</summary>${vistos.map((z) => linha6(z, true)).join("")}</details>` : ""}</section>`;
+  if (nav === "conversas") {
+    const lista = (l, k, tit) => { const f = l.filter(acha), todas = (s.zapTodas || {})[k], vis = todas || q ? f : f.slice(0, 12);
+      return `<section class="z6sec"><h4>${tit} · ${f.length}</h4>${vis.map((z) => linha6(z)).join("") || '<p class="nota" style="margin:0">Nada.</p>'}${f.length > vis.length ? `<button class="lk" type="button" data-zapmais="${k}">Ver mais ${f.length - vis.length}</button>` : ""}</section>`; };
+    corpo = `<input class="busca z8busca" id="zap-busca" placeholder="Buscar conversa, pessoa ou assunto" value="${esc(s.zapBusca || "")}" autocomplete="off">
+      ${lista(grupos, "g", "👥 Grupos")}${lista(pessoas, "p", "👤 Conversas com pessoas")}`;
+  }
+  if (nav === "rotas") corpo = `<p class="nota" style="margin:0">O que o ALFY achou nas conversas que pode virar rota. Os pedidos com <b>++</b> vêm primeiro. ＋ Virar rota abre a rota preenchida para você revisar; Descartar tira da lista.</p>
+      <section class="z6sec z7sug">${sugVis.map(sugHTML).join("") || '<p class="nota" style="margin:0">Nada novo para virar rota.</p>'}${sugs.length > sugVis.length ? `<button class="lk" type="button" data-acao="zap-sug-todas">Ver mais ${sugs.length - sugVis.length}</button>` : ""}</section>`;
+  return `<div class="z6tela">${h}${topo}${corpo}</div>`;
 }
 // ---------------------------------------------------------------- feed
 const EV_IC = { comentario: "💬", orientacao: "🧭", whatsapp: "📱", status: "🔀", nova: "🗺️", ideia: "💡", editar: "✏️", budget: "💰", pauta_ligar: "🗓️", reuniao_ligar: "🗓️", pauta_desligar: "🗓️", reuniao_desligar: "🗓️" };
@@ -1765,7 +1775,7 @@ function render() {
   if (!M) return;
   casca(); topo(); medidores(); bolhas();
   const c = $("#conteudo");
-  c.innerHTML = { rotinas: vistaAbaRotinas, placar: vistaPlacar, zap: () => `<div style="max-width:900px">${zapHTML("")}</div>`, rotas: () => (s.vista === "rar" && comando() ? vistaRotaARota() : s.vista === "kanban" ? vistaKanban() : vistaLista()), feed: vistaFeed, agenda: vistaAgenda, equipe: vistaEquipe, pautas: vistaPautas, comandos: vistaComandos, eu: vistaEu }[s.aba]();
+  c.innerHTML = { rotinas: vistaAbaRotinas, placar: vistaPlacar, zap: () => `<div style="max-width:1080px">${zapHTML("")}</div>`, rotas: () => (s.vista === "rar" && comando() ? vistaRotaARota() : s.vista === "kanban" ? vistaKanban() : vistaLista()), feed: vistaFeed, agenda: vistaAgenda, equipe: vistaEquipe, pautas: vistaPautas, comandos: vistaComandos, eu: vistaEu }[s.aba]();
   { const r = s.robo, semRobo = r?.visto_em && Date.now() - new Date(r.visto_em) > 5 * 60000, semIa = r && !r.ia_ok;   // aviso no topo: robô ou IA fora
     if (comando() && (semRobo || semIa)) c.insertAdjacentHTML("afterbegin", `<div class="alerta-ia">${semRobo ? `💻 O robô do Mac está sem sinal desde ${quandoFoi(r.visto_em)}: os pedidos ao ALFY ficam na fila até ele voltar.` : `🐙 A IA do ALFY está desligada: ${esc(r.ia_msg || "")} Os pedidos que falharam voltam sozinhos quando ligar.`}</div>`); }
   if (s.aba === "rotas" && s.vista === "kanban") ligarKanban();
@@ -1974,6 +1984,8 @@ document.addEventListener("click", async (e) => {
     if (d.rrdepois) { const foi = await enviarRascunho(d.rrdepois); rrTirar(d.rrdepois, "depois"); aviso(nomeRota(d.rrdepois) + " ficou para depois" + (foi ? " · comentário enviado" : "")); return; }
     if (d.rrlista) { s.rr.formato = "lista"; s.rr.foco = d.rrlista; rrSalvar(); render(); setTimeout(() => $(".rr-item.foco")?.scrollIntoView({ block: "start", behavior: "smooth" }), 40); return; }
     if (d.rraplicar) { const rt = d.rraplicar, t = s.rr.itens[rt]?.sugestao; if (!t) return; s.rr.itens[rt].sugestao = ""; s.rr.foco = rt; s.respLinha = { ...(s.respLinha || {}), [rt]: "" }; await pedir("ia", "rota:" + rt, { texto: t, agir: true }, "rota:" + rt); render(); return; }
+    if (d.zapnav) { s.zapNav = d.zapnav; render(); scrollTo(0, 0); return; }
+    if (d.zapmais) { s.zapTodas = { ...(s.zapTodas || {}), [d.zapmais]: true }; render(); return; }
     if (d.zapir) { document.getElementById(d.zapir)?.scrollIntoView({ behavior: "smooth", block: "start" }); return; }
     if (d.rrf) { const f = rrF(), l = f[d.rrf]; f[d.rrf] = l.includes(d.rrfv) ? l.filter((x) => x !== d.rrfv) : [...l, d.rrfv]; s.rr.foco = null; rrSalvar(); render(); return; }
     if (d.rrftira) { s[d.rrftira] = ""; s.rr.foco = null; render(); return; }
@@ -2098,7 +2110,7 @@ document.addEventListener("click", async (e) => {
       await lembrar(q); return;
     }
     if (a === "ir-escrever" || a === "ir-alfy") { const el = a === "ir-alfy" ? ($(".alfy4") || $("#f-coment")) : $("#f-coment"), c = $("#corpo-folha"); if (el && c) c.scrollTo({ top: el.offsetTop - ($(".cab3")?.offsetHeight || 0) - 10 }); setTimeout(() => $("#t-coment")?.focus({ preventScroll: true }), 50); if (a === "ir-alfy") aviso("Escolha uma ação do ALFY ou escreva o pedido"); return; }
-    if (a === "zap-ver-todas") { s.zapTodas = true; render(); return; }
+    if (a === "zap-ver-todas") { s.zapTodas = { g: true, p: true }; render(); return; }
     if (a === "zap-sug-todas") { s.zapSugTodas = true; render(); return; }
     if (a === "zap-imp-tudo") { s.zapImpTudo = true; render(); return; }
     if (a === "zap-todas") { for (const z of (s.zap?.itens || []).filter((x) => x.precisa && !x.visto && zapNoModo(x))) s.zap = await chamar("alfy_zap_visto", { p_id: z.id }); render(); aviso("Tudo marcado como respondido"); return; }
@@ -2151,6 +2163,7 @@ function abrirNovaOpcao() {
 }
 document.addEventListener("input", (e) => {
   const t = e.target;
+  if (t.id === "zap-busca") { s.zapBusca = t.value; const pos = t.selectionStart; render(); const i = $("#zap-busca"); i.focus(); i.setSelectionRange(pos, pos); return; }
   if (t.id === "pl-busca") { s.plBusca = t.value; const pos = t.selectionStart; render(); const i = $("#pl-busca"); i.focus(); i.setSelectionRange(pos, pos); return; }
   if (t.id === "nave-busca") { clearTimeout(naveBuscar.t); const q = t.value; naveBuscar.t = setTimeout(() => naveBuscar(q), 250); return; }
   if (t.id === "busca") { s.busca = t.value; const pos = t.selectionStart; render(); const i = $("#busca"); i.focus(); i.setSelectionRange(pos, pos); }
