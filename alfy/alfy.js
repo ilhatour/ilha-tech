@@ -1,4 +1,4 @@
-// ALFY · Mapa de Rotas · Ilha Tech · v2.37.0 · 06/11/2026 · Painel de Ferro · qualidade da entrega pedida ao concluir
+// ALFY · Mapa de Rotas · Ilha Tech · v2.37.1 · 06/11/2026 · Painel de Ferro · criar rota fecha a gaveta
 // Tudo passa pelas funções alfy_* do banco, sempre com a chave pessoal de quem está usando.
 // O banco decide o que cada pessoa vê; a tela só desenha o que voltou.
 // A IA e os comandos são pedidos numa fila (alfy.pedido) que o robô do Mac atende.
@@ -1268,7 +1268,7 @@ function folha() {
   const conv = s.convTudo ? tempo : tempo.slice(-8), hist = [...(r.historico || [])].reverse(), histV = s.histTudo ? hist : hist.slice(0, 6);
   const ld = s.lemDia || "amanha", lh = s.lemHora ?? 9;
   const comp = !!r.inicio;
-  $("#camada").innerHTML = `<div class="veu" id="veu"><section class="folha v3 v4" role="dialog" aria-modal="true" aria-label="${esc(nomeRota(r.rt))}">
+  const html = `<div class="veu" id="veu"><section class="folha v3 v4" role="dialog" aria-modal="true" aria-label="${esc(nomeRota(r.rt))}">
     <div class="corpo" id="corpo-folha"><div class="cab3"><div class="col3">
       <div class="cab3-nav"><button class="voltar3" type="button" data-acao="fechar"><span>‹</span>${{ rotas: "Rotas", agenda: "Agenda", feed: "Feed", pautas: "Pautas", comandos: "Comandos", equipe: "Equipe", eu: "Eu" }[s.aba] || "Voltar"}</button>${ord.length > 1 ? `<span class="pos3">${i + 1} de ${ord.length}</span>` : ""}<span class="espaco"></span><button class="fechar4" type="button" data-acao="fechar" aria-label="Fechar">${IC.x}</button></div>
       <div class="cab4">${tag(r)}<div class="cab4t"><h2>${esc(r.titulo)}</h2></div></div>
@@ -1321,6 +1321,9 @@ function folha() {
         r.status === "concluida" ? "" : `<button type="button" class="b3 ok" data-mover="concluida"><span>✓</span>Concluir</button>`].filter(Boolean);
       return `<div class="col3 barra3-in" style="grid-template-columns:36px repeat(${bt.length},minmax(0,1fr)) 36px"><button type="button" class="seta3" data-fnav="-1" ${i > 0 ? "" : "disabled"} aria-label="Rota anterior">‹</button>${bt.join("")}<button type="button" class="seta3" data-fnav="1" ${i < ord.length - 1 ? "" : "disabled"} aria-label="Próxima rota">›</button></div>`; })()}</nav>
   </section></div>`;
+  // nada mudou: não redesenha (o vigia recarrega a cada 3 s enquanto o ALFY trabalha e a gaveta piscava)
+  if (html === folha.ult && $("#camada .folha.v4")) return;
+  $("#camada").innerHTML = folha.ult = html;
   ligarAncoras();
 }
 async function lembrar(quando) {
@@ -1417,9 +1420,8 @@ function novaRota(pre = {}) {
         const q = await chamar("alfy_pedir", { p_tipo: "ia", p_escopo: "rota:" + c.rt, p_dados: { agir: true, texto: `Organize esta rota nova a partir do que eu escrevi. Título: «${tit0 || "(vazio)"}». Texto: «${txt0 || "(vazio)"}». Reescreva o título no formato "Pessoa: verbo + o quê", o O que fazer na minha voz falando com quem faz (1 ou 2 frases), e preencha Instruções e Resultado esperado só com o que o texto diz. Se o texto disser quem faz, junto com quem, frente, prioridade ou prazo, ajuste. Não invente nada.` } });
         s.esperando["rota:" + c.rt] = q.id;
       }
-      // abre a rota na hora; a lista se atualiza por trás (fica na aba em que a pessoa estava)
-      aviso(organizar ? "Salvo. O ALFY está organizando a rota…" : "Salvo");
-      await abrir(c.rt); if (organizar) { s.abaFolha = "alfy"; refolha(); }
+      // criou, fechou: não abre a gaveta (pedido do Miguel, 06/11); a lista se atualiza por trás
+      fechar(); aviso(organizar ? `✓ ${nomeRota(c.rt)} criada. O ALFY está organizando…` : `✓ ${nomeRota(c.rt)} criada`);
       recarregar().then(async () => { if (s.aba === "agenda") await carregarAgenda(); render(); }).catch(falhou);
     } catch (e) { falhou(e); solta(); }
   });
