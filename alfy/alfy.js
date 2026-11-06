@@ -832,7 +832,7 @@ function textoRota(r) {
   const onde = (i?.onde || r.como_esta || "").replace(/\s*Próximo passo:.*$/s, "").trim();
   const n = nomeRota(r.rt).replace(/^Rota /, "");
   return assinar([nome && nome !== "—" ? `${nome}, me dá um retorno desta rota?` : "Preciso de um retorno desta rota:", "", blocoMapa(r),
-    onde ? `\n*Onde está:* ${onde.slice(0, 300)}` : "", "", `Responde aqui com *${n}* + como está.`].filter((x, k, a) => !(x === "" && a[k - 1] === "")).join("\n"));
+    onde ? `\n*Onde está:* ${onde.slice(0, 300)}` : "", "", `Responde aqui com *Rota ${n}* (ou *RT-${n}*, *RT${n}*) + como está.`].filter((x, k, a) => !(x === "" && a[k - 1] === "")).join("\n"));
 }
 function blocoMapa(r, quem) {
   const partes = [`${ST[r.status].bola} *${nomeRota(r.rt)}*`];
