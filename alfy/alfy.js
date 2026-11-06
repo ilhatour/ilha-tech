@@ -1,4 +1,4 @@
-// ALFY · Mapa de Rotas · Ilha Tech · v2.34.0 · 06/11/2026 · Painel de Ferro · Passagem: Próxima = já vi (volta com novidade), Amanhã = some até amanhã, Atualizar não zera
+// ALFY · Mapa de Rotas · Ilha Tech · v2.34.1 · 06/11/2026 · Painel de Ferro · Passagem: Próxima manda para o fim da fila, Amanhã some até amanhã
 // Tudo passa pelas funções alfy_* do banco, sempre com a chave pessoal de quem está usando.
 // O banco decide o que cada pessoa vê; a tela só desenha o que voltou.
 // A IA e os comandos são pedidos numa fila (alfy.pedido) que o robô do Mac atende.
@@ -472,7 +472,9 @@ const amanha6 = () => { const d = new Date(hojeDia() + "T06:00:00-03:00"); d.set
 // as rotas abertas (com os filtros do topo), na ordem escolhida, já em grupos
 function rrGrupos(todas, tudoMesmo) {
   const r = s.rr, mud = r.modo === "mudou" && !tudoMesmo;
-  const vs = filtradas().filter((x) => ABERTOS.includes(x.status) && (tudoMesmo || rrPassaFiltro(x)) && (todas || ((mud || !rrPassou(x)) && !rrAdiada(x))));   // no O que mudou, o "visto" é a última passada
+  const base = filtradas().filter((x) => ABERTOS.includes(x.status) && (tudoMesmo || rrPassaFiltro(x)) && (todas || !rrAdiada(x)));
+  const fimDaFila = mud || todas ? [] : base.filter(rrPassou).sort((a, b) => String(r.feitas[a.rt]).localeCompare(String(r.feitas[b.rt])));
+  const vs = mud || todas ? base : base.filter((x) => !rrPassou(x));   // passada (sem novidade) vai para o fim da fila, não some
   if (mud) {
     const ms = vs.map((x) => [x, rrMudou(x)]).filter(([, m]) => m).sort((a, b) => b[1].em.localeCompare(a[1].em)).map(([x]) => x);
     return ms.length ? [["Mudou desde a sua última passada", ms]] : [];
@@ -493,6 +495,7 @@ function rrGrupos(todas, tudoMesmo) {
     gs = nomes.map((n, i) => [n, vs.filter((x) => balde(x) === i).sort(porPrazo)]);
   }
   if (r.novFirst) gs.forEach(([, l]) => l.sort((a, b) => rrTem(b.rt) - rrTem(a.rt)));
+  if (fimDaFila.length) gs.push(["↩ Já passadas (fim da fila)", fimDaFila]);
   return gs.filter(([, l]) => l.length);
 }
 const rrFila = () => rrGrupos().flatMap(([, l]) => l);
@@ -526,7 +529,7 @@ function rrSortear() {
 }
 function rrTirar(rt, onde) {
   if (onde === "feitas") marcarVisto(rt);
-  s.rr[onde] = { ...s.rr[onde], [rt]: onde === "depois" ? amanha6() : true }; s.rr.foco = null; rrSalvar(); render();
+  s.rr[onde] = { ...s.rr[onde], [rt]: onde === "depois" ? amanha6() : new Date().toISOString() }; s.rr.foco = null; rrSalvar(); render();
   setTimeout(rrNoLugar, 20);
 }
 function rrNovidade(r) {
@@ -572,7 +575,7 @@ function rrItem(r, foco) {
     ${foco ? `<div class="acoes4"><div class="grupo4">
         <button class="ac" type="submit" form="${fid}" data-clmodo="comentar">💬<span>Comentar</span></button>${comando() ? `<button class="ac ia" type="submit" form="${fid}" data-clmodo="alfy">🐙<span>Pedir ao ALFY</span></button>` : ""}${comando() && r.rt.startsWith("RT-") ? `<button class="ac" type="button" data-rastrear="${r.rt}">📡<span>Rastrear</span></button>` : ""}
         <button class="ac ${s.rrAg === r.rt ? "on" : ""}" type="button" data-rragendar="${r.rt}">📅<span>Agendar</span></button>${r.status !== "andamento" ? `<button class="ac" type="button" data-rapido="andamento" data-rrt="${r.rt}">▶<span>Em andamento</span></button>` : ""}<button class="ac ok" type="button" data-rapido="concluida" data-rrt="${r.rt}">✓<span>Concluir</span></button><button class="ac" type="button" data-rt="${r.rt}">↗<span>Abrir</span></button></div>
-      <div class="grupo4 dir"><button class="ac" type="button" data-rrdepois="${r.rt}" title="Agora não: a rota some até amanhã de manhã">⏭<span>Amanhã</span></button><button class="ac" type="button" data-acao="rr-sortear" title="Sortear a próxima (S)">🎲<span>Sortear</span></button><button class="btn turq" type="button" data-rrfeita="${r.rt}" title="Já vi: a rota sai da fila e só volta se tiver novidade">Próxima →</button></div></div>`
+      <div class="grupo4 dir"><button class="ac" type="button" data-rrdepois="${r.rt}" title="Agora não: a rota some até amanhã de manhã">⏭<span>Amanhã</span></button><button class="ac" type="button" data-acao="rr-sortear" title="Sortear a próxima (S)">🎲<span>Sortear</span></button><button class="btn turq" type="button" data-rrfeita="${r.rt}" title="Já vi: a rota vai para o fim da fila (com novidade, volta ao lugar dela)">Próxima →</button></div></div>`
       : `<div class="acoes4 mini4"><button class="ac" type="button" data-rrfoco="${r.rt}">✎<span>Tratar</span></button><button class="ac" type="button" data-rrfeita="${r.rt}">✓<span>Vista</span></button><button class="ac" type="button" data-rrdepois="${r.rt}">⏭<span>Depois</span></button></div>`}
   </article>`;
 }
@@ -581,7 +584,7 @@ function rrCartao(r) {
   return `<div class="cartao rr-cartao ${rrTem(r.rt) ? "tem" : ""}"><span class="c1">${tag(r)}<b>${esc(r.titulo)}</b></span>
     <span class="c2"><span class="pessoa"><span class="avatar">${ini(nomeDe(r.responsavel_id))}</span><span>${esc(curto(nomeDe(r.responsavel_id)))}</span></span><span class="prazo ${pz.cls}">${pz.txt.replace("até ", "")}</span></span>
     <span class="rr-mini">${i ? esc(i.novidades) : rrRodando() && s.rr.rts.includes(r.rt) ? "📡 lendo…" : "ainda não rastreada"}</span>
-    <span class="rr-acoes"><button class="ac" type="button" data-rrfeita="${r.rt}" title="Já vi: sai da fila até ter novidade">✓</button><button class="ac" type="button" data-rrdepois="${r.rt}" title="Agora não: some até amanhã de manhã">⏭</button><button class="ac" type="button" data-rrlista="${r.rt}" title="Tratar esta na lista">🐙</button><button class="ac" type="button" data-rt="${r.rt}" title="Abrir a rota">↗</button></span></div>`;
+    <span class="rr-acoes"><button class="ac" type="button" data-rrfeita="${r.rt}" title="Já vi: vai para o fim da fila">✓</button><button class="ac" type="button" data-rrdepois="${r.rt}" title="Agora não: some até amanhã de manhã">⏭</button><button class="ac" type="button" data-rrlista="${r.rt}" title="Tratar esta na lista">🐙</button><button class="ac" type="button" data-rt="${r.rt}" title="Abrir a rota">↗</button></span></div>`;
 }
 function vistaRotaARota() {
   const r = s.rr, todas = rrGrupos(true).flatMap(([, l]) => l), gs = rrGrupos(), fila = gs.flatMap(([, l]) => l), foco = rrFoco();
@@ -606,7 +609,7 @@ function vistaRotaARota() {
       <button class="chip" type="button" data-acao="rr-novfirst" aria-pressed="${r.novFirst}">Novidade primeiro</button>`}<span class="espaco"></span>
       <div class="alterna" role="group" aria-label="Formato"><button type="button" data-rrformato="lista" aria-pressed="${r.formato === "lista"}">Lista</button><button type="button" data-rrformato="kanban" aria-pressed="${r.formato === "kanban"}">Kanban</button></div></div>
     <div class="rr-carta" aria-hidden="true">${pontos}</div>
-    <p class="rr-conta"><b>${fila.length}</b> na fila · ✓ ${nFeitas} passadas <small class="rr-exp">(voltam se tiverem novidade)</small> · ⏭ ${nDepois} para amanhã${nDepois ? ` <button class="mini" type="button" data-acao="rr-voltar">Trazer de volta</button>` : ""}${nFeitas ? ` <button class="mini" type="button" data-acao="rr-zerar">Trazer todas de volta</button>` : ""}</p></section>`;
+    <p class="rr-conta"><b>${fila.filter((x) => !rrPassou(x)).length}</b> para passar · ✓ ${nFeitas} já passadas <small class="rr-exp">(no fim da fila; com novidade voltam ao lugar)</small> · ⏭ ${nDepois} para amanhã${nDepois ? ` <button class="mini" type="button" data-acao="rr-voltar">Trazer de volta</button>` : ""}${nFeitas ? ` <button class="mini" type="button" data-acao="rr-zerar">Recomeçar a passada</button>` : ""}</p></section>`;
   if (!fila.length && r.modo === "mudou") return painel + `<div class="vazio rr-fim">✅ Nada mudou desde a sua última passada. Quando alguém comentar, responder no WhatsApp ou o rastreio achar novidade, a rota aparece aqui.</div>`;
   if (!fila.length) return painel + `<div class="vazio rr-fim">🏁 Passada completa. ${nFeitas} vistas${nDepois ? `, ${nDepois} ficaram para depois` : ""}.</div>`;
   if (r.formato === "kanban") return painel + `<div class="kanban rr-kanban" style="grid-template-columns:repeat(${gs.length},minmax(230px,1fr))">${gs.map(([n, l]) => `<section class="coluna"><header><b>${esc(n)}</b><span>${l.length}</span></header><div class="cartoes">${l.map(rrCartao).join("")}</div></section>`).join("")}</div>`;
