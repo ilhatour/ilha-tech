@@ -1,4 +1,4 @@
-// ALFY · Mapa de Rotas · Ilha Tech · v2.34.1 · 06/11/2026 · Painel de Ferro · Passagem: Próxima manda para o fim da fila, Amanhã some até amanhã
+// ALFY · Mapa de Rotas · Ilha Tech · v2.35.0 · 06/11/2026 · Painel de Ferro · 📋 copiar uma rota para o WhatsApp; arrastar do kanban e da agenda consertado
 // Tudo passa pelas funções alfy_* do banco, sempre com a chave pessoal de quem está usando.
 // O banco decide o que cada pessoa vê; a tela só desenha o que voltou.
 // A IA e os comandos são pedidos numa fila (alfy.pedido) que o robô do Mac atende.
@@ -244,7 +244,7 @@ const podeMexer = (r) => manda() || r.responsavel_id === eu().id || r.co_respons
 function acoesLinha(r) {
   if (!podeMexer(r)) return "";
   const ab = ABERTOS.includes(r.status);
-  return `<span class="acoes-linha">${ab ? `<button class="ac ok" type="button" data-rapido="concluida" data-rrt="${r.rt}" title="Concluir">✓<span>Concluir</span></button>` : ""}${r.status === "rota" ? `<button class="ac" type="button" data-rapido="andamento" data-rrt="${r.rt}" title="Começar">▶<span>Começar</span></button>` : ""}${ab && r.rt.startsWith("RT-") ? `<button class="ac" type="button" data-agdar="${r.rt}" title="${r.inicio ? "Mudar o horário na agenda" : "Dar um horário na agenda"}">📅<span>${r.inicio ? hhmm(r.inicio) : "Agendar"}</span></button>` : ""}${comando() && r.rt.startsWith("RT-") ? `<button class="ac" type="button" data-rastrear="${r.rt}" title="Rastrear: procura novidade desta rota no WhatsApp e no e-mail">📡<span>Rastrear</span></button>` : ""}<button class="ac ${s.linhasAbertas?.[r.rt] ? "on" : ""} ${s.respLinha?.[r.rt] && !s.linhasAbertas?.[r.rt] ? "pronto" : ""}" type="button" data-linhacaixa="${r.rt}" title="${comando() ? "Comentar ou pedir ao ALFY" : "Comentar"}">${comando() ? "🐙" : "💬"}<span>${comando() ? "ALFY" : "Comentar"}</span></button></span>`;
+  return `<span class="acoes-linha"><button class="ac" type="button" data-copiarrota="${r.rt}" title="Copiar esta rota para mandar no WhatsApp">📋<span>Copiar</span></button>${ab ? `<button class="ac ok" type="button" data-rapido="concluida" data-rrt="${r.rt}" title="Concluir">✓<span>Concluir</span></button>` : ""}${r.status === "rota" ? `<button class="ac" type="button" data-rapido="andamento" data-rrt="${r.rt}" title="Começar">▶<span>Começar</span></button>` : ""}${ab && r.rt.startsWith("RT-") ? `<button class="ac" type="button" data-agdar="${r.rt}" title="${r.inicio ? "Mudar o horário na agenda" : "Dar um horário na agenda"}">📅<span>${r.inicio ? hhmm(r.inicio) : "Agendar"}</span></button>` : ""}${comando() && r.rt.startsWith("RT-") ? `<button class="ac" type="button" data-rastrear="${r.rt}" title="Rastrear: procura novidade desta rota no WhatsApp e no e-mail">📡<span>Rastrear</span></button>` : ""}<button class="ac ${s.linhasAbertas?.[r.rt] ? "on" : ""} ${s.respLinha?.[r.rt] && !s.linhasAbertas?.[r.rt] ? "pronto" : ""}" type="button" data-linhacaixa="${r.rt}" title="${comando() ? "Comentar ou pedir ao ALFY" : "Comentar"}">${comando() ? "🐙" : "💬"}<span>${comando() ? "ALFY" : "Comentar"}</span></button></span>`;
 }
 function caixaLinha(r, forcar) {
   if (!forcar && !s.linhasAbertas?.[r.rt]) return "";
@@ -306,7 +306,7 @@ async function moverOrdem(rt, passo) {
 }
 function cartaoK(r) {
   const pz = prazoInfo(r);
-  return `<button type="button" class="cartao" draggable="true" data-rt="${r.rt}"><span class="c1">${tag(r)}<b>${esc(r.titulo)}</b></span><span class="c2"><span class="pessoa"><span class="avatar">${ini(nomeDe(r.responsavel_id))}</span><span>${esc(curto(nomeDe(r.responsavel_id)))}${r.co_responsavel_id ? " + " + esc(curto(nomeDe(r.co_responsavel_id))) : ""}</span></span>${r.comentarios ? `<span>💬 ${r.comentarios}</span>` : ""}<span class="prazo ${pz.cls}">${pz.txt.replace("até ", "")}</span></span></button>`;
+  return `<div class="cartao-w"><button type="button" class="ck-copiar" data-copiarrota="${r.rt}" title="Copiar esta rota para o WhatsApp" aria-label="Copiar a ${nomeRota(r.rt)}">📋</button><button type="button" class="cartao" draggable="true" data-rt="${r.rt}"><span class="c1">${tag(r)}<b>${esc(r.titulo)}</b></span><span class="c2"><span class="pessoa"><span class="avatar">${ini(nomeDe(r.responsavel_id))}</span><span>${esc(curto(nomeDe(r.responsavel_id)))}${r.co_responsavel_id ? " + " + esc(curto(nomeDe(r.co_responsavel_id))) : ""}</span></span>${r.comentarios ? `<span>💬 ${r.comentarios}</span>` : ""}<span class="prazo ${pz.cls}">${pz.txt.replace("até ", "")}</span></span></button></div>`;
 }
 function vistaKanban() {
   const vs = filtradas();
@@ -319,7 +319,7 @@ function ligarKanban() {
   const k = $("#kanban"); if (!k) return;
   k.addEventListener("dragstart", (e) => { const el = e.target.closest(".cartao"); if (!el) return; el.classList.add("arrastando"); e.dataTransfer.setData("text/plain", el.dataset.rt); });
   k.addEventListener("dragend", (e) => { const el = e.target.closest(".cartao"); el && el.classList.remove("arrastando"); });
-  k.querySelectorAll(".agk-col").forEach((col) => {
+  k.querySelectorAll(".coluna").forEach((col) => {
     col.addEventListener("dragover", (e) => { e.preventDefault(); col.classList.add("alvo"); });
     col.addEventListener("dragleave", () => col.classList.remove("alvo"));
     col.addEventListener("drop", (e) => { e.preventDefault(); col.classList.remove("alvo"); mover(e.dataTransfer.getData("text/plain"), col.dataset.colSt); });
@@ -574,7 +574,7 @@ function rrItem(r, foco) {
       <span class="rr-acoes"><button class="btn turq peq" type="button" data-agpor="${r.rt}">📅 Pôr na agenda</button><button class="btn peq" type="button" data-agprazo="${r.rt}">Só mudar o prazo</button></span></div>` : ""}
     ${foco ? `<div class="acoes4"><div class="grupo4">
         <button class="ac" type="submit" form="${fid}" data-clmodo="comentar">💬<span>Comentar</span></button>${comando() ? `<button class="ac ia" type="submit" form="${fid}" data-clmodo="alfy">🐙<span>Pedir ao ALFY</span></button>` : ""}${comando() && r.rt.startsWith("RT-") ? `<button class="ac" type="button" data-rastrear="${r.rt}">📡<span>Rastrear</span></button>` : ""}
-        <button class="ac ${s.rrAg === r.rt ? "on" : ""}" type="button" data-rragendar="${r.rt}">📅<span>Agendar</span></button>${r.status !== "andamento" ? `<button class="ac" type="button" data-rapido="andamento" data-rrt="${r.rt}">▶<span>Em andamento</span></button>` : ""}<button class="ac ok" type="button" data-rapido="concluida" data-rrt="${r.rt}">✓<span>Concluir</span></button><button class="ac" type="button" data-rt="${r.rt}">↗<span>Abrir</span></button></div>
+        <button class="ac ${s.rrAg === r.rt ? "on" : ""}" type="button" data-rragendar="${r.rt}">📅<span>Agendar</span></button><button class="ac" type="button" data-copiarrota="${r.rt}" title="Copiar esta rota para mandar no WhatsApp">📋<span>Copiar</span></button>${r.status !== "andamento" ? `<button class="ac" type="button" data-rapido="andamento" data-rrt="${r.rt}">▶<span>Em andamento</span></button>` : ""}<button class="ac ok" type="button" data-rapido="concluida" data-rrt="${r.rt}">✓<span>Concluir</span></button><button class="ac" type="button" data-rt="${r.rt}">↗<span>Abrir</span></button></div>
       <div class="grupo4 dir"><button class="ac" type="button" data-rrdepois="${r.rt}" title="Agora não: a rota some até amanhã de manhã">⏭<span>Amanhã</span></button><button class="ac" type="button" data-acao="rr-sortear" title="Sortear a próxima (S)">🎲<span>Sortear</span></button><button class="btn turq" type="button" data-rrfeita="${r.rt}" title="Já vi: a rota vai para o fim da fila (com novidade, volta ao lugar dela)">Próxima →</button></div></div>`
       : `<div class="acoes4 mini4"><button class="ac" type="button" data-rrfoco="${r.rt}">✎<span>Tratar</span></button><button class="ac" type="button" data-rrfeita="${r.rt}">✓<span>Vista</span></button><button class="ac" type="button" data-rrdepois="${r.rt}">⏭<span>Depois</span></button></div>`}
   </article>`;
@@ -826,6 +826,14 @@ function pautaDet() {
 // ---------------------------------------------------------------- Mapa de Rotas do WhatsApp (formato oficial de 28/10, com "Rota N")
 const LEGENDA = (ex) => `*STATUS:* 🔴 Não iniciada · 🟡 Em andamento · 🟠 Parada · 🟢 Concluída\n*PRIORIDADE:* 🚨 P1 urgente, 24h · ⚡ P2 até 3 dias · ⏳ P3 até 7 dias · 💤 P4 até 30 dias · ⏸️ P5 sem prazo\n\n*COMO RESPONDER:*\nnúmero da rota + comentário\nEx.: ${ex} já liguei, aguardando retorno`;
 const SITUACAO = { andamento: "em andamento", pausada: "parada" };
+// 📋 uma rota só, pronta para o WhatsApp (mesmo padrão do Mapa), pedindo retorno
+function textoRota(r) {
+  const nome = curto(nomeDe(r.responsavel_id) || ""), i = s.rr?.itens?.[r.rt];
+  const onde = (i?.onde || r.como_esta || "").replace(/\s*Próximo passo:.*$/s, "").trim();
+  const n = nomeRota(r.rt).replace(/^Rota /, "");
+  return assinar([nome && nome !== "—" ? `${nome}, me dá um retorno desta rota?` : "Preciso de um retorno desta rota:", "", blocoMapa(r),
+    onde ? `\n*Onde está:* ${onde.slice(0, 300)}` : "", "", `Responde aqui com *${n}* + como está.`].filter((x, k, a) => !(x === "" && a[k - 1] === "")).join("\n"));
+}
 function blocoMapa(r, quem) {
   const partes = [`${ST[r.status].bola} *${nomeRota(r.rt)}*`];
   if (pcod(r.prioridade)) partes.push(prioTxt(r.prioridade));
@@ -1664,7 +1672,7 @@ function ligarAgendaKanban() {
     if (bs[j]) { s.agDia = bs[j].dataset.agsel; render(); } }, { passive: true });
   k.addEventListener("dragstart", (e) => { const el = e.target.closest("[data-agarrasta]"); if (!el) return; el.classList.add("arrastando"); e.dataTransfer.setData("text/plain", el.dataset.agarrasta); });
   k.addEventListener("dragend", (e) => { const el = e.target.closest("[data-agarrasta]"); el && el.classList.remove("arrastando"); });
-  k.querySelectorAll(".coluna").forEach((col) => {
+  k.querySelectorAll(".agk-col").forEach((col) => {
     col.addEventListener("dragover", (e) => { e.preventDefault(); col.classList.add("alvo"); });
     col.addEventListener("dragleave", (e) => { if (!col.contains(e.relatedTarget)) col.classList.remove("alvo"); });
     col.addEventListener("drop", async (e) => {
@@ -1999,6 +2007,7 @@ document.addEventListener("click", async (e) => {
     if (d.pil) { s.pil = s.pil?.rt === d.pilrt && s.pil?.k === d.pil ? null : { rt: d.pilrt, k: d.pil }; if (s.aberta === d.pilrt) refolha(); render(); return; }
     if (d.pilfecha) { const rt = s.pil?.rt; s.pil = null; if (s.aberta === rt) refolha(); render(); return; }
     if (d.pilset) { await pilSalvar(d.pilrt, d.pilset, d.pilv); return; }
+    if (d.copiarrota) { const r = rotaDe(d.copiarrota); if (r) { copiar(textoRota(r)); const tx = b.innerHTML; b.innerHTML = b.innerHTML.replace("📋", "✓"); setTimeout(() => { b.innerHTML = tx; }, 1500); } return; }
     if (d.rrmodo) { s.rr.modo = d.rrmodo; s.rr.foco = null; rrSalvar(); render(); return; }
     if (d.agsel) { s.agDia = d.agsel; render(); return; }
     if (d.agnovo) { novaRota({ compromisso: true, dia: d.agnovo }); return; }

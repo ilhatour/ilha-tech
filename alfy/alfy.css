@@ -1507,3 +1507,9 @@ button.pil{font:inherit;cursor:pointer;border:inherit}
 .znav .zi{font-style:normal}@media (max-width:600px){.znav .zi{display:none}.znav button{padding:10px 8px}}
 @media (max-width:600px){.znav button{padding:10px 6px;font-size:13.5px;gap:5px}.znav button span{min-width:20px;padding:0 5px}}
 .rr-exp{font-size:12px;color:var(--aco)}
+/* 2.35 · 📋 copiar uma rota para o WhatsApp */
+.cartao-w{position:relative}
+.cartao-w .cartao .c1{padding-right:26px}
+.ck-copiar{position:absolute;top:6px;right:6px;z-index:2;width:28px;height:28px;border-radius:8px;border:1px solid var(--linha);background:var(--ferro-1);font-size:14px;line-height:1;cursor:pointer;opacity:0;transition:opacity .15s}
+.cartao-w:hover .ck-copiar,.ck-copiar:focus-visible{opacity:1}
+@media (hover:none){.ck-copiar{opacity:1}}
