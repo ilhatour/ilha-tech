@@ -1,4 +1,4 @@
-// ALFY · Mapa de Rotas · Ilha Tech · v2.33.0 · 06/11/2026 · Painel de Ferro · WhatsApp em navegadores (Resumo, Conversas, Possíveis rotas), menu com nomes
+// ALFY · Mapa de Rotas · Ilha Tech · v2.34.0 · 06/11/2026 · Painel de Ferro · Passagem: Próxima = já vi (volta com novidade), Amanhã = some até amanhã, Atualizar não zera
 // Tudo passa pelas funções alfy_* do banco, sempre com a chave pessoal de quem está usando.
 // O banco decide o que cada pessoa vê; a tela só desenha o que voltou.
 // A IA e os comandos são pedidos numa fila (alfy.pedido) que o robô do Mac atende.
@@ -465,10 +465,14 @@ function rrFiltrosHTML() {   // filtros à mostra: grupos curtos numa linha (no 
     <div class="rrf2-g"><select class="rrf2-sel ${s.pessoa ? "on" : ""}" data-rrsel="pessoa" aria-label="Pessoa">${opc([["semdono", "👻 Sem dono"], ...pes], s.pessoa, "👤 Todas as pessoas")}</select><select class="rrf2-sel ${s.frente ? "on" : ""}" data-rrsel="frente" aria-label="Frente">${opc(FRENTES.map((x) => [x, frenteCurta(x)]), s.frente, "🗺️ Todas as frentes")}</select></div>
     ${n ? `<button type="button" class="lk rrf2-limpa" data-acao="rr-filtros-limpar">Limpar ${n}</button>` : ""}</div>`;
 }
+// ✓ Próxima = "já vi": sai da fila até ter novidade (comentário, WhatsApp, rastreio). ⏭ Depois = "agora não": some até amanhã às 6h
+const rrPassou = (x) => !!s.rr.feitas[x.rt] && !rrMudou(x);
+const rrAdiada = (x) => { const v = s.rr.depois[x.rt]; return v === true || (typeof v === "string" && v > new Date().toISOString()); };
+const amanha6 = () => { const d = new Date(hojeDia() + "T06:00:00-03:00"); d.setDate(d.getDate() + 1); return d.toISOString(); };
 // as rotas abertas (com os filtros do topo), na ordem escolhida, já em grupos
 function rrGrupos(todas, tudoMesmo) {
   const r = s.rr, mud = r.modo === "mudou" && !tudoMesmo;
-  const vs = filtradas().filter((x) => ABERTOS.includes(x.status) && (tudoMesmo || rrPassaFiltro(x)) && (todas || ((mud || !r.feitas[x.rt]) && !r.depois[x.rt])));   // no O que mudou, o "visto" é a última passada
+  const vs = filtradas().filter((x) => ABERTOS.includes(x.status) && (tudoMesmo || rrPassaFiltro(x)) && (todas || ((mud || !rrPassou(x)) && !rrAdiada(x))));   // no O que mudou, o "visto" é a última passada
   if (mud) {
     const ms = vs.map((x) => [x, rrMudou(x)]).filter(([, m]) => m).sort((a, b) => b[1].em.localeCompare(a[1].em)).map(([x]) => x);
     return ms.length ? [["Mudou desde a sua última passada", ms]] : [];
@@ -496,7 +500,7 @@ function rrFoco() { const f = rrFila(); if (!f.find((x) => x.rt === s.rr.foco)) 
 async function rrPassar() {
   const rts = rrGrupos(true, true).flatMap(([, l]) => l).map((x) => x.rt).filter((rt) => rt.startsWith("RT-"));
   if (!rts.length) { aviso("Nenhuma rota aberta com estes filtros"); return; }
-  Object.assign(s.rr, { feitas: {}, depois: {}, itens: {}, foco: null, rts, ped: { status: "fila" } });
+  Object.assign(s.rr, { itens: {}, foco: null, rts, ped: { status: "fila" } });   // atualizar não zera o que você já passou nem o que deixou para depois
   s.rr.lote = await pedir("rastrear_lote", "lote", { rts });
   if (!s.rr.lote) s.rr.ped = null;
   rrSalvar(); render();
@@ -522,7 +526,7 @@ function rrSortear() {
 }
 function rrTirar(rt, onde) {
   if (onde === "feitas") marcarVisto(rt);
-  s.rr[onde] = { ...s.rr[onde], [rt]: true }; s.rr.foco = null; rrSalvar(); render();
+  s.rr[onde] = { ...s.rr[onde], [rt]: onde === "depois" ? amanha6() : true }; s.rr.foco = null; rrSalvar(); render();
   setTimeout(rrNoLugar, 20);
 }
 function rrNovidade(r) {
@@ -568,7 +572,7 @@ function rrItem(r, foco) {
     ${foco ? `<div class="acoes4"><div class="grupo4">
         <button class="ac" type="submit" form="${fid}" data-clmodo="comentar">💬<span>Comentar</span></button>${comando() ? `<button class="ac ia" type="submit" form="${fid}" data-clmodo="alfy">🐙<span>Pedir ao ALFY</span></button>` : ""}${comando() && r.rt.startsWith("RT-") ? `<button class="ac" type="button" data-rastrear="${r.rt}">📡<span>Rastrear</span></button>` : ""}
         <button class="ac ${s.rrAg === r.rt ? "on" : ""}" type="button" data-rragendar="${r.rt}">📅<span>Agendar</span></button>${r.status !== "andamento" ? `<button class="ac" type="button" data-rapido="andamento" data-rrt="${r.rt}">▶<span>Em andamento</span></button>` : ""}<button class="ac ok" type="button" data-rapido="concluida" data-rrt="${r.rt}">✓<span>Concluir</span></button><button class="ac" type="button" data-rt="${r.rt}">↗<span>Abrir</span></button></div>
-      <div class="grupo4 dir"><button class="ac" type="button" data-rrdepois="${r.rt}">⏭<span>Depois</span></button><button class="ac" type="button" data-acao="rr-sortear" title="Sortear a próxima (S)">🎲<span>Sortear</span></button><button class="btn turq" type="button" data-rrfeita="${r.rt}">Próxima →</button></div></div>`
+      <div class="grupo4 dir"><button class="ac" type="button" data-rrdepois="${r.rt}" title="Agora não: a rota some até amanhã de manhã">⏭<span>Amanhã</span></button><button class="ac" type="button" data-acao="rr-sortear" title="Sortear a próxima (S)">🎲<span>Sortear</span></button><button class="btn turq" type="button" data-rrfeita="${r.rt}" title="Já vi: a rota sai da fila e só volta se tiver novidade">Próxima →</button></div></div>`
       : `<div class="acoes4 mini4"><button class="ac" type="button" data-rrfoco="${r.rt}">✎<span>Tratar</span></button><button class="ac" type="button" data-rrfeita="${r.rt}">✓<span>Vista</span></button><button class="ac" type="button" data-rrdepois="${r.rt}">⏭<span>Depois</span></button></div>`}
   </article>`;
 }
@@ -577,11 +581,11 @@ function rrCartao(r) {
   return `<div class="cartao rr-cartao ${rrTem(r.rt) ? "tem" : ""}"><span class="c1">${tag(r)}<b>${esc(r.titulo)}</b></span>
     <span class="c2"><span class="pessoa"><span class="avatar">${ini(nomeDe(r.responsavel_id))}</span><span>${esc(curto(nomeDe(r.responsavel_id)))}</span></span><span class="prazo ${pz.cls}">${pz.txt.replace("até ", "")}</span></span>
     <span class="rr-mini">${i ? esc(i.novidades) : rrRodando() && s.rr.rts.includes(r.rt) ? "📡 lendo…" : "ainda não rastreada"}</span>
-    <span class="rr-acoes"><button class="ac" type="button" data-rrfeita="${r.rt}" title="Vista">✓</button><button class="ac" type="button" data-rrdepois="${r.rt}" title="Deixar para depois">⏭</button><button class="ac" type="button" data-rrlista="${r.rt}" title="Tratar esta na lista">🐙</button><button class="ac" type="button" data-rt="${r.rt}" title="Abrir a rota">↗</button></span></div>`;
+    <span class="rr-acoes"><button class="ac" type="button" data-rrfeita="${r.rt}" title="Já vi: sai da fila até ter novidade">✓</button><button class="ac" type="button" data-rrdepois="${r.rt}" title="Agora não: some até amanhã de manhã">⏭</button><button class="ac" type="button" data-rrlista="${r.rt}" title="Tratar esta na lista">🐙</button><button class="ac" type="button" data-rt="${r.rt}" title="Abrir a rota">↗</button></span></div>`;
 }
 function vistaRotaARota() {
   const r = s.rr, todas = rrGrupos(true).flatMap(([, l]) => l), gs = rrGrupos(), fila = gs.flatMap(([, l]) => l), foco = rrFoco();
-  const nFeitas = todas.filter((x) => r.feitas[x.rt]).length, nDepois = todas.filter((x) => r.depois[x.rt]).length;
+  const nFeitas = todas.filter(rrPassou).length, nDepois = todas.filter(rrAdiada).length;
   const lidas = r.rts.filter((rt) => r.itens[rt]).length, comNov = todas.filter((x) => rrTem(x.rt)).length;
   const ultima = Object.values(r.itens).map((i) => i.em).sort().pop();
   const nMud = filtradas().filter((x) => ABERTOS.includes(x.status) && rrPassaFiltro(x) && !r.depois[x.rt] && rrMudou(x)).length;
@@ -602,7 +606,7 @@ function vistaRotaARota() {
       <button class="chip" type="button" data-acao="rr-novfirst" aria-pressed="${r.novFirst}">Novidade primeiro</button>`}<span class="espaco"></span>
       <div class="alterna" role="group" aria-label="Formato"><button type="button" data-rrformato="lista" aria-pressed="${r.formato === "lista"}">Lista</button><button type="button" data-rrformato="kanban" aria-pressed="${r.formato === "kanban"}">Kanban</button></div></div>
     <div class="rr-carta" aria-hidden="true">${pontos}</div>
-    <p class="rr-conta"><b>${fila.length}</b> na fila · ✓ ${nFeitas} vistas · ⏭ ${nDepois} para depois${nDepois ? ` <button class="mini" type="button" data-acao="rr-voltar">Trazer de volta</button>` : ""}${nFeitas ? ` <button class="mini" type="button" data-acao="rr-zerar">Recomeçar a passada</button>` : ""}</p></section>`;
+    <p class="rr-conta"><b>${fila.length}</b> na fila · ✓ ${nFeitas} passadas <small class="rr-exp">(voltam se tiverem novidade)</small> · ⏭ ${nDepois} para amanhã${nDepois ? ` <button class="mini" type="button" data-acao="rr-voltar">Trazer de volta</button>` : ""}${nFeitas ? ` <button class="mini" type="button" data-acao="rr-zerar">Trazer todas de volta</button>` : ""}</p></section>`;
   if (!fila.length && r.modo === "mudou") return painel + `<div class="vazio rr-fim">✅ Nada mudou desde a sua última passada. Quando alguém comentar, responder no WhatsApp ou o rastreio achar novidade, a rota aparece aqui.</div>`;
   if (!fila.length) return painel + `<div class="vazio rr-fim">🏁 Passada completa. ${nFeitas} vistas${nDepois ? `, ${nDepois} ficaram para depois` : ""}.</div>`;
   if (r.formato === "kanban") return painel + `<div class="kanban rr-kanban" style="grid-template-columns:repeat(${gs.length},minmax(230px,1fr))">${gs.map(([n, l]) => `<section class="coluna"><header><b>${esc(n)}</b><span>${l.length}</span></header><div class="cartoes">${l.map(rrCartao).join("")}</div></section>`).join("")}</div>`;
@@ -610,7 +614,7 @@ function vistaRotaARota() {
   const mini = (x) => `<div class="rr-mini4" role="button" tabindex="0" data-rrfoco="${x.rt}">${tag(x)}<span class="tt"><b>${esc(x.titulo)}</b><small>${r.modo === "mudou" && rrMudou(x) ? `<span class="nova-l">${esc(rrMudou(x).txt)}</span> · ` : temNova(x) ? '<span class="nova-l">💬 nova resposta</span> · ' : ""}${esc(ST[x.status].um)} · ${esc(prazoInfo(x).txt)} · ${esc(curto(nomeDe(x.responsavel_id)))}${rrTem(x.rt) ? " · 📡 novidade" : ""}${s.rr.itens[x.rt]?.resumo ? " · " + esc(s.rr.itens[x.rt].resumo.slice(0, 120)) : x.como_esta ? " · " + esc(x.como_esta.slice(0, 110)) : ""}</small></span></div>`;
   const resto = gs.map(([n, l]) => { const ll = l.filter((x) => x.rt !== foco); return ll.length ? `<section class="rr-grupo"><h2>${esc(n)}<span class="ct">${ll.length}</span></h2><div class="lista">${ll.map(mini).join("")}</div></section>` : ""; }).join("");
   return painel + (fx ? `<div class="rr-deck" id="rr-deck">${rrItem(fx, true)}</div>` : "")
-    + `<p class="rr-dica">Atalhos: <kbd>⌘ Enter</kbd> comenta e passa · <kbd>⌘ Shift Enter</kbd> pede ao ALFY e passa · <kbd>→</kbd> próxima · <kbd>D</kbd> depois · <kbd>C</kbd> concluir · <kbd>S</kbd> sortear · <kbd>E</kbd> escrever · <kbd>Esc</kbd> sai do campo</p>`
+    + `<p class="rr-dica">Atalhos: <kbd>⌘ Enter</kbd> comenta e passa · <kbd>⌘ Shift Enter</kbd> pede ao ALFY e passa · <kbd>→</kbd> próxima (já vi) · <kbd>D</kbd> amanhã · <kbd>C</kbd> concluir · <kbd>S</kbd> sortear · <kbd>E</kbd> escrever · <kbd>Esc</kbd> sai do campo</p>`
     + (resto ? `<h3 class="rr-fila-t">Na fila · ${fila.length - (fx ? 1 : 0)}</h3>${resto}` : "");
 }
 
@@ -1981,7 +1985,7 @@ document.addEventListener("click", async (e) => {
       await chamar("alfy_editar", { p_rt: rt, p_campos: campos }); s.rrAg = null; aviso(d.agpor ? `📅 ${nomeRota(rt)} na agenda: ${ddmm(dd + "T12:00:00-03:00")} ${hi}` : `Prazo da ${nomeRota(rt)}: ${ddmm(dd + "T12:00:00-03:00")}`); await recarregar(); render(); return;
     }
     if (d.rrfeita) { const foi = await enviarRascunho(d.rrfeita); rrTirar(d.rrfeita, "feitas"); if (foi) aviso(`💬 Comentário enviado na ${nomeRota(d.rrfeita)}. O ALFY vai atualizar a rota`); return; }
-    if (d.rrdepois) { const foi = await enviarRascunho(d.rrdepois); rrTirar(d.rrdepois, "depois"); aviso(nomeRota(d.rrdepois) + " ficou para depois" + (foi ? " · comentário enviado" : "")); return; }
+    if (d.rrdepois) { const foi = await enviarRascunho(d.rrdepois); rrTirar(d.rrdepois, "depois"); aviso(nomeRota(d.rrdepois) + " volta amanhã de manhã" + (foi ? " · comentário enviado" : "")); return; }
     if (d.rrlista) { s.rr.formato = "lista"; s.rr.foco = d.rrlista; rrSalvar(); render(); setTimeout(() => $(".rr-item.foco")?.scrollIntoView({ block: "start", behavior: "smooth" }), 40); return; }
     if (d.rraplicar) { const rt = d.rraplicar, t = s.rr.itens[rt]?.sugestao; if (!t) return; s.rr.itens[rt].sugestao = ""; s.rr.foco = rt; s.respLinha = { ...(s.respLinha || {}), [rt]: "" }; await pedir("ia", "rota:" + rt, { texto: t, agir: true }, "rota:" + rt); render(); return; }
     if (d.zapnav) { s.zapNav = d.zapnav; render(); scrollTo(0, 0); return; }
