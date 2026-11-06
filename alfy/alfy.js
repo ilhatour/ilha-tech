@@ -1,4 +1,4 @@
-// ALFY · Mapa de Rotas · Ilha Tech · v2.36.0 · 06/11/2026 · Painel de Ferro · equipe cria a própria rota; agenda de outra pessoa e da equipe toda
+// ALFY · Mapa de Rotas · Ilha Tech · v2.37.0 · 06/11/2026 · Painel de Ferro · qualidade da entrega pedida ao concluir
 // Tudo passa pelas funções alfy_* do banco, sempre com a chave pessoal de quem está usando.
 // O banco decide o que cada pessoa vê; a tela só desenha o que voltou.
 // A IA e os comandos são pedidos numa fila (alfy.pedido) que o robô do Mac atende.
@@ -344,12 +344,35 @@ function valorRota(r) {
   const atraso = r.prazo && pcod(r.prioridade) !== "P5" ? (Date.now() - new Date(r.prazo)) / 864e5 : -1, mod = atraso <= 0.5 ? 1 : atraso <= 7 ? 0.5 : 0;
   return { i, d, q, base, pts: base * mod, mod, feito: false };
 }
+// ao concluir, o Comando diz como foi a entrega (vem marcado "Como esperado"); cancelar não conclui
+const QUALIDADES = [["Abaixo", "Abaixo do esperado"], ["Como esperado", "Como esperado"], ["Acima", "Acima do esperado"]];
+function qualidadeAoConcluir(rt) {
+  const r = rotaDe(rt) || (s.cartao?.rt === rt ? s.cartao : null);
+  if (!comando() || !r || !valorRota(r)) return Promise.resolve(true);
+  return new Promise((ok) => {
+    let q = r.qualidade || "Como esperado";
+    const c = document.createElement("div");
+    c.className = "qconc"; c.setAttribute("role", "dialog"); c.setAttribute("aria-label", "Qualidade da entrega");
+    c.innerHTML = `<div class="qc-caixa"><b>Como foi a entrega?</b><small>${esc(nomeRota(rt))} · ${esc(r.titulo)}</small><div class="qc-ops">${QUALIDADES.map(([v, n]) => `<button type="button" data-q="${v}" class="${v === q ? "on" : ""}">${n}</button>`).join("")}</div><div class="qc-pe"><button type="button" class="mini" data-qx="1">Cancelar</button><button type="button" class="cta" data-qok="1">✓ Concluir</button></div></div>`;
+    const fim = async (sim) => {
+      c.remove(); document.removeEventListener("keydown", tecla, true);
+      if (!sim) return ok(false);
+      if (q !== r.qualidade) { try { await chamar("alfy_editar", { p_rt: rt, p_campos: { qualidade: q } }); } catch (e) { falhou(e); } }
+      ok(true);
+    };
+    const marca = (v) => { q = v; c.querySelectorAll("[data-q]").forEach((b) => b.classList.toggle("on", b.dataset.q === v)); };
+    const tecla = (e) => { e.stopPropagation(); if (e.key === "Escape") { e.preventDefault(); fim(false); } else if (e.key === "Enter") { e.preventDefault(); fim(true); } else if ("123".includes(e.key) && e.key) marca(QUALIDADES[+e.key - 1][0]); };
+    c.addEventListener("click", (e) => { e.stopPropagation(); const b = e.target.closest("button"); if (e.target === c || b?.dataset.qx) fim(false); else if (b?.dataset.qok) fim(true); else if (b?.dataset.q) marca(b.dataset.q); });
+    document.addEventListener("keydown", tecla, true);
+    document.body.appendChild(c); c.querySelector("[data-qok]").focus();
+  });
+}
 function valeHTML(r) {
   const v = valorRota(r); if (!v) return `<p class="vale4 nao">🏆 Não pontua no Placar (${(r.tipo || "").includes("Compromisso") ? "compromisso" : "frente Pessoal"}).</p>`;
   const n = (x) => x.toLocaleString("pt-BR"), pad = (k) => !r[k] ? " (vazio, conta 2)" : "";
   const agora = v.feito ? `Valeu <b>${n(v.pts)} pts</b>${v.mod === 1 ? ", entregue no prazo" : v.mod === 0.5 ? ", entregue fora do prazo (metade)" : ", entregue muito fora do prazo (zero)"}.`
     : v.mod === 1 ? `Concluída no prazo vale <b>${n(v.base)} pts</b>. Até 7 dias fora vale ${n(v.base / 2)}; depois, zero.` : v.mod === 0.5 ? `Já passou do prazo: se concluir até 7 dias depois dele vale <b>${n(v.base / 2)} pts</b> (metade). Depois, zero.` : `Passou mais de 7 dias do prazo: <b>não pontua mais</b>.`;
-  return `<p class="vale4">🏆 ${agora}<small>Impacto ${v.i}${pad("impacto")} + Dificuldade ${v.d}${pad("esforco")} + Qualidade ${v.q}${pad("qualidade")} = ${v.base}</small></p>`;
+  return `<p class="vale4">🏆 ${agora}<small>Impacto ${v.i}${pad("impacto")} + Dificuldade ${v.d}${pad("esforco")} + Qualidade ${v.q} = ${v.base}</small></p>`;
 }
 function vistaPlacar() {
   const pl = s.placar; if (!pl) return `<div class="carregando">Carregando o placar…</div>`;
@@ -376,7 +399,7 @@ function vistaPlacar() {
   }
   const lista = comando() ? (pl.entregas || []).filter((e) => !s.plBusca || (e.titulo + " " + nomeDe(e.resp) + " " + nomeDe(e.co)).toLowerCase().includes(s.plBusca.toLowerCase())) : (pl.minhas || []);
   const banco = `<section class="pl6sec"><div class="pl6h"><h3>${comando() ? "Entregas do mês" : "Suas entregas"} · ${(comando() ? pl.entregas : pl.minhas || []).length}</h3><button class="lk" type="button" data-verconc="1">✓ Ver rotas concluídas</button>${comando() ? `<input class="busca" id="pl-busca" placeholder="Buscar entrega ou pessoa" value="${esc(s.plBusca || "")}">` : ""}</div>${lista.map((e) => entregaHTML(e, comando())).join("") || '<p class="nota">Nenhuma entrega neste mês ainda. Cada rota concluída vale até 10 pontos.</p>'}</section>`;
-  const regra = `<details class="pl7regra"><summary>Como pontua</summary><div class="pl7tab"><div><b>Impacto</b><span>Alto 3 · Médio 2 · Baixo 1</span></div><div><b>Dificuldade</b><span>Muito difícil 4 · Difícil 3 · Simples 2 · Fácil 1</span></div><div><b>Qualidade</b><span>Acima 3 · Como esperado 2 · Abaixo 1</span></div><div><b>Prazo</b><span>No prazo ×1 · até 7 dias fora ×½ · mais que isso ×0</span></div></div><p class="nota" style="margin:8px 0 0">Pontos = (Impacto + Dificuldade + Qualidade) × prazo, até 10 por rota. Campo vazio conta como o do meio (2 + 2 + 2 = 6). Responsável e co-responsável pontuam. Compromisso e frente Pessoal não contam.</p></details>`;
+  const regra = `<details class="pl7regra"><summary>Como pontua</summary><div class="pl7tab"><div><b>Impacto</b><span>Alto 3 · Médio 2 · Baixo 1</span></div><div><b>Dificuldade</b><span>Muito difícil 4 · Difícil 3 · Simples 2 · Fácil 1</span></div><div><b>Qualidade</b><span>Acima do esperado 3 · Como esperado 2 · Abaixo do esperado 1</span></div><div><b>Prazo</b><span>No prazo ×1 · até 7 dias fora ×½ · mais que isso ×0</span></div></div><p class="nota" style="margin:8px 0 0">Pontos = (Impacto + Dificuldade + Qualidade) × prazo, até 10 por rota. Campo vazio conta como o do meio (2 + 2 + 2 = 6). Responsável e co-responsável pontuam. Compromisso e frente Pessoal não contam.</p></details>`;
   return `<div class="pl7">${nav}<div class="pl7grade"><div class="pl7a">${topo}</div><div class="pl7b">${banco}${regra}</div></div></div>`;
 }
 
@@ -647,7 +670,7 @@ function pilMenu(r) {
 async function pilSalvar(rt, k, v) {
   s.pil = null;
   try {
-    if (k === "st") await chamar("alfy_mover", { p_rt: rt, p_status: v });
+    if (k === "st") { if (v === "concluida" && !(await qualidadeAoConcluir(rt))) return; await chamar("alfy_mover", { p_rt: rt, p_status: v }); }
     else {
       const campos = k === "prio" ? { prioridade: v, prazo: prazoDaPrio(pcod(v)) } : k === "prazo" ? { prazo: v ? (v.includes("T") ? v : v + "T18:00:00-03:00") : "" } : { responsavel_id: v };
       const c = await chamar("alfy_editar", { p_rt: rt, p_campos: campos }); if (s.aberta === rt && c) s.cartao = c;
@@ -1270,7 +1293,7 @@ function folha() {
           ${r.repete === "semanal" ? `<div class="dias-sem" style="padding:0 12px 10px">${DIAS_SEM.map((n, k) => `<label><input type="checkbox" data-repetedia="1" value="${k + 1}" ${(r.repete_dias || []).includes(k + 1) ? "checked" : ""}>${n}</label>`).join("")}</div>` : ""}
           ${linhaD("💰", "Custo", `<input data-bud="1" value="${esc(r.budget_valor || "")}" placeholder="sem custo">`)}
           ${r.budget_valor || r.budget_status !== "sem custo" ? `<div class="bud3">${BUDGET_ST.map((x) => `<button type="button" class="chip" data-budst="${x}" aria-pressed="${r.budget_status === x}" ${(x === "aprovado" || x === "recusado") && !comando() ? "disabled" : ""}>${x}</button>`).join("")}</div>` : ""}</div>
-        <div class="grupo3" id="f-det-tipo"><small>Tipo e pontos</small>${linhaD("🏷️", "Tipo", `<select data-prop="tipo">${opc(TIPOS, r.tipo, "Sem tipo")}</select>`)}${linhaD("🧭", "Natureza", `<select data-prop="natureza">${opc(NATUREZAS, r.natureza, "Sem natureza")}</select>`)}${linhaD("💥", "Impacto", `<select data-prop="impacto">${opc(NIVEIS, r.impacto, "Sem")}</select>`)}${linhaD("🏋️", "Dificuldade", `<select data-prop="esforco">${opc(["Fácil", "Simples", "Difícil", "Muito difícil"].concat(["Baixo", "Médio", "Alto"].includes(r.esforco) ? [r.esforco] : []), r.esforco, "Sem")}</select>`)}${comando() ? linhaD("⭐", "Qualidade da entrega", `<select data-prop="qualidade">${opc(["Acima", "Como esperado", "Abaixo"], r.qualidade, "Como esperado (padrão)")}</select>`) : ""}${valeHTML(r)}</div>
+        <div class="grupo3" id="f-det-tipo"><small>Tipo e pontos</small>${linhaD("🏷️", "Tipo", `<select data-prop="tipo">${opc(TIPOS, r.tipo, "Sem tipo")}</select>`)}${linhaD("🧭", "Natureza", `<select data-prop="natureza">${opc(NATUREZAS, r.natureza, "Sem natureza")}</select>`)}${linhaD("💥", "Impacto", `<select data-prop="impacto">${opc(NIVEIS, r.impacto, "Sem")}</select>`)}${linhaD("🏋️", "Dificuldade", `<select data-prop="esforco">${opc(["Fácil", "Simples", "Difícil", "Muito difícil"].concat(["Baixo", "Médio", "Alto"].includes(r.esforco) ? [r.esforco] : []), r.esforco, "Sem")}</select>`)}${comando() ? linhaD("⭐", "Qualidade da entrega", `<select data-prop="qualidade">${opc(QUALIDADES, r.qualidade || "Como esperado")}</select>`) : ""}${valeHTML(r)}</div>
         <div class="grupo3"><small>📎 Arquivos</small>${(r.anexos || []).map((x) => `<div class="lin3"><span class="ic">${/pdf/.test(x.tipo || "") ? "📄" : /image/.test(x.tipo || "") ? "🖼️" : "📎"}</span><span class="rot" style="min-width:0;overflow:hidden;text-overflow:ellipsis">${esc(x.nome)}</span><span class="val"><button class="mini" type="button" data-baixar="${x.id}">Baixar</button><button class="mini" type="button" data-tiraranexo="${x.id}" aria-label="Tirar">✕</button></span></div>`).join("")}
           <label class="lin3" style="cursor:pointer"><span class="ic">＋</span><span class="rot">Anexar arquivo</span><input type="file" id="rota-arq" multiple hidden></label><span id="rota-arq-prog" class="nota3"></span></div>
         <div class="grupo3"><small>🗓️ Pauta e reunião</small><div class="lin3"><span class="rot">Levar para</span><span class="val val-w">${(r.pautas || []).map((id) => { const p = (M.pautas || []).find((x) => x.id === id); return p ? `<button class="chip" type="button" data-irpauta="${id}">${esc(p.titulo)}</button>` : ""; }).join("")}${(r.reunioes || []).map((id) => { const x = reuniaoDe(id); return x ? `<button class="chip" type="button" data-irreuniao="${id}">${esc(x.titulo)}</button>` : ""; }).join("")}${pode ? `<button class="chip" type="button" data-acao="pauta-da-rota">＋ pauta</button>${reus.length ? `<select data-levarreuniao="1"><option value="">＋ reunião</option>${reus.filter((x) => !(r.reunioes || []).includes(x.id)).map((x) => `<option value="${x.id}">${esc(x.titulo)}</option>`).join("")}</select>` : ""}` : ""}</span></div>
@@ -1861,6 +1884,7 @@ const ativoNaFolha = () => { const a = document.activeElement; return a && $("#c
 // ---------------------------------------------------------------- ações
 async function mover(rt, st) {
   const r = rotaDe(rt) || s.cartao; if (!r || r.status === st) return;
+  if (st === "concluida" && !(await qualidadeAoConcluir(rt))) return;
   try { const r2 = await chamar("alfy_mover", { p_rt: rt, p_status: st }); if (s.aberta === rt && r2?.rt) s.aberta = r2.rt; aviso(`${nomeRota(r2?.rt || rt)} foi para ${ST[st].nome}`); await recarregar(); render(); } catch (e) { falhou(e); }
 }
 async function editar(campos, msg) {
@@ -1995,7 +2019,7 @@ document.addEventListener("click", async (e) => {
     if (d.rtnmodo) { s.rtnModo = d.rtnmodo; if (d.rtnmodo === "todas") await carregarRotinas(); render(); return; }
     if (d.rtnfoco) { s.rtnFoco = d.rtnfoco; render(); return; }
     if (d.rtnpular) { const t = await enviarRascunho(d.rtnpular); s.rtnPulou = { ...(s.rtnPulou || {}), [d.rtnpular]: true }; s.rtnFoco = null; render(); if (t) aviso("Comentário enviado"); return; }
-    if (d.rtnfeita) { const rt = d.rtnfeita; await enviarRascunho(rt); await chamar("alfy_mover", { p_rt: rt, p_status: "concluida" }); s.rtnFoco = null; await recarregar(); await carregarRotinas(); render(); aviso(`✓ ${nomeRota(rt)} feita. Volta na próxima data.`); return; }
+    if (d.rtnfeita) { const rt = d.rtnfeita; if (!(await qualidadeAoConcluir(rt))) return; await enviarRascunho(rt); await chamar("alfy_mover", { p_rt: rt, p_status: "concluida" }); s.rtnFoco = null; await recarregar(); await carregarRotinas(); render(); aviso(`✓ ${nomeRota(rt)} feita. Volta na próxima data.`); return; }
     if (d.rtnnao) { const rt = d.rtnnao, ta = document.getElementById("cl-" + rt.replace(/\W/g, "")), mot = (ta?.value || "").trim(); if (!mot) { aviso("Escreva no campo por que não deu, e toque de novo"); ta?.focus(); return; } ta.value = ""; await chamar("alfy_comentar", { p_rt: rt, p_texto: "✗ Não deu: " + mot, p_tipo: "comentario" }); s.rtnPulou = { ...(s.rtnPulou || {}), [rt]: true }; s.rtnFoco = null; await recarregar(); render(); aviso("Registrado. A rotina fica aberta."); return; }
     if (d.plmes) { s.placarMes = d.plmes; await carregarPlacar(); render(); return; }
     if (d.rodarrotina) { const r = await chamar("alfy_rotina_rodar", { p_serie: d.rodarrotina }); await recarregar(); await carregarRotinas(); render(); aviso(r.ja_aberta ? `Já tem uma aberta: ${nomeRota(r.rt)}` : `🔁 Rotina aberta: ${nomeRota(r.rt)}`); abrir(r.rt); return; }
@@ -2076,7 +2100,7 @@ document.addEventListener("click", async (e) => {
     if (d.copiarmapa) { copiar(assinar(mapaPessoa(d.copiarmapa).txt)); s.mapasCopiados = { ...(s.mapasCopiados || {}), [d.copiarmapa]: new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) }; render(); return; }
     if (d.baixar) { aviso("Baixando…"); const x = await chamar("alfy_anexo_baixar", { p_id: +d.baixar }); const bin = atob(x.base64), u8 = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i); const url = URL.createObjectURL(new Blob([u8], { type: x.tipo || "application/octet-stream" })); const l = document.createElement("a"); l.href = url; l.download = x.nome; document.body.append(l); l.click(); l.remove(); setTimeout(() => URL.revokeObjectURL(url), 5000); return; }
     if (d.tiraranexo) { s.cartao = await chamar("alfy_anexo_tirar", { p_id: +d.tiraranexo }); refolha(); await recarregar(); render(); aviso("Anexo tirado da rota"); return; }
-    if (d.rapido) { const rt = d.rrt; if (s.aba === "rotas" && s.vista === "rar") await enviarRascunho(rt); await chamar("alfy_mover", { p_rt: rt, p_status: d.rapido }); if (d.rapido === "concluida" && s.rr.feitas) { s.rr.feitas = { ...s.rr.feitas, [rt]: true }; s.rr.foco = null; rrSalvar(); if (s.vista === "rar") setTimeout(rrNoLugar, 60); } aviso(d.rapido === "concluida" ? `✓ ${nomeRota(rt)} concluída` : `${nomeRota(rt)} em andamento`); await recarregar(); render(); return; }
+    if (d.rapido) { const rt = d.rrt; if (d.rapido === "concluida" && !(await qualidadeAoConcluir(rt))) return; if (s.aba === "rotas" && s.vista === "rar") await enviarRascunho(rt); await chamar("alfy_mover", { p_rt: rt, p_status: d.rapido }); if (d.rapido === "concluida" && s.rr.feitas) { s.rr.feitas = { ...s.rr.feitas, [rt]: true }; s.rr.foco = null; rrSalvar(); if (s.vista === "rar") setTimeout(rrNoLugar, 60); } aviso(d.rapido === "concluida" ? `✓ ${nomeRota(rt)} concluída` : `${nomeRota(rt)} em andamento`); await recarregar(); render(); return; }
     if (d.rastrear) { const rt = d.rastrear; s.linhasAbertas = { ...(s.linhasAbertas || {}), [rt]: true }; s.respLinha = { ...(s.respLinha || {}), [rt]: "" }; s.sugLinha = { ...(s.sugLinha || {}), [rt]: "" }; s.rastreando = { ...(s.rastreando || {}), [rt]: true }; s.pedRastreio = { ...(s.pedRastreio || {}), [rt]: await pedir("rastrear", "rota:" + rt, {}, "rota:" + rt) }; render(); return; }
     if (d.aplicarsug) { const rt = d.aplicarsug, t = s.sugLinha[rt]; s.sugLinha[rt] = ""; s.respLinha[rt] = ""; s.rastreando[rt] = false; await pedir("ia", "rota:" + rt, { texto: t, agir: true }, "rota:" + rt); render(); return; }
     if (d.linhacaixa) { s.linhasAbertas = { ...(s.linhasAbertas || {}), [d.linhacaixa]: !s.linhasAbertas?.[d.linhacaixa] }; render(); setTimeout(() => $("#cl-" + d.linhacaixa.replace(/\W/g, ""))?.focus(), 30); return; }

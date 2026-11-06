@@ -1518,3 +1518,13 @@ button.pil{font:inherit;cursor:pointer;border:inherit}
 .ag-quem.on{border-color:var(--turq);color:var(--texto);background:rgba(43,175,166,.1)}
 .agk-quem{font-size:12px;font-weight:700;color:var(--aco-2)}
 @media (max-width:760px){.ag-quem{max-width:none;flex:1 1 100%;height:40px;font-size:15px}}
+/* 2.37 qualidade ao concluir */
+.qconc{position:fixed;inset:0;z-index:60;display:grid;place-items:center;background:rgba(10,12,14,.6);padding:16px}
+.qc-caixa{width:min(440px,100%);background:var(--ferro-1);border:1px solid var(--linha);border-radius:14px;padding:18px;display:grid;gap:12px;box-shadow:0 20px 50px rgba(0,0,0,.45)}
+.qc-caixa>b{font-family:var(--fd);font-size:18px}
+.qc-caixa>small{color:var(--aco);margin-top:-8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.qc-ops{display:grid;gap:6px}
+.qc-ops button{text-align:left;padding:11px 14px;border-radius:10px;border:1px solid var(--linha);background:var(--ferro-2);cursor:pointer;font-size:16px}
+.qc-ops button.on{border-color:var(--turq);background:rgba(43,175,166,.14);font-weight:600}
+.qc-ops button.on::before{content:"✓ ";color:var(--turq)}
+.qc-pe{display:flex;justify-content:flex-end;gap:8px}
