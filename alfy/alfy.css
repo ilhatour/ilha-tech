@@ -1531,3 +1531,14 @@ button.pil{font:inherit;cursor:pointer;border:inherit}
 .qc-ops button.nr{color:var(--aco-2);border-style:dashed;margin-top:4px}
 .qc-ops button.nr.on{border-color:var(--verm);background:rgba(229,72,77,.12);color:var(--texto)}
 .qc-ops button.nr.on::before{content:"✕ ";color:var(--verm)}
+/* 2.39 cobranças e tempo aberta */
+.cobr4{display:flex;flex-wrap:wrap;align-items:center;gap:4px 16px;margin:10px 0 2px;font-size:14px;color:var(--aco)}
+.cobr-l{background:none;border:0;padding:0;color:var(--aco);font-size:14px;cursor:default}
+button.cobr-l{cursor:pointer}button.cobr-l:hover{color:var(--texto)}
+.cobr-l i{font-style:normal;opacity:.7}
+.cobr-l.nada{opacity:.7}
+.cobr-hist{flex-basis:100%;list-style:none;margin:6px 0 0;padding:0;display:grid;gap:2px;font-size:14px}
+.cobr-hist li{display:grid;grid-template-columns:96px 1fr auto;gap:10px;padding:5px 0;border-top:1px solid var(--linha)}
+.cobr-hist li .ok{color:var(--foam)}
+.aguarda4{flex-basis:100%;margin:0 0 4px;color:var(--amber);font-weight:600}
+.idade-l{color:var(--aco);font-variant-numeric:tabular-nums}

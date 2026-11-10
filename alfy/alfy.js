@@ -1,4 +1,4 @@
-// ALFY · Mapa de Rotas · Ilha Tech · v2.38.1 · 06/11/2026 · Painel de Ferro · concluir como cancelada, não realizada
+// ALFY · Mapa de Rotas · Ilha Tech · v2.39.0 · 10/11/2026 · Painel de Ferro · 📣 Cobrar, cobranças contadas e tempo de rota aberta
 // Tudo passa pelas funções alfy_* do banco, sempre com a chave pessoal de quem está usando.
 // O banco decide o que cada pessoa vê; a tela só desenha o que voltou.
 // A IA e os comandos são pedidos numa fila (alfy.pedido) que o robô do Mac atende.
@@ -202,7 +202,7 @@ function topo() {
     l1.innerHTML = `<h1>Rotas<small>${comando() ? "todas as frentes" : curto(eu().nome)}</small></h1>${alt}<span class="espaco"></span>${vivo}<button class="cta" type="button" data-acao="nova">＋ Nova rota</button>`;
     $("#alterna-cel").innerHTML = alt;
     fi.innerHTML = filtrosHTML(`<button class="chip alerta" type="button" id="f-venc" aria-pressed="${s.venc}">Só vencidas</button>` +
-      (s.vista === "lista" ? `<select class="sel" id="f-agrupar" aria-label="Agrupar">${opc([["prioridade", "Por prioridade"], ["minha", "Minha ordem"], ["frente", "Por frente e pessoa"], ["prazo", "Por prazo"]], s.agrupar)}</select>` : ""));
+      (s.vista === "lista" ? `<select class="sel" id="f-agrupar" aria-label="Agrupar">${opc([["prioridade", "Por prioridade"], ["minha", "Minha ordem"], ["frente", "Por frente e pessoa"], ["prazo", "Por prazo"], ["aberta", "Mais tempo aberta"], ["cobradas", "Mais cobradas"]], s.agrupar)}</select>` : ""));
   } else if (s.aba === "feed") {
     l1.innerHTML = `<h1>Feed<small>últimas atualizações das rotas</small></h1><span class="espaco"></span>${vivo}`;
     $("#alterna-cel").innerHTML = "";
@@ -238,13 +238,13 @@ function tag(r) {
 const semEmoji = (t) => (t || "").replace(/^\S+\s/, "");
 function metaLinha(r, semPessoa) {
   const pz = prazoInfo(r), b = r.budget_valor || r.budget_status !== "sem custo";
-  return `<span class="meta2">${semPessoa ? "" : `<span>👤 ${esc(curto(nomeDe(r.responsavel_id)))}${r.co_responsavel_id ? " + " + esc(curto(nomeDe(r.co_responsavel_id))) : ""}</span>`}${r.repete ? `<span style="color:var(--turq)">🔁 ${{ diaria: "diária", semanal: "semanal", quinzenal: "quinzenal", mensal: "mensal", sob_demanda: "quando precisar" }[r.repete]}</span>` : ""}${r.prioridade ? `<span>${prioTxt(r.prioridade)}</span>` : ""}<span class="${pz.cls}">📅 ${pz.txt}</span>${r.natureza ? `<span>🧭 ${esc(semEmoji(r.natureza))}</span>` : ""}${r.tipo ? `<span>🏷️ ${esc(semEmoji(r.tipo))}</span>` : ""}${b && r.budget_status !== "sem custo" ? `<span class="bud ${r.budget_status === "aprovado" ? "ok" : ""}">💰 ${esc(r.budget_valor || "")} ${r.budget_status}</span>` : ""}${r.comentarios ? `<span style="color:var(--turq)">💬 ${r.comentarios}</span>` : ""}${r.n_anexos ? `<span>📎 ${r.n_anexos}</span>` : ""}${tocando(r) ? `<span class="sino">🔔 lembrete</span>` : ""}${temNova(r) ? `<span class="nova-l">💬 nova resposta</span>` : ""}${ultLinha(r)}</span>`;
+  return `<span class="meta2">${semPessoa ? "" : `<span>👤 ${esc(curto(nomeDe(r.responsavel_id)))}${r.co_responsavel_id ? " + " + esc(curto(nomeDe(r.co_responsavel_id))) : ""}</span>`}${r.repete ? `<span style="color:var(--turq)">🔁 ${{ diaria: "diária", semanal: "semanal", quinzenal: "quinzenal", mensal: "mensal", sob_demanda: "quando precisar" }[r.repete]}</span>` : ""}${r.prioridade ? `<span>${prioTxt(r.prioridade)}</span>` : ""}<span class="${pz.cls}">📅 ${pz.txt}</span>${r.natureza ? `<span>🧭 ${esc(semEmoji(r.natureza))}</span>` : ""}${r.tipo ? `<span>🏷️ ${esc(semEmoji(r.tipo))}</span>` : ""}${b && r.budget_status !== "sem custo" ? `<span class="bud ${r.budget_status === "aprovado" ? "ok" : ""}">💰 ${esc(r.budget_valor || "")} ${r.budget_status}</span>` : ""}${r.comentarios ? `<span style="color:var(--turq)">💬 ${r.comentarios}</span>` : ""}${r.n_anexos ? `<span>📎 ${r.n_anexos}</span>` : ""}${tocando(r) ? `<span class="sino">🔔 lembrete</span>` : ""}${temNova(r) ? `<span class="nova-l">💬 nova resposta</span>` : ""}${r.cobr?.aguarda && (r.responsavel_id === eu().id || r.co_responsavel_id === eu().id) ? `<span class="nova-l">📣 aguardando seu retorno</span>` : ""}${ABERTOS.includes(r.status) && r.criado_em ? `<span class="idade-l" title="${esc(idadeTxt(r))}${r.cobr?.n ? " · cobrada " + r.cobr.n + "x" : ""}">${diasEntre(r.criado_em, new Date().toISOString())}d${r.cobr?.n ? ` · 📣${r.cobr.n}` : ""}</span>` : ""}${ultLinha(r)}</span>`;
 }
 const podeMexer = (r) => manda() || r.responsavel_id === eu().id || r.co_responsavel_id === eu().id;
 function acoesLinha(r) {
   if (!podeMexer(r)) return "";
   const ab = ABERTOS.includes(r.status);
-  return `<span class="acoes-linha"><button class="ac" type="button" data-copiarrota="${r.rt}" title="Copiar esta rota para mandar no WhatsApp">📋<span>Copiar</span></button>${ab ? `<button class="ac ok" type="button" data-rapido="concluida" data-rrt="${r.rt}" title="Concluir">✓<span>Concluir</span></button>` : ""}${r.status === "rota" ? `<button class="ac" type="button" data-rapido="andamento" data-rrt="${r.rt}" title="Começar">▶<span>Começar</span></button>` : ""}${ab && r.rt.startsWith("RT-") ? `<button class="ac" type="button" data-agdar="${r.rt}" title="${r.inicio ? "Mudar o horário na agenda" : "Dar um horário na agenda"}">📅<span>${r.inicio ? hhmm(r.inicio) : "Agendar"}</span></button>` : ""}${comando() && r.rt.startsWith("RT-") ? `<button class="ac" type="button" data-rastrear="${r.rt}" title="Rastrear: procura novidade desta rota no WhatsApp e no e-mail">📡<span>Rastrear</span></button>` : ""}<button class="ac ${s.linhasAbertas?.[r.rt] ? "on" : ""} ${s.respLinha?.[r.rt] && !s.linhasAbertas?.[r.rt] ? "pronto" : ""}" type="button" data-linhacaixa="${r.rt}" title="${comando() ? "Comentar ou pedir ao ALFY" : "Comentar"}">${comando() ? "🐙" : "💬"}<span>${comando() ? "ALFY" : "Comentar"}</span></button></span>`;
+  return `<span class="acoes-linha"><button class="ac" type="button" data-copiarrota="${r.rt}" title="Copiar esta rota para mandar no WhatsApp">📋<span>Copiar</span></button>${podeCobrar(r) ? `<button class="ac" type="button" data-cobrar="${r.rt}" title="Copia um 'e aí?' para a pessoa e conta a cobrança">📣<span>Cobrar</span></button>` : ""}${ab ? `<button class="ac ok" type="button" data-rapido="concluida" data-rrt="${r.rt}" title="Concluir">✓<span>Concluir</span></button>` : ""}${r.status === "rota" ? `<button class="ac" type="button" data-rapido="andamento" data-rrt="${r.rt}" title="Começar">▶<span>Começar</span></button>` : ""}${ab && r.rt.startsWith("RT-") ? `<button class="ac" type="button" data-agdar="${r.rt}" title="${r.inicio ? "Mudar o horário na agenda" : "Dar um horário na agenda"}">📅<span>${r.inicio ? hhmm(r.inicio) : "Agendar"}</span></button>` : ""}${comando() && r.rt.startsWith("RT-") ? `<button class="ac" type="button" data-rastrear="${r.rt}" title="Rastrear: procura novidade desta rota no WhatsApp e no e-mail">📡<span>Rastrear</span></button>` : ""}<button class="ac ${s.linhasAbertas?.[r.rt] ? "on" : ""} ${s.respLinha?.[r.rt] && !s.linhasAbertas?.[r.rt] ? "pronto" : ""}" type="button" data-linhacaixa="${r.rt}" title="${comando() ? "Comentar ou pedir ao ALFY" : "Comentar"}">${comando() ? "🐙" : "💬"}<span>${comando() ? "ALFY" : "Comentar"}</span></button></span>`;
 }
 function caixaLinha(r, forcar) {
   if (!forcar && !s.linhasAbertas?.[r.rt]) return "";
@@ -272,6 +272,11 @@ function vistaLista() {
     const porPrazo = (a, b) => (a.prazo || "9").localeCompare(b.prazo || "9") || a.rt.localeCompare(b.rt);
     return Object.keys(nomes).map((p) => [p, vs.filter((r) => pcod(r.prioridade) === p).sort(porPrazo)]).filter(([, l]) => l.length)
       .map(([p, l]) => `<section class="grupo prio-g prio-${p || "sem"}"><h2>${nomes[p]}<span class="ct">${l.length}</span>${l.filter(vencida).length ? `<em>· ${l.filter(vencida).length} vencidas</em>` : ""}</h2><div class="lista">${l.map((r) => linha(r)).join("")}</div></section>`).join("");
+  }
+  if (s.agrupar === "aberta" || s.agrupar === "cobradas") {   // o que está mofando ou mais cobrado primeiro
+    const idade = (r) => -new Date(r.criado_em || 0), cob = (r) => +(r.cobr?.n || 0);
+    const l = vs.slice().sort(s.agrupar === "aberta" ? (a, b) => idade(b) - idade(a) || ordPrio(a, b) : (a, b) => cob(b) - cob(a) || idade(b) - idade(a));
+    return `<section class="grupo"><h2>${s.agrupar === "aberta" ? "Mais tempo aberta" : "Mais cobradas"}<span class="ct">${l.length}</span></h2><div class="lista">${l.map((r) => linha(r)).join("")}</div></section>`;
   }
   if (s.agrupar === "prazo") {
     const g = { vencidas: [], hoje: [], semana: [], depois: [], sem: [] };
@@ -591,13 +596,13 @@ function rrItem(r, foco) {
   return `<article class="rr-item ${foco ? "foco" : ""}" id="rr-${r.rt.replace(/\W/g, "")}">
     <div class="rr-cab" role="button" tabindex="0" data-rrfoco="${r.rt}">${tag(r)}<span class="tt"><b>${esc(r.titulo)}</b><span class="selos3">${foco ? pil(r, "st", "selo3 st-" + r.status, "● " + ST[r.status].um) + pil(r, "prio", "selo3", r.prioridade ? prioTxt(r.prioridade) : "Sem prioridade") + pil(r, "prazo", "selo3 " + pz.cls, "📅 " + pz.txt) + pil(r, "dono", "selo3", "👤 " + esc(curto(nomeDe(r.responsavel_id)))) : selo("st-" + r.status, "● " + ST[r.status].um) + (r.prioridade ? selo("", prioTxt(r.prioridade)) : "") + selo(pz.cls, "📅 " + pz.txt) + selo("", "👤 " + esc(curto(nomeDe(r.responsavel_id))))}${r.comentarios ? selo("", "💬 " + r.comentarios) : ""}</span></span></div>${foco && !s.aberta ? pilMenu(r) : ""}
     ${foco && s.rr.modo === "mudou" && rrMudou(r) ? `<p class="rr-mudou">🔔 ${esc(rrMudou(r).txt)}</p>` : ""}
-    ${foco ? rrFicha(r) : rrSituacao(r) + rrNovidade(r)}
+    ${foco ? cobrHTML(r) + rrFicha(r) : rrSituacao(r) + rrNovidade(r)}
     ${foco ? caixaLinha(r, true) : ""}
     ${s.rrAg === r.rt ? `<div class="rr-agenda">${quandoCaixa(["ag-dia", "ag-ini", "ag-fim"], r.responsavel_id, r.rt)}<label>Dia<input type="date" id="ag-dia" value="${r.inicio ? dia(r.inicio) : hojeDia()}"></label><label>Das<input type="time" id="ag-ini" value="${r.inicio ? hhmm(r.inicio) : "09:00"}"></label><label>Até<input type="time" id="ag-fim" value="${r.fim ? hhmm(r.fim) : ""}"></label>
       <span class="rr-acoes"><button class="btn turq peq" type="button" data-agpor="${r.rt}">📅 Pôr na agenda</button><button class="btn peq" type="button" data-agprazo="${r.rt}">Só mudar o prazo</button></span></div>` : ""}
     ${foco ? `<div class="acoes4"><div class="grupo4">
         <button class="ac" type="submit" form="${fid}" data-clmodo="comentar">💬<span>Comentar</span></button>${comando() ? `<button class="ac ia" type="submit" form="${fid}" data-clmodo="alfy">🐙<span>Pedir ao ALFY</span></button>` : ""}${comando() && r.rt.startsWith("RT-") ? `<button class="ac" type="button" data-rastrear="${r.rt}">📡<span>Rastrear</span></button>` : ""}
-        <button class="ac ${s.rrAg === r.rt ? "on" : ""}" type="button" data-rragendar="${r.rt}">📅<span>Agendar</span></button><button class="ac" type="button" data-copiarrota="${r.rt}" title="Copiar esta rota para mandar no WhatsApp">📋<span>Copiar</span></button>${r.status !== "andamento" ? `<button class="ac" type="button" data-rapido="andamento" data-rrt="${r.rt}">▶<span>Em andamento</span></button>` : ""}<button class="ac ok" type="button" data-rapido="concluida" data-rrt="${r.rt}">✓<span>Concluir</span></button><button class="ac" type="button" data-rt="${r.rt}">↗<span>Abrir</span></button></div>
+        <button class="ac ${s.rrAg === r.rt ? "on" : ""}" type="button" data-rragendar="${r.rt}">📅<span>Agendar</span></button><button class="ac" type="button" data-copiarrota="${r.rt}" title="Copiar esta rota para mandar no WhatsApp">📋<span>Copiar</span></button>${podeCobrar(r) ? `<button class="ac" type="button" data-cobrar="${r.rt}" title="Copia um 'e aí?' para a pessoa e conta a cobrança">📣<span>Cobrar</span></button>` : ""}${r.status !== "andamento" ? `<button class="ac" type="button" data-rapido="andamento" data-rrt="${r.rt}">▶<span>Em andamento</span></button>` : ""}<button class="ac ok" type="button" data-rapido="concluida" data-rrt="${r.rt}">✓<span>Concluir</span></button><button class="ac" type="button" data-rt="${r.rt}">↗<span>Abrir</span></button></div>
       <div class="grupo4 dir"><button class="ac" type="button" data-rrdepois="${r.rt}" title="Agora não: a rota some até amanhã de manhã">⏭<span>Amanhã</span></button><button class="ac" type="button" data-acao="rr-sortear" title="Sortear a próxima (S)">🎲<span>Sortear</span></button><button class="btn turq" type="button" data-rrfeita="${r.rt}" title="Já vi: a rota vai para o fim da fila (com novidade, volta ao lugar dela)">Próxima →</button></div></div>`
       : `<div class="acoes4 mini4"><button class="ac" type="button" data-rrfoco="${r.rt}">✎<span>Tratar</span></button><button class="ac" type="button" data-rrfeita="${r.rt}">✓<span>Vista</span></button><button class="ac" type="button" data-rrdepois="${r.rt}">⏭<span>Depois</span></button></div>`}
   </article>`;
@@ -857,6 +862,32 @@ function textoRota(r) {
   return assinar([nome && nome !== "—" ? `${nome}, me dá um retorno desta rota?` : "Preciso de um retorno desta rota:", "", blocoMapa(r),
     onde ? `\n*Onde está:* ${onde.slice(0, 300)}` : "", "", `Responde aqui com *Rota ${n}* (ou *RT-${n}*, *RT${n}*) + como está.`].filter((x, k, a) => !(x === "" && a[k - 1] === "")).join("\n"));
 }
+// 📣 Cobrar: o "e aí?" na voz do Miguel; a rota guarda quantas vezes foi cobrada (Copiar, Mapa e Cobrar, uma por dia)
+function textoCobrar(r) {
+  const nome = curto(nomeDe(r.responsavel_id) || ""), n = nomeRota(r.rt).replace(/^Rota /, "");
+  return assinar([nome && nome !== "—" ? `E aí, ${nome}? Como está esta rota?` : "E aí? Como está esta rota?", "", blocoMapa(r), "",
+    `Estou aguardando seu retorno. Responde aqui com *Rota ${n}* + como está.`].join("\n"));
+}
+function registrarCobranca(rts, origem) {
+  rts = (rts || []).filter((rt) => rt && rt.startsWith("RT-"));
+  if (!manda() || !rts.length) return;
+  chamar("alfy_cobrar", { p_rts: rts, p_origem: origem }).then(() => recarregar()).then(() => { if (s.aberta) recarregarCartao().then(() => { if (!ativoNaFolha()) refolha(); }); renderSeguro(); }).catch(() => {});
+}
+const diasEntre = (a, b) => Math.max(0, Math.round((new Date(dia(b)) - new Date(dia(a))) / 864e5));
+function idadeTxt(r) {   // tempo de rota aberta (ou quanto levou)
+  if (!r.criado_em) return "";
+  if (r.status === "concluida" && r.concluida_em) { const n = diasEntre(r.criado_em, r.concluida_em); return `✓ Levou ${n ? n + (n === 1 ? " dia" : " dias") : "menos de um dia"} (${ddmm(r.criado_em)} a ${ddmm(r.concluida_em)})`; }
+  const n = diasEntre(r.criado_em, new Date().toISOString());
+  return n ? `🕓 Aberta há ${n} ${n === 1 ? "dia" : "dias"} · criada em ${ddmm(r.criado_em)}` : `🕓 Criada hoje`;
+}
+function cobrHTML(r) {   // as duas linhas do cartão: tempo aberta e cobranças (com o histórico ao tocar)
+  const c = r.cobr || {}, n = +c.n || 0, h = s.cobrHist?.[r.rt];
+  const cob = n ? `<button type="button" class="cobr-l" data-cobrhist="${r.rt}" aria-expanded="${!!h}">📣 Cobrada ${n} ${n === 1 ? "vez" : "vezes"} · respondeu ${+c.resp || 0} · última em ${ddmm(c.ult)} <i>${h ? "▴" : "▾"}</i></button>` : `<span class="cobr-l nada">📣 Ainda não cobrada</span>`;
+  const lista = h ? `<ul class="cobr-hist">${h === "carregando" ? "<li>carregando…</li>" : h.map((x) => `<li><span>${ddmm(x.em)} ${hhmm(x.em)}</span><span>${{ copiar: "📋 Copiar", mapa: "🗺️ Mapa", cobrar: "📣 Cobrar" }[x.origem]}${x.por ? " · " + esc(curto(x.por)) : ""}</span><span class="${x.respondida ? "ok" : ""}">${x.respondida ? "respondeu ✓" : "sem resposta"}</span></li>`).join("")}</ul>` : "";
+  const aguarda = c.aguarda && (r.responsavel_id === eu().id || r.co_responsavel_id === eu().id) ? `<p class="aguarda4">📣 Estão aguardando seu retorno nesta rota. Comente o que andou.</p>` : "";
+  return `<div class="cobr4">${aguarda}<span class="cobr-l idade">${idadeTxt(r)}</span>${ABERTOS.includes(r.status) || n ? cob : ""}${lista}</div>`;
+}
+const podeCobrar = (r) => manda() && ABERTOS.includes(r.status) && r.rt.startsWith("RT-") && r.responsavel_id && r.responsavel_id !== eu().id;
 function blocoMapa(r, quem) {
   const partes = [`${ST[r.status].bola} *${nomeRota(r.rt)}*`];
   if (pcod(r.prioridade)) partes.push(prioTxt(r.prioridade));
@@ -893,7 +924,7 @@ function mapaPessoa(id, soVencidas) {
   if (rotinas.length) { l.push("*SUAS ROTINAS:*", ""); rotinas.forEach((r) => l.push(blocoRotina(r), "")); }
   if (time.length) { l.push("*DA SUA EQUIPE (para acompanhar e cobrar):*", ""); time.forEach((r) => l.push(blocoMapa(r, curto(nomeDe(r.responsavel_id))), "")); }
   l.push(LEGENDA(num((minhas[0] || time[0] || { rt: "RT-374" }).rt)));
-  return { n: minhas.length + time.length, txt: l.join("\n") };
+  return { n: minhas.length + time.length, txt: l.join("\n"), rts: minhas.concat(time, rotinas).map((r) => r.rt) };
 }
 function mapaGrupo(ids) {
   const rotas = (M.rotas || []).filter((r) => mapeavel(r) && ids.includes(r.responsavel_id));
@@ -903,7 +934,7 @@ function mapaGrupo(ids) {
   ids.forEach((id) => { const rs = rotas.filter((r) => r.responsavel_id === id).sort(ordPrio), rn = rotinasMapa((r) => r.responsavel_id === id); if (!rs.length && !rn.length) return; l.push(`👤 *${nomeDe(id)}*`, ""); rs.forEach((r) => l.push(blocoMapa(r), "")); rn.forEach((r) => l.push(blocoRotina(r), "")); });
   if (!rotas.length) l.push("Nenhuma rota aberta com essas pessoas agora.", "");
   l.push(LEGENDA(num((rotas[0] || { rt: "RT-374" }).rt)));
-  return { n: rotas.length, txt: l.join("\n") };
+  return { n: rotas.length, txt: l.join("\n"), rts: rotas.concat(...ids.map((id) => rotinasMapa((r) => r.responsavel_id === id))).map((r) => r.rt) };
 }
 function mapaSetor(frente) {
   const rotas = (M.rotas || []).filter((r) => mapeavel(r) && r.frente === frente);
@@ -915,7 +946,7 @@ function mapaSetor(frente) {
   ids.forEach((id) => { l.push(ehMiguel(id) ? "*COMIGO (Miguel):*" : `👤 *${nomeDe(id) || "Sem responsável"}*`, ""); rotas.filter((r) => (r.responsavel_id || "") === id).sort(ordPrio).forEach((r) => l.push(blocoMapa(r), "")); });
   if (!rotas.length) l.push("Nenhuma rota aberta nesta frente agora.", "");
   l.push(LEGENDA(num((rotas[0] || { rt: "RT-374" }).rt)));
-  return { n: rotas.length, txt: l.join("\n") };
+  return { n: rotas.length, txt: l.join("\n"), rts: rotas.map((r) => r.rt) };
 }
 const rotaTxt = (t) => String(t || "").replace(/\bRT[-\s]?(\d{2,4})\b/g, "Rota $1");
 // "hoje 14:32", "ontem 18:10", "anteontem 09:05", depois "há 5 dias"
@@ -1275,7 +1306,7 @@ function folha() {
       <nav class="ancoras3" aria-label="Seções">${SECOES_F.map(([k, n]) => `<button type="button" data-irf="${k}" aria-current="${k === "fazer"}">${n}${k === "interagir" ? (novas ? ` <small class="novas4">${novas} nova${novas > 1 ? "s" : ""}</small>` : tempo.length ? ` <small>${tempo.length}</small>` : "") : ""}${k === "lembrete" && lem ? " ⏰" : ""}</button>`).join("")}</nav></div></div>
     <div class="col3">
       <section class="secao3" id="f-fazer">
-        <div class="selos4">${pil(r, "st", "sl4 st-" + r.status, "<i></i>" + ST[r.status].um)}${pil(r, "prio", "sl4", r.prioridade ? prioTxt(r.prioridade) : "Sem prioridade")}${pil(r, "prazo", "sl4 " + pz.cls, "📅 " + pz.txt)}${pil(r, "dono", "sl4", "👤 " + esc(curto(nomeDe(r.responsavel_id))) + (r.co_responsavel_id ? " + " + esc(curto(nomeDe(r.co_responsavel_id))) : ""))}${(() => { const v = valorRota(r); return v ? `<button type="button" class="sl4 pts" data-irf="det-tipo" title="Quanto esta rota vale no Placar">🏆 ${v.feito ? "" : "vale "}${(v.feito || v.mod === 1 ? (v.feito ? v.pts : v.base) : v.pts).toLocaleString("pt-BR")} pts</button>` : ""; })()}${r.repete ? `<span class="sl4">🔁 ${REPETE_TXT[r.repete]}</span>` : ""}${r.sensivel ? '<span class="sl4">🔒 só eu</span>' : ""}</div>${pilMenu(r)}
+        <div class="selos4">${pil(r, "st", "sl4 st-" + r.status, "<i></i>" + ST[r.status].um)}${pil(r, "prio", "sl4", r.prioridade ? prioTxt(r.prioridade) : "Sem prioridade")}${pil(r, "prazo", "sl4 " + pz.cls, "📅 " + pz.txt)}${pil(r, "dono", "sl4", "👤 " + esc(curto(nomeDe(r.responsavel_id))) + (r.co_responsavel_id ? " + " + esc(curto(nomeDe(r.co_responsavel_id))) : ""))}${(() => { const v = valorRota(r); return v ? `<button type="button" class="sl4 pts" data-irf="det-tipo" title="Quanto esta rota vale no Placar">🏆 ${v.feito ? "" : "vale "}${(v.feito || v.mod === 1 ? (v.feito ? v.pts : v.base) : v.pts).toLocaleString("pt-BR")} pts</button>` : ""; })()}${r.repete ? `<span class="sl4">🔁 ${REPETE_TXT[r.repete]}</span>` : ""}${r.sensivel ? '<span class="sl4">🔒 só eu</span>' : ""}</div>${pilMenu(r)}${cobrHTML(r)}
         ${campo4(r, "assist", "resumo4")}${campo4(r, "instr")}${campo4(r, "resultado")}
         ${campo4(r, "como_esta", "agora4")}
       </section>
@@ -2046,7 +2077,9 @@ document.addEventListener("click", async (e) => {
     if (d.pil) { s.pil = s.pil?.rt === d.pilrt && s.pil?.k === d.pil ? null : { rt: d.pilrt, k: d.pil }; if (s.aberta === d.pilrt) refolha(); render(); return; }
     if (d.pilfecha) { const rt = s.pil?.rt; s.pil = null; if (s.aberta === rt) refolha(); render(); return; }
     if (d.pilset) { await pilSalvar(d.pilrt, d.pilset, d.pilv); return; }
-    if (d.copiarrota) { const r = rotaDe(d.copiarrota); if (r) { copiar(textoRota(r)); const tx = b.innerHTML; b.innerHTML = b.innerHTML.replace("📋", "✓"); setTimeout(() => { b.innerHTML = tx; }, 1500); } return; }
+    if (d.cobrar) { const r = rotaDe(d.cobrar); if (r) { copiar(textoCobrar(r)); registrarCobranca([r.rt], "cobrar"); aviso(`📣 Cobrança copiada. Cole no WhatsApp de ${curto(nomeDe(r.responsavel_id))}`); } return; }
+    if (d.cobrhist) { const rt = d.cobrhist; s.cobrHist = s.cobrHist || {}; if (s.cobrHist[rt]) delete s.cobrHist[rt]; else { s.cobrHist[rt] = "carregando"; chamar("alfy_cobrancas", { p_rt: rt }).then((h) => { if (s.cobrHist[rt]) { s.cobrHist[rt] = h || []; s.aberta === rt && refolha(); renderSeguro(); } }); } if (s.aberta === rt) refolha(); renderSeguro(); return; }
+    if (d.copiarrota) { const r = rotaDe(d.copiarrota); if (r) { copiar(textoRota(r)); registrarCobranca([r.rt], "copiar"); const tx = b.innerHTML; b.innerHTML = b.innerHTML.replace("📋", "✓"); setTimeout(() => { b.innerHTML = tx; }, 1500); } return; }
     if (d.rrmodo) { s.rr.modo = d.rrmodo; s.rr.foco = null; rrSalvar(); render(); return; }
     if (d.agsel) { s.agDia = d.agsel; render(); return; }
     if (d.agnovo) { novaRota({ compromisso: true, dia: d.agnovo, responsavel_id: s.agQuem && s.agQuem !== "equipe" ? s.agQuem : "" }); return; }
@@ -2099,7 +2132,7 @@ document.addEventListener("click", async (e) => {
     if (d.naveabrir) { s.naveAbrir = d.naveabrir; render(); return; }
     if (d.navetrazer) { const fr = $("#nv-frente")?.value; const r = await chamar("alfy_nave_trazer", { p_colaborador: d.navetrazer, p_alfy: s.naveLigar || null, p_apelido: $("#nv-apelido")?.value || "", p_papel: $("#nv-papel")?.value || "colaborador", p_frentes: fr ? [fr] : null }); await naveDepois(s.naveLigar ? {} : r, s.naveLigar ? "Ligado à Nave ID" : `${r.nome} entrou no ALFY`); return; }
     if (d.aprovar || d.recusar) { const id = +(d.aprovar || d.recusar), fr = $("#fa-frente-" + id)?.value; const r = await chamar("alfy_ficha_aprovar", { p_id: id, p_papel: $("#fa-papel-" + id)?.value || "colaborador", p_frentes: fr ? [fr] : [], p_nivel: $("#fa-nivel-" + id)?.value || "operacional", p_aprovar: !!d.aprovar }); s.aprovado = d.aprovar ? r : null; s.fichas = await chamar("alfy_fichas"); if (comando()) s.equipe = await chamar("alfy_equipe"); await recarregar(); render(); aviso(d.aprovar ? "Cadastrado na Nave ID e no ALFY" : "Ficha recusada"); return; }
-    if (d.copiarmapa) { copiar(assinar(mapaPessoa(d.copiarmapa).txt)); s.mapasCopiados = { ...(s.mapasCopiados || {}), [d.copiarmapa]: new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) }; render(); return; }
+    if (d.copiarmapa) { const mp = mapaPessoa(d.copiarmapa); copiar(assinar(mp.txt)); registrarCobranca(mp.rts, "mapa"); s.mapasCopiados = { ...(s.mapasCopiados || {}), [d.copiarmapa]: new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) }; render(); return; }
     if (d.baixar) { aviso("Baixando…"); const x = await chamar("alfy_anexo_baixar", { p_id: +d.baixar }); const bin = atob(x.base64), u8 = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i); const url = URL.createObjectURL(new Blob([u8], { type: x.tipo || "application/octet-stream" })); const l = document.createElement("a"); l.href = url; l.download = x.nome; document.body.append(l); l.click(); l.remove(); setTimeout(() => URL.revokeObjectURL(url), 5000); return; }
     if (d.tiraranexo) { s.cartao = await chamar("alfy_anexo_tirar", { p_id: +d.tiraranexo }); refolha(); await recarregar(); render(); aviso("Anexo tirado da rota"); return; }
     if (d.rapido) { const rt = d.rrt; if (d.rapido === "concluida" && !(await qualidadeAoConcluir(rt))) return; if (s.aba === "rotas" && s.vista === "rar") await enviarRascunho(rt); await chamar("alfy_mover", { p_rt: rt, p_status: d.rapido }); if (d.rapido === "concluida" && s.rr.feitas) { s.rr.feitas = { ...s.rr.feitas, [rt]: true }; s.rr.foco = null; rrSalvar(); if (s.vista === "rar") setTimeout(rrNoLugar, 60); } aviso(d.rapido === "concluida" ? `✓ ${nomeRota(rt)} concluída` : `${nomeRota(rt)} em andamento`); await recarregar(); render(); return; }
@@ -2156,7 +2189,7 @@ document.addEventListener("click", async (e) => {
     if (a === "gravar") { gravar(); return; }
     if (a === "whatsapp" || a === "grupos") { await pedir("whatsapp", null, { horas: a === "grupos" ? 168 : s.waHoras || 24 }); render(); aviso("Lendo o WhatsApp… leva de 1 a 3 minutos"); return; }
     if (a === "ronda") { await pedir(a, null, {}); render(); aviso("Pedido na fila do robô"); return; }
-    if (a === "copiar-mapa") { const cob = s.cmd === "cobrar" || s.mapaModo === "cobrar", modo = cob ? "pessoa" : s.mapaModo || "pessoa"; copiar(assinar((modo === "grupo" ? mapaGrupo(s.grupo || []) : modo === "setor" ? mapaSetor(s.alvo) : mapaPessoa(s.alvo, cob)).txt)); return; }
+    if (a === "copiar-mapa") { const cob = s.cmd === "cobrar" || s.mapaModo === "cobrar", modo = cob ? "pessoa" : s.mapaModo || "pessoa"; const mp = modo === "grupo" ? mapaGrupo(s.grupo || []) : modo === "setor" ? mapaSetor(s.alvo) : mapaPessoa(s.alvo, cob); copiar(assinar(mp.txt)); registrarCobranca(mp.rts, "mapa"); return; }
     if (a === "sair") { sair(); return; }
     if (a === "lembrar") { $("[data-irf=lembrete]")?.click(); return; }
     if (a === "lem-confirmar") {
