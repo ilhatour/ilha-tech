@@ -1,4 +1,4 @@
-// ALFY · Mapa de Rotas · Ilha Tech · v2.39.0 · 10/11/2026 · Painel de Ferro · 📣 Cobrar, cobranças contadas e tempo de rota aberta
+// ALFY · Mapa de Rotas · Ilha Tech · v2.40.0 · 11/11/2026 · Painel de Ferro · concluir com quem fez e como foi; filtro Parece concluída
 // Tudo passa pelas funções alfy_* do banco, sempre com a chave pessoal de quem está usando.
 // O banco decide o que cada pessoa vê; a tela só desenha o que voltou.
 // A IA e os comandos são pedidos numa fila (alfy.pedido) que o robô do Mac atende.
@@ -358,16 +358,26 @@ function qualidadeAoConcluir(rt) {
     let q = r.qualidade || "Como esperado";
     const c = document.createElement("div");
     c.className = "qconc"; c.setAttribute("role", "dialog"); c.setAttribute("aria-label", "Qualidade da entrega");
-    c.innerHTML = `<div class="qc-caixa"><b>Como foi a entrega?</b><small>${esc(nomeRota(rt))} · ${esc(r.titulo)}</small><div class="qc-ops">${QUALIDADES.map(([v, n]) => `<button type="button" data-q="${v}" class="${v === q ? "on" : ""} ${v === "Não realizada" ? "nr" : ""}">${n}</button>`).join("")}</div><div class="qc-pe"><button type="button" class="mini" data-qx="1">Cancelar</button><button type="button" class="cta" data-qok="1">✓ Concluir</button></div></div>`;
+    c.innerHTML = `<div class="qc-caixa"><b>Como foi a entrega?</b><small>${esc(nomeRota(rt))} · ${esc(r.titulo)}</small><div class="qc-ops">${QUALIDADES.map(([v, n]) => `<button type="button" data-q="${v}" class="${v === q ? "on" : ""} ${v === "Não realizada" ? "nr" : ""}">${n}</button>`).join("")}</div>
+      <details class="qc-mais"><summary>Quem fez e como foi (opcional)</summary><label>Quem fez<select id="qc-quem">${opc(gente().sort((x, y) => x[1].localeCompare(y[1])), r.responsavel_id || "", "Sem dono")}</select></label><label>Como foi<textarea id="qc-como" rows="2" placeholder="Ex.: o Luan resolveu por telefone com o fornecedor"></textarea></label></details>
+      <div class="qc-pe"><button type="button" class="mini" data-qx="1">Cancelar</button><button type="button" class="cta" data-qok="1">✓ Concluir</button></div></div>`;
     const fim = async (sim) => {
-      c.remove(); document.removeEventListener("keydown", tecla, true);
-      if (!sim) return ok(false);
-      if (q !== r.qualidade) { try { await chamar("alfy_editar", { p_rt: rt, p_campos: { qualidade: q } }); } catch (e) { falhou(e); } }
+      document.removeEventListener("keydown", tecla, true);
+      if (!sim) { c.remove(); return ok(false); }
+      setTimeout(() => c.remove(), 0);
+      const quem = $("#qc-quem")?.value || "", como = ($("#qc-como")?.value || "").trim(), campos = {};
+      if (q !== r.qualidade) campos.qualidade = q;
+      if (quem && quem !== r.responsavel_id) campos.responsavel_id = quem;   // quem fez leva os pontos
+      try {
+        if (Object.keys(campos).length) await chamar("alfy_editar", { p_rt: rt, p_campos: campos });
+        if (como) await chamar("alfy_comentar", { p_rt: rt, p_texto: `✓ Como foi concluída${campos.responsavel_id ? ` (feita por ${curto(nomeDe(quem))})` : ""}: ${como}`, p_tipo: "comentario" });
+      } catch (e) { falhou(e); }
       ok(true);
     };
     const marca = (v) => { q = v; c.querySelectorAll("[data-q]").forEach((b) => b.classList.toggle("on", b.dataset.q === v)); };
-    const tecla = (e) => { e.stopPropagation(); if (e.key === "Escape") { e.preventDefault(); fim(false); } else if (e.key === "Enter") { e.preventDefault(); fim(true); } else if ("1234".includes(e.key) && e.key) marca(QUALIDADES[+e.key - 1][0]); };
-    c.addEventListener("click", (e) => { e.stopPropagation(); const b = e.target.closest("button"); if (e.target === c || b?.dataset.qx) fim(false); else if (b?.dataset.qok) fim(true); else if (b?.dataset.q) marca(b.dataset.q); });
+    const tecla = (e) => { e.stopPropagation(); const campo = /^(TEXTAREA|SELECT|INPUT)$/.test(e.target.tagName);
+      if (e.key === "Escape") { e.preventDefault(); fim(false); } else if (e.key === "Enter" && (!campo || e.metaKey || e.ctrlKey)) { e.preventDefault(); fim(true); } else if (!campo && "1234".includes(e.key) && e.key) marca(QUALIDADES[+e.key - 1][0]); };
+    c.addEventListener("click", (e) => { e.stopPropagation(); const b = e.target.closest("button"); if (e.target.closest("summary")) e.target.closest("details").open || setTimeout(() => $("#qc-como")?.focus(), 30); if (e.target === c || b?.dataset.qx) fim(false); else if (b?.dataset.qok) fim(true); else if (b?.dataset.q) marca(b.dataset.q); });
     document.addEventListener("keydown", tecla, true);
     document.body.appendChild(c); c.querySelector("[data-qok]").focus();
   });
@@ -475,12 +485,13 @@ const RR_FILTROS = {
   prio: ["Prioridade", [["P1", "🚨 P1"], ["P2", "⚡ P2"], ["P3", "⏳ P3"], ["P4", "💤 P4"], ["P5", "⏸️ P5"], ["sem", "Sem prioridade"]]],
   st: ["Etapa", [["rota", "🔴 Não iniciada"], ["andamento", "🟡 Em andamento"], ["pausada", "🟠 Pausada"]]],
   prazo: ["Prazo", [["venc", "Vencidas"], ["hoje", "Vence hoje"], ["semana", "Nos próximos 7 dias"], ["sem", "Sem prazo"]]],
+  fim: ["ALFY", [["sim", "🏁 Parece concluída"]]],   // virar a roda: o que o ALFY leu como já feito, para concluir em sequência
 };
 const rrF = () => { const f = s.rr.f || (s.rr.f = { prio: [], st: [], prazo: [] }); for (const k in RR_FILTROS) f[k] = f[k] || []; return f; };
 function rrPassaFiltro(x) {
   const f = rrF(), pz = !x.prazo || pcod(x.prioridade) === "P5" ? "sem" : dias(x.prazo) < 0 ? "venc" : dias(x.prazo) === 0 ? "hoje" : dias(x.prazo) <= 7 ? "semana" : "depois";
   return (!f.prio.length || f.prio.includes(pcod(x.prioridade) || "sem")) && (!f.st.length || f.st.includes(x.status))
-    && (!f.prazo.length || f.prazo.includes(pz) || (f.prazo.includes("semana") && (pz === "hoje")));
+    && (!f.prazo.length || f.prazo.includes(pz) || (f.prazo.includes("semana") && (pz === "hoje"))) && (!f.fim.length || !!s.rr.itens[x.rt]?.concluida);
 }
 const rrNFiltros = () => Object.values(rrF()).reduce((n, l) => n + l.length, 0) + (s.pessoa ? 1 : 0) + (s.frente ? 1 : 0);
 function rrFiltrosHTML() {   // filtros à mostra: grupos curtos numa linha (no celular, desliza para o lado)
@@ -490,6 +501,7 @@ function rrFiltrosHTML() {   // filtros à mostra: grupos curtos numa linha (no 
   return `<div class="rrf2">${grupo("prio", "Prioridade", RR_FILTROS.prio[1].map(([v]) => [v, curto_[v]]))}
     ${grupo("st", "Etapa", [["rota", "🔴 Não iniciada"], ["andamento", "🟡 Andamento"], ["pausada", "🟠 Pausada"]])}
     ${grupo("prazo", "Prazo", [["venc", "Vencidas"], ["hoje", "Hoje"], ["semana", "7 dias"], ["sem", "Sem prazo"]])}
+    ${(() => { const n = (M.rotas || []).filter((r) => ABERTOS.includes(r.status) && s.rr.itens[r.rt]?.concluida).length; return n || f.fim.length ? grupo("fim", "ALFY", [["sim", `🏁 Parece concluída · ${n}`]]) : ""; })()}
     <div class="rrf2-g"><select class="rrf2-sel ${s.pessoa ? "on" : ""}" data-rrsel="pessoa" aria-label="Pessoa">${opc([["semdono", "👻 Sem dono"], ...pes], s.pessoa, "👤 Todas as pessoas")}</select><select class="rrf2-sel ${s.frente ? "on" : ""}" data-rrsel="frente" aria-label="Frente">${opc(FRENTES.map((x) => [x, frenteCurta(x)]), s.frente, "🗺️ Todas as frentes")}</select></div>
     ${n ? `<button type="button" class="lk rrf2-limpa" data-acao="rr-filtros-limpar">Limpar ${n}</button>` : ""}</div>`;
 }
