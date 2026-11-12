@@ -1549,3 +1549,6 @@ button.cobr-l{cursor:pointer}button.cobr-l:hover{color:var(--texto)}
 .qc-mais label{display:grid;gap:4px;font-size:14px;color:var(--aco);margin-bottom:8px}
 .qc-mais select,.qc-mais textarea{width:100%;background:var(--ferro-2);border:1px solid var(--linha);border-radius:8px;padding:9px 10px;font-size:16px;color:var(--texto)}
 .qc-caixa{max-height:calc(100vh - 32px);overflow:auto}
+/* 2.41 sugestão: Já resolvido / Não vira rota */
+.z7sa{flex-wrap:wrap}
+.z7sa .lk{text-align:center}
