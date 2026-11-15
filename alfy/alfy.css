@@ -1601,3 +1601,8 @@ textarea.melhorando{opacity:.6;border-color:var(--lilas)!important}
 .dd4.cm>summary span{color:var(--amber)}
 .ac.so-icone span{display:none}
 @media (max-width:700px){.dd4-m{position:fixed;left:12px;right:12px;bottom:76px;min-width:0}}
+/* 2.51 achar pessoa digitando */
+.pm-busca,.pes-busca{width:100%;background:var(--ferro-2);border:1px solid var(--linha);border-radius:8px;padding:8px 10px;font-size:15px;color:var(--texto);margin-bottom:6px}
+.pm-busca:focus,.pes-busca:focus{border-color:var(--turq);outline:none}
+.pm-pes{display:flex;flex-wrap:wrap;gap:6px;max-height:240px;overflow:auto}
+.qc-mais .pes-busca{margin:2px 0 4px}

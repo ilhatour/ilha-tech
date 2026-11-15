@@ -1,4 +1,4 @@
-// ALFY · Mapa de Rotas · Ilha Tech · v2.50.0 · 15/11/2026 · Painel de Ferro · 🗂️ levar a rota para uma pauta pela Passagem
+// ALFY · Mapa de Rotas · Ilha Tech · v2.51.0 · 15/11/2026 · Painel de Ferro · 🔎 achar pessoa digitando o nome
 // Tudo passa pelas funções alfy_* do banco, sempre com a chave pessoal de quem está usando.
 // O banco decide o que cada pessoa vê; a tela só desenha o que voltou.
 // A IA e os comandos são pedidos numa fila (alfy.pedido) que o robô do Mac atende.
@@ -159,6 +159,14 @@ const opc = (lista, atual, vazio) => (vazio !== undefined ? `<option value="">${
 const gente = () => (M?.pessoas || []).filter((p) => p.nome).map((p) => [p.id, p.nome]);
 // escolher pessoa: primeiro quem está com rota aberta, depois a equipe toda da Nave ID (no select dá para digitar o nome)
 const comRota = () => new Set((M?.rotas || []).filter((r) => ABERTOS.includes(r.status)).flatMap((r) => [r.responsavel_id, r.co_responsavel_id]).filter(Boolean));
+const semAc = (t) => String(t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+// achar pessoa digitando: com rota aberta primeiro; o nome completo da Nave também conta (ex.: "riguetti")
+function pessoasQue(q) {
+  const cr = comRota(), w = semAc(q).trim().split(/\s+/).filter(Boolean);
+  return (M?.pessoas || []).filter((p) => p.nome && w.every((x) => semAc(p.nome + " " + (p.nome_completo || "")).includes(x)))
+    .sort((a, b) => (cr.has(b.id) - cr.has(a.id)) || a.nome.localeCompare(b.nome));
+}
+const pesBuscaHTML = (ph) => `<input class="pes-busca" type="search" autocomplete="off" placeholder="${ph || "🔎 Digite o nome"}" aria-label="Procurar pessoa">`;
 function genteOpc(atual, vazio) {
   const cr = comRota(), l = gente().sort((x, y) => x[1].localeCompare(y[1])), a = l.filter(([id]) => cr.has(id)), b = l.filter(([id]) => !cr.has(id));
   const op = ([v, n]) => `<option value="${esc(v)}" ${v === atual ? "selected" : ""}>${esc(n)}</option>`;
@@ -371,7 +379,7 @@ function qualidadeAoConcluir(rt) {
     const c = document.createElement("div");
     c.className = "qconc"; c.setAttribute("role", "dialog"); c.setAttribute("aria-label", "Qualidade da entrega");
     c.innerHTML = `<div class="qc-caixa"><b>Como foi a entrega?</b><small>${esc(nomeRota(rt))} · ${esc(r.titulo)}</small><div class="qc-ops">${QUALIDADES.map(([v, n]) => `<button type="button" data-q="${v}" class="${v === q ? "on" : ""} ${v === "Não realizada" ? "nr" : ""}">${n}</button>`).join("")}</div>
-      <details class="qc-mais"><summary>Quem fez e como foi (opcional)</summary><label>Quem fez<select id="qc-quem">${genteOpc(r.responsavel_id || "", "Sem dono")}</select></label><label>Como foi<textarea id="qc-como" rows="2" placeholder="Ex.: o Luan resolveu por telefone com o fornecedor"></textarea></label></details>
+      <details class="qc-mais"><summary>Quem fez e como foi (opcional)</summary><label>Quem fez${pesBuscaHTML()}<select id="qc-quem">${genteOpc(r.responsavel_id || "", "Sem dono")}</select></label><label>Como foi<textarea id="qc-como" rows="2" placeholder="Ex.: o Luan resolveu por telefone com o fornecedor"></textarea></label></details>
       <div class="qc-pe"><button type="button" class="mini" data-qx="1">Cancelar</button><button type="button" class="cta" data-qok="1">✓ Concluir</button></div></div>`;
     const fim = async (sim) => {
       document.removeEventListener("keydown", tecla, true);
@@ -715,7 +723,8 @@ function pilMenu(r) {
     + `<p class="pm-nota">A prioridade acerta o prazo sozinha (P1 24 h, P2 3 dias, P3 7 dias, P4 30 dias, P5 sem prazo). Depois dá para mudar o prazo.</p>`;
   if (k === "prazo") corpo = [["0", "Hoje"], ["1", "Amanhã"], ["3", "Em 3 dias"], ["7", "Em 7 dias"], ["30", "Em 30 dias"]].map(([n, nm]) => b(dd(+n), `${nm} <small>${ddmm(dd(+n) + "T12:00:00-03:00")}</small>`, r.prazo && dia(r.prazo) === dd(+n))).join("")
     + `<label class="pm-data">Outra data<input type="date" data-pildata="${r.rt}" value="${r.prazo ? dia(r.prazo) : ""}"></label>${r.prazo ? b("", "Tirar o prazo", false) : ""}`;
-  if (k === "dono") corpo = `<select class="pm-sel" data-pildono="${r.rt}">${genteOpc(r.responsavel_id || "", "Sem dono")}</select>`;
+  if (k === "dono") { const lista = (q) => { const l = pessoasQue(q).slice(0, q ? 12 : 8); return l.map((p) => b(p.id, esc(p.nome) + (comRota().has(p.id) ? "" : ' <small style="color:var(--aco)">sem rota</small>'), r.responsavel_id === p.id)).join("") + (q ? "" : b("", "Sem dono", !r.responsavel_id)) || '<p class="nota" style="margin:4px 0">Ninguém com esse nome.</p>'; };
+    s.pesLista = lista; corpo = `<input class="pm-busca" data-pesbusca="1" type="search" autocomplete="off" placeholder="🔎 Digite o nome de quem faz" aria-label="Procurar pessoa"><div class="pm-pes">${lista("")}</div>`; }
   const tit = { st: "Etapa", prio: "Prioridade", prazo: "Prazo de entrega", dono: "Quem faz" }[k];
   return `<div class="pmenu" role="dialog" aria-label="${tit}"><div class="pm-cab"><b>${tit}</b><button type="button" class="pm-x" data-pilfecha="1" aria-label="Fechar">✕</button></div><div class="pm-ops">${corpo}</div></div>`;
 }
@@ -1500,7 +1509,7 @@ function folha() {
         <form class="escrever4" id="f-coment"><textarea id="t-coment" rows="2" placeholder="${comando() ? "Conte o que aconteceu ou o próximo passo (o ALFY atualiza a rota), ou peça algo ao ALFY" : "Conte como está ou o próximo passo. O ALFY atualiza a rota."}">${esc(s.rascunhoRota || "")}</textarea>
           <div class="acoes4b"><button class="btn turq peq" type="submit" data-tipoc="comentario">💬 Comentar</button>${comando() ? `<button class="lk" type="button" data-acao="coment-alfy">🐙 Pedir ao ALFY</button>` : ""}${pode ? `<button class="lk" type="submit" data-tipoc="orientacao">🧭 Dar como orientação</button>` : ""}</div></form></section>
       <section class="secao3" id="f-detalhes"><div class="f4h"><h3>Detalhes</h3>${comando() ? `<button class="anel4" type="button" data-acao="det-alfy" title="O ALFY preenche os detalhes com o que entendeu da rota">🐙<span>Preencher</span></button>` : ""}</div><div class="det3 ${pode ? "" : "so-leitura"}">
-        <div class="grupo3"><small>Quem</small>${linhaD("🗺️", "Frente", `<select data-prop="frente">${opc(FRENTES.map((f) => [f, frenteCurta(f)]), r.frente, "Sem frente")}</select>`)}${linhaD("👤", "Responsável", `<select data-prop="responsavel_id">${genteOpc(r.responsavel_id, "Sem dono")}</select>`)}${linhaD("🤝", "Junto com", `<select data-prop="co_responsavel_id">${genteOpc(r.co_responsavel_id, "Ninguém")}</select>`)}${comando() ? `<div class="lin3"><span class="ic">${r.sensivel ? "🔒" : "👥"}</span><span class="rot">Quem vê</span><span class="val"><button class="chip" type="button" data-acao="sensivel" aria-pressed="${!!r.sensivel}">${r.sensivel ? "Só eu" : "Equipe da rota"}</button></span></div>` : ""}${ger ? `<p class="nota3">Gerente da frente: ${esc(ger.nome)}</p>` : ""}</div>
+        <div class="grupo3"><small>Quem</small>${linhaD("🗺️", "Frente", `<select data-prop="frente">${opc(FRENTES.map((f) => [f, frenteCurta(f)]), r.frente, "Sem frente")}</select>`)}${linhaD("👤", "Responsável", `${pesBuscaHTML()}<select data-prop="responsavel_id">${genteOpc(r.responsavel_id, "Sem dono")}</select>`)}${linhaD("🤝", "Junto com", `${pesBuscaHTML()}<select data-prop="co_responsavel_id">${genteOpc(r.co_responsavel_id, "Ninguém")}</select>`)}${comando() ? `<div class="lin3"><span class="ic">${r.sensivel ? "🔒" : "👥"}</span><span class="rot">Quem vê</span><span class="val"><button class="chip" type="button" data-acao="sensivel" aria-pressed="${!!r.sensivel}">${r.sensivel ? "Só eu" : "Equipe da rota"}</button></span></div>` : ""}${ger ? `<p class="nota3">Gerente da frente: ${esc(ger.nome)}</p>` : ""}</div>
         <div class="grupo3"><small>Quando e quanto</small>${linhaD("⚡", "Prioridade", `<select data-prop="prioridade">${opc(PRIORIDADES, r.prioridade, "Sem prioridade")}</select>`)}${linhaD("📅", "Prazo", `<input type="date" data-prop="prazo" value="${dia(r.prazo)}">`)}${linhaD("🔁", "Repete", `<select data-prop="repete">${opc([["", "Pontual"], ["diaria", "Diária"], ["semanal", "Semanal"], ["quinzenal", "Quinzenal"], ["mensal", "Mensal"], ["sob_demanda", "Quando precisar"]], r.repete || "")}</select>`)}
           ${r.repete === "semanal" ? `<div class="dias-sem" style="padding:0 12px 10px">${DIAS_SEM.map((n, k) => `<label><input type="checkbox" data-repetedia="1" value="${k + 1}" ${(r.repete_dias || []).includes(k + 1) ? "checked" : ""}>${n}</label>`).join("")}</div>` : ""}
           ${linhaD("💰", "Custo", `<input data-bud="1" value="${esc(r.budget_valor || "")}" placeholder="sem custo">`)}
@@ -1602,8 +1611,8 @@ function novaRota(pre = {}) {
       ${comando() ? `<label class="chip ia-org" style="cursor:pointer;align-self:flex-start;white-space:normal"><input type="checkbox" id="n-ia" ${pre.semIA ? "" : "checked"} style="margin-right:6px">🐙 O ALFY organiza: arruma o título e o O que fazer, preenche Instruções e Resultado e acerta dono, frente, prioridade e prazo pelo que você escreveu. Desmarque para salvar exatamente como está.</label>` : ""}
       <div class="form-linha"><label><p class="rotulo">🔁 Pontual ou recorrente?</p><select id="n-rep" class="busca" style="width:100%">${opc([["", "Pontual (uma vez só)"], ["diaria", "🔁 Diária"], ["semanal", "🔁 Semanal"], ["quinzenal", "🔁 Quinzenal"], ["mensal", "🔁 Mensal"], ["sob_demanda", "🔁 Quando precisar (reativo com um toque)"]], pre.repete || "")}</select></label><div id="n-dias" hidden><p class="rotulo">Em quais dias</p><div class="dias-sem">${DIAS_SEM.map((n, i) => `<label><input type="checkbox" class="n-dia-sem" value="${i + 1}">${n}</label>`).join("")}</div></div></div>
       ${manda() ? `<div class="cadeia"><div class="elo"><small>🗺️ Frente</small><select id="n-frente">${opc(FRENTES.map((f) => [f, frenteCurta(f)]), pre.frente || (eu().frentes || [])[0] || "", "Sem frente")}</select></div><span class="seta">›</span>
-        <div class="elo"><small>👤 Responsável</small><select id="n-resp">${genteOpc(pre.responsavel_id || eu().id)}</select></div><span class="seta">›</span>
-        <div class="elo"><small>🤝 Co-responsável</small><select id="n-co">${genteOpc("", "Ninguém")}</select></div></div>
+        <div class="elo"><small>👤 Responsável</small>${pesBuscaHTML()}<select id="n-resp">${genteOpc(pre.responsavel_id || eu().id)}</select></div><span class="seta">›</span>
+        <div class="elo"><small>🤝 Co-responsável</small>${pesBuscaHTML()}<select id="n-co">${genteOpc("", "Ninguém")}</select></div></div>
       <div class="props"><div class="dado"><small>Prioridade</small><select id="n-prio">${opc(PRIORIDADES, pre.prioridade || "⏳ P3 · 7 dias")}</select></div><div class="dado"><small>Prazo</small><input id="n-prazo" type="date" value="${esc(pre.prazo || "")}"></div><div class="dado"><small>Vai para</small><select id="n-st">${opc([["rota", "Rotas"], ["ideia", "Ideias"]], st)}</select></div></div>${comando() ? '<label class="chip" style="cursor:pointer;align-self:flex-start"><input type="checkbox" id="n-sens" style="margin-right:6px">🔒 Só eu vejo (processo, saúde, sócio, assunto sobre gerente)</label>' : ""}` : `<div class="props"><div class="dado"><small>Prioridade</small><select id="n-prio">${opc(PRIORIDADES, pre.prioridade || "⏳ P3 · 7 dias")}</select></div><div class="dado"><small>Prazo</small><input id="n-prazo" type="date" value="${esc(pre.prazo || "")}"></div></div>
         <p class="nota" style="margin:0">A rota é sua: aparece na sua lista e na sua agenda. Se escolher a prioridade e deixar o prazo vazio, o prazo sai sozinho (P1 amanhã, P2 em 3 dias, P3 em 7 dias).</p>`}
       <label class="chip" style="cursor:pointer;align-self:flex-start;white-space:normal;max-width:100%"><input type="checkbox" id="n-comp" ${pre.compromisso ? "checked" : ""} style="margin-right:6px">📅 É compromisso com dia e hora (vai para a agenda, não entra no Mapa de Rotas)</label>
@@ -2193,6 +2202,26 @@ async function usarItemDespejo(i) {
 }
 
 // ---------------------------------------------------------------- eventos
+// procurar pessoa digitando: na pílula "Quem faz" a lista se refaz; nos outros campos o select abaixo fica só com quem bate
+document.addEventListener("input", (e) => {
+  const t = e.target;
+  if (t.dataset?.pesbusca && s.pesLista) { const box = t.parentElement.querySelector(".pm-pes"); if (box) box.innerHTML = s.pesLista(t.value); return; }
+  if (t.classList?.contains("pes-busca")) {
+    const sel = t.nextElementSibling; if (!sel || sel.tagName !== "SELECT") return;
+    if (!sel.dataset.orig) sel.dataset.orig = sel.innerHTML;
+    const q = semAc(t.value).trim(), tmp = document.createElement("select"); tmp.innerHTML = sel.dataset.orig;
+    if (q) { [...tmp.querySelectorAll("option")].forEach((o) => { if (o.value && !q.split(/\s+/).every((x) => semAc(o.textContent + " " + ((M?.pessoas || []).find((p) => p.id === o.value)?.nome_completo || "")).includes(x))) o.remove(); });
+      tmp.querySelectorAll("optgroup").forEach((g) => { if (!g.children.length) g.remove(); }); }
+    const v = sel.value; sel.innerHTML = tmp.innerHTML; if ([...sel.options].some((o) => o.value === v)) sel.value = v;
+    const ops = [...sel.options].filter((o) => o.value); if (q && ops.length === 1) sel.value = ops[0].value;
+  }
+}, true);
+document.addEventListener("keydown", (e) => {   // Enter no campo de busca: escolhe a primeira pessoa que bate
+  const t = e.target; if (e.key !== "Enter") return;
+  if (t.dataset?.pesbusca) { e.preventDefault(); e.stopPropagation(); t.parentElement.querySelector(".pm-pes .pm-op")?.click(); return; }
+  if (t.classList?.contains("pes-busca")) { e.preventDefault(); e.stopPropagation(); const sel = t.nextElementSibling, o = [...(sel?.options || [])].find((x) => x.value);
+    if (o) { sel.value = o.value; sel.dispatchEvent(new Event("change", { bubbles: true })); } }
+}, true);
 // grupos da barra (🐙 ALFY · 📤 Mandar · ⋯ Rota): um aberto por vez; fecha ao escolher ou clicar fora
 document.addEventListener("click", (e) => {
   const aberto = e.target.closest("details.dd4");
@@ -2277,7 +2306,7 @@ document.addEventListener("click", async (e) => {
     if (d.zapir) { document.getElementById(d.zapir)?.scrollIntoView({ behavior: "smooth", block: "start" }); return; }
     if (d.rrf) { const f = rrF(), l = f[d.rrf]; f[d.rrf] = l.includes(d.rrfv) ? l.filter((x) => x !== d.rrfv) : [...l, d.rrfv]; s.rr.foco = null; rrSalvar(); render(); return; }
     if (d.rrftira) { s[d.rrftira] = ""; s.rr.foco = null; render(); return; }
-    if (d.pil) { s.pil = s.pil?.rt === d.pilrt && s.pil?.k === d.pil ? null : { rt: d.pilrt, k: d.pil }; if (s.aberta === d.pilrt) refolha(); render(); return; }
+    if (d.pil) { s.pil = s.pil?.rt === d.pilrt && s.pil?.k === d.pil ? null : { rt: d.pilrt, k: d.pil }; if (s.aberta === d.pilrt) refolha(); render(); if (s.pil?.k === "dono" && innerWidth > 700) setTimeout(() => document.querySelector(".pm-busca")?.focus(), 30); return; }
     if (d.pilfecha) { const rt = s.pil?.rt; s.pil = null; if (s.aberta === rt) refolha(); render(); return; }
     if (d.pilset) { await pilSalvar(d.pilrt, d.pilset, d.pilv); return; }
     if (d.cm) { cmCaixa(d.cm); return; }
