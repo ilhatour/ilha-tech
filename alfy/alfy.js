@@ -1,4 +1,4 @@
-// ALFY · Mapa de Rotas · Ilha Tech · v2.46.0 · 📡 Feed ao vivo do Miguel (✓ Já vi / 🙈 Não preciso) · 15/11/2026 · Painel de Ferro · Placar só com quem tem rota; escolher pessoa com a equipe toda
+// ALFY · Mapa de Rotas · Ilha Tech · v2.46.1 · 15/11/2026 · Painel de Ferro · 🦜 Contramestre ligado de verdade (modo equipe)
 // Tudo passa pelas funções alfy_* do banco, sempre com a chave pessoal de quem está usando.
 // O banco decide o que cada pessoa vê; a tela só desenha o que voltou.
 // A IA e os comandos são pedidos numa fila (alfy.pedido) que o robô do Mac atende.
@@ -962,7 +962,7 @@ function cmCaixa(rt, tipo0) {   // escolher o que mandar, conferir o texto e man
   const r = rotaDe(rt) || (s.cartao?.rt === rt ? s.cartao : null); if (!r) return;
   if (!r.responsavel_id) { aviso("Esta rota está sem dono: escolha quem faz antes de mandar", true); return; }
   let tipo = tipo0 || "push", destino = "tatico";
-  if (!s.cmDest) chamar("alfy_cm_destinos", {}).then((d) => { s.cmDest = d || {}; if (document.body.contains(c)) desenha($("#cm-livre")?.value); }).catch(() => {});
+  chamar("alfy_cm_destinos", {}).then((d) => { s.cmDest = d || {}; if (document.body.contains(c)) desenha($("#cm-livre")?.value); }).catch(() => {});
   const c = document.createElement("div");
   c.className = "qconc cmcx"; c.setAttribute("role", "dialog"); c.setAttribute("aria-label", "Mandar pelo Contramestre");
   const ops = [["push", "🔔 Push (andamento)"], ["rota", "📋 A rota"], ["livre", "✍️ Recado"]];
@@ -972,7 +972,7 @@ function cmCaixa(rt, tipo0) {   // escolher o que mandar, conferir o texto e man
       <small class="cm-onde">${destino === "tatico" ? (s.cmDest?.[r.responsavel_id] ? "Grupo: " + esc(s.cmDest[r.responsavel_id]) : s.cmDest ? "⚠️ Esta pessoa ainda não tem grupo tático cadastrado" : "") : "Só quando você quiser: vai direto para o WhatsApp da pessoa."}</small>
       ${tipo === "livre" ? `<textarea id="cm-livre" rows="3" placeholder="O que o Contramestre deve dizer">${esc(livre || "")}</textarea>` : ""}
       <pre class="cm-prev" id="cm-prev"></pre>
-      <p class="cm-modo">🧪 Modo teste: chega no seu WhatsApp, pelo número do Contramestre, dizendo para quem e onde iria.</p>
+      <p class="cm-modo">${s.cmDest?._modo === "equipe" ? "🦜 Vai de verdade, pelo número do Contramestre." : "🧪 Modo teste: chega no seu WhatsApp, pelo número do Contramestre, dizendo para quem e onde iria."}</p>
       <div class="qc-pe"><button type="button" class="mini" data-qx="1">Cancelar</button><button type="button" class="cta" data-cmok="1">🦜 Mandar</button></div></div>`;
     const prev = () => { $("#cm-prev").textContent = cmTexto(tipo, r, $("#cm-livre")?.value || ""); }; prev(); $("#cm-livre")?.addEventListener("input", prev); $("#cm-livre")?.focus(); };
   const fecha = () => { c.remove(); document.removeEventListener("keydown", tecla, true); };
