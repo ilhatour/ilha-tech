@@ -1568,3 +1568,20 @@ button.cobr-l{cursor:pointer}button.cobr-l:hover{color:var(--texto)}
 .cmg{border-left:1px solid var(--linha);padding-left:10px;align-items:center}
 .cmg-r{font-size:13px;color:var(--amber);font-weight:600;white-space:nowrap}
 @media (max-width:700px){.cmg{border-left:0;padding-left:0;border-top:1px solid var(--linha);padding-top:6px}}
+
+/* 📡 Feed ao vivo (v2.46, só comando): postagens; importante com fio âmbar; vistas apagadas */
+.fv-fil{display:flex;gap:6px;align-items:center;flex-basis:100%;overflow-x:auto;scrollbar-width:none}
+.fv-lista{display:flex;flex-direction:column;max-width:860px}
+.fv-lista .dia{font-family:var(--fd);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--aco-2);margin:16px 0 4px}
+.fv{display:grid;grid-template-columns:32px minmax(0,1fr) auto;gap:12px;align-items:start;padding:12px 4px 12px 10px;border-bottom:1px solid var(--linha);border-left:2px solid transparent}
+.fv.imp{border-left-color:var(--amber)}
+.fv.feito{opacity:.55}
+.fv-ic{width:32px;height:32px;border-radius:9px;display:grid;place-items:center;background:var(--ferro-2);border:1px solid var(--linha);font-size:15px}
+.fv-l1{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline;font-size:13px;color:var(--aco-2)}
+.fv-l1 b{color:var(--branco);font-weight:600}
+.fv-l1 em{font-style:normal;color:var(--amber);font-weight:600}
+.fv-t{display:block;margin-top:2px;font-size:15px;color:var(--branco);font-weight:600}
+.fv-c p{margin:3px 0 0;font-size:14px;color:var(--texto);white-space:pre-line;overflow-wrap:anywhere}
+.fv-rota{margin-top:6px;background:none;border:0;padding:0;color:var(--turq);font:inherit;font-size:13px;cursor:pointer}
+.fv-ac{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+@media (max-width:640px){.fv{grid-template-columns:28px minmax(0,1fr)}.fv-ic{width:28px;height:28px}.fv-ac{grid-column:2;justify-content:flex-start}}

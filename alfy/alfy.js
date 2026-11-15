@@ -1,4 +1,4 @@
-// ALFY · Mapa de Rotas · Ilha Tech · v2.45.1 · 15/11/2026 · Painel de Ferro · Placar só com quem tem rota; escolher pessoa com a equipe toda
+// ALFY · Mapa de Rotas · Ilha Tech · v2.46.0 · 📡 Feed ao vivo do Miguel (✓ Já vi / 🙈 Não preciso) · 15/11/2026 · Painel de Ferro · Placar só com quem tem rota; escolher pessoa com a equipe toda
 // Tudo passa pelas funções alfy_* do banco, sempre com a chave pessoal de quem está usando.
 // O banco decide o que cada pessoa vê; a tela só desenha o que voltou.
 // A IA e os comandos são pedidos numa fila (alfy.pedido) que o robô do Mac atende.
@@ -170,7 +170,7 @@ function navItens() {
   const abertas = (M?.rotas || []).filter((r) => ABERTOS.includes(r.status) && !ehRotina(r)).length;
   const rotinasAb = (M?.rotas || []).filter((r) => ABERTOS.includes(r.status) && ehRotina(r) && (comando() || r.responsavel_id === eu().id || r.co_responsavel_id === eu().id)).length;
   const pautas = (M?.pautas || []).filter((p) => p.status === "aberta").length;
-  const it = [["rotas", "Rotas", IC.rotas, abertas], ["rotinas", "Rotinas", IC.rotinas, rotinasAb || ""], ["agenda", "Agenda", IC.agenda, ""], ["feed", "Feed", IC.feed, ""], ["pautas", "Pautas", IC.pautas, pautas || ""], ["placar", "Placar", IC.placar, ""]];
+  const it = [["rotas", "Rotas", IC.rotas, abertas], ["rotinas", "Rotinas", IC.rotinas, rotinasAb || ""], ["agenda", "Agenda", IC.agenda, ""], ["feed", "Feed", IC.feed, comando() ? (s.posts?.abertos || "") : ""], ["pautas", "Pautas", IC.pautas, pautas || ""], ["placar", "Placar", IC.placar, ""]];
   if (cuidaPessoas()) it.push(["equipe", "Equipe", IC.eu, (s.fichas || []).filter((f) => f.status === "pendente").length || ""]);
   if (comando()) it.push(["zap", "WhatsApp", IC.whatsapp, (s.zap?.itens || []).filter((z) => z.precisa && !z.visto).length || ""]);
   if (comando()) it.push(["comandos", "Comandos", IC.comandos, ""]);
@@ -210,8 +210,13 @@ function topo() {
     $("#alterna-cel").innerHTML = alt;
     fi.innerHTML = filtrosHTML(`<button class="chip alerta" type="button" id="f-venc" aria-pressed="${s.venc}">Só vencidas</button>` +
       (s.vista === "lista" ? `<select class="sel" id="f-agrupar" aria-label="Agrupar">${opc([["prioridade", "Por prioridade"], ["minha", "Minha ordem"], ["frente", "Por frente e pessoa"], ["prazo", "Por prazo"], ["aberta", "Mais tempo aberta"], ["cobradas", "Mais cobradas"]], s.agrupar)}</select>` : ""));
+  } else if (s.aba === "feed" && feedVivo()) {
+    l1.innerHTML = `<h1>Feed<small>ao vivo: tudo o que acontece</small></h1><span class="espaco"></span>${vivo}`;
+    $("#alterna-cel").innerHTML = "";
+    const x = s.posts || {};
+    fi.innerHTML = `<div class="fv-fil">${[["novas", `Novas${x.abertos ? " · " + x.abertos : ""}`], ["imp", `Importantes${x.importantes ? " · " + x.importantes : ""}`], ["vistas", "Já vistas"]].map(([k, n]) => `<button class="chip" type="button" data-fvf="${k}" aria-pressed="${s.fvF === k}">${n}</button>`).join("")}<span class="espaco"></span>${x.abertos ? `<button class="chip" type="button" data-fvtodos="1">✓ Vi tudo</button>` : ""}<button class="chip" type="button" data-fvantigo="1">Mexidas nas rotas</button></div>`;
   } else if (s.aba === "feed") {
-    l1.innerHTML = `<h1>Feed<small>últimas atualizações das rotas</small></h1><span class="espaco"></span>${vivo}`;
+    l1.innerHTML = `<h1>Feed<small>últimas atualizações das rotas</small></h1><span class="espaco"></span>${comando() ? `<button class="chip" type="button" data-fvantigo="0">📡 Ao vivo</button>` : ""}${vivo}`;
     $("#alterna-cel").innerHTML = "";
     const tipos = [["todos", "Tudo"], ["comentario", "Comentários"], ["orientacao", "Orientações"], ["whatsapp", "WhatsApp"], ["status", "Status"], ["editar", "Edições"], ["nova", "Rotas novas"], ["budget", "Budget"], ["pauta", "Pautas"]];
     fi.innerHTML = filtrosHTML() + `<div style="display:flex;gap:6px;overflow-x:auto;flex-basis:100%;scrollbar-width:none">${tipos.map(([k, n]) => `<button class="chip" type="button" data-ffeed="${k}" aria-pressed="${s.fFeed === k}">${n}</button>`).join("")}</div>`;
@@ -798,6 +803,44 @@ function vistaFeed() {
     const fala = ["comentario", "orientacao", "whatsapp"].includes(e.tipo);
     const verbo = { comentario: "comentou", orientacao: "deu uma orientação", whatsapp: "respondeu pelo WhatsApp" }[e.tipo];
     return cab + `<button type="button" class="ev" data-rt="${e.rt}"><span class="ic-ev">${EV_IC[e.tipo] || "•"}</span><span class="c"><span class="l1"><b>${esc(curto(e.quem))}</b> ${fala ? verbo : esc(evTexto(e))}</span>${fala ? `<p>${esc((e.texto || "").slice(0, 400))}</p>` : ""}<span class="rr">${esc(nomeRota(e.rt))}${r ? " · " + esc(r.titulo) + " · " + esc(frenteCurta(r.frente)) : ""}</span></span><small class="hh">${hhmm(e.em)}</small></button>`;
+  }).join("")}</div>`;
+}
+
+// ---------------------------------------------------------------- 📡 Feed ao vivo (só comando, v2.46 · 15/11): postagens de tudo o que acontece, ✓ Já vi / 🙈 Não preciso
+s.posts = null; s.fvF = "novas"; s.feedAntigo = false;
+const feedVivo = () => comando() && !s.feedAntigo;
+const POST_IC = { comentario: "💬", whatsapp: "📱", grupo: "👥", conversa: "👤", mm: "➕", sugestao: "🗺️", nova: "✨", status: "🔁", parece: "🏁", rastreio: "📡", resumo: "📰" };
+async function carregarPosts() {
+  if (!comando()) return false;
+  const x = await chamar("alfy_posts", { p_vistos: s.fvF === "vistas" }).catch(() => null);
+  s.postsEm = Date.now();
+  if (!x) return false;
+  const antes = s.posts, ja = new Set((antes?.posts || []).map((p) => p.id));
+  s.posts = x;
+  const imp = antes ? x.posts.filter((p) => p.importante && !p.visto_em && !p.ignorado_em && !ja.has(p.id)) : [];
+  if (imp.length) aviso(`📡 ${imp[0].titulo}${imp.length > 1 ? ` (e mais ${imp.length - 1})` : ""}`);
+  return !antes || antes.abertos !== x.abertos || antes.posts[0]?.id !== x.posts[0]?.id;
+}
+const quandoPost = (em) => (dia(em) === hojeDia() ? hhmm(em) : ddmm(em) + " " + hhmm(em));
+function vistaFeedVivo() {
+  const x = s.posts;
+  if (!x) return `<div class="carregando">Carregando o feed…</div>`;
+  const b = (s.busca || "").toLowerCase();
+  const l = x.posts.filter((p) => (s.fvF === "vistas" ? p.visto_em || p.ignorado_em : !p.visto_em && !p.ignorado_em) && (s.fvF !== "imp" || p.importante)
+    && (!b || [p.titulo, p.texto, p.onde, p.quem].join(" ").toLowerCase().includes(b)));
+  if (!l.length) return `<div class="vazio">${s.fvF === "vistas" ? "Nada visto nos últimos 14 dias." : "✓ Você está em dia. O que acontecer no WhatsApp, nos grupos e nas rotas aparece aqui na hora."}</div>`;
+  let d0 = "";
+  return `<div class="fv-lista">${l.map((p) => {
+    const d = dia(p.criado_em), cab = d !== d0 ? ((d0 = d), `<div class="dia">${d === hojeDia() ? "Hoje" : ddmm(p.criado_em)}</div>`) : "";
+    const feito = p.visto_em || p.ignorado_em;
+    return cab + `<article class="fv${p.importante ? " imp" : ""}${feito ? " feito" : ""}" data-post="${p.id}">
+      <span class="fv-ic" aria-hidden="true">${POST_IC[p.tipo] || "•"}</span>
+      <div class="fv-c"><div class="fv-l1">${p.quem ? `<b>${esc(curto(p.quem))}</b>` : ""}${p.onde ? `<span>${esc(p.onde)}</span>` : ""}<time>${quandoPost(p.criado_em)}</time>${p.importante ? `<em>${esc(p.motivo || "importante")}</em>` : ""}</div>
+        <b class="fv-t">${esc(p.titulo)}</b>${p.texto ? `<p>${esc(p.texto).slice(0, 700)}</p>` : ""}
+        ${p.rt ? `<button type="button" class="fv-rota" data-rt="${p.rt}">${esc(nomeRota(p.rt))} ›</button>` : ""}</div>
+      <div class="fv-ac">${feito ? `<button type="button" class="mini" data-fv="desfazer" data-pid="${p.id}">${p.ignorado_em ? "🙈 Sem preocupação" : "✓ Visto"} · desfazer</button>`
+        : `<button type="button" class="mini" data-fv="visto" data-pid="${p.id}" title="Já vi">✓ Já vi</button><button type="button" class="mini" data-fv="ignorar" data-pid="${p.id}" title="Não preciso me preocupar com isso: o ALFY aprende">🙈 Não preciso</button>`}</div>
+    </article>`;
   }).join("")}</div>`;
 }
 
@@ -1938,7 +1981,7 @@ function render() {
   if (!M) return;
   casca(); topo(); medidores(); bolhas();
   const c = $("#conteudo");
-  c.innerHTML = { rotinas: vistaAbaRotinas, placar: vistaPlacar, zap: () => `<div style="max-width:1080px">${zapHTML("")}</div>`, rotas: () => (s.vista === "rar" && comando() ? vistaRotaARota() : s.vista === "kanban" ? vistaKanban() : vistaLista()), feed: vistaFeed, agenda: vistaAgenda, equipe: vistaEquipe, pautas: vistaPautas, comandos: vistaComandos, eu: vistaEu }[s.aba]();
+  c.innerHTML = { rotinas: vistaAbaRotinas, placar: vistaPlacar, zap: () => `<div style="max-width:1080px">${zapHTML("")}</div>`, rotas: () => (s.vista === "rar" && comando() ? vistaRotaARota() : s.vista === "kanban" ? vistaKanban() : vistaLista()), feed: () => (feedVivo() ? vistaFeedVivo() : vistaFeed()), agenda: vistaAgenda, equipe: vistaEquipe, pautas: vistaPautas, comandos: vistaComandos, eu: vistaEu }[s.aba]();
   { const r = s.robo, semRobo = r?.visto_em && Date.now() - new Date(r.visto_em) > 5 * 60000, semIa = r && !r.ia_ok, semWa = r && r.wa_ok === false;   // aviso no topo: robô, IA ou leitura do WhatsApp fora
     if (comando() && (semRobo || semIa || semWa)) c.insertAdjacentHTML("afterbegin", `<div class="alerta-ia">${semRobo ? `💻 O robô do Mac está sem sinal desde ${quandoFoi(r.visto_em)}: os pedidos ao ALFY ficam na fila até ele voltar.` : semIa ? `🐙 A IA do ALFY está desligada: ${esc(r.ia_msg || "")} Os pedidos que falharam voltam sozinhos quando ligar.` : `📱 A leitura do WhatsApp do Mac falhou ${r.wa_falhas || 3} vezes seguidas${r.wa_em ? ` (última leitura boa ${quandoFoi(r.wa_em)})` : ""}. O robô já reiniciou e tenta de novo a cada 90 s. Se continuar: o WhatsApp do Mac está aberto? Apareceu janela pedindo permissão?`}</div>`); }
   if (s.aba === "rotas" && s.vista === "kanban") ligarKanban();
@@ -2092,6 +2135,22 @@ async function usarItemDespejo(i) {
 // ---------------------------------------------------------------- eventos
 document.addEventListener("click", async (e) => {
   if (e.target.id === "veu") { fechar(); return; }
+  const fvb = e.target.closest("[data-fv],[data-fvf],[data-fvtodos],[data-fvantigo]");
+  if (fvb) {
+    e.stopPropagation();
+    const d = fvb.dataset;
+    if (d.fvantigo !== undefined) { s.feedAntigo = d.fvantigo === "1"; if (s.feedAntigo) FEED = await chamar("alfy_feed", { p_limite: 150 }).catch(() => FEED); else await carregarPosts(); render(); return; }
+    if (d.fvf) { s.fvF = d.fvf; await carregarPosts(); render(); return; }
+    const ids = d.fvtodos ? (s.posts?.posts || []).filter((p) => !p.visto_em && !p.ignorado_em).map((p) => p.id) : [+d.pid];
+    if (!ids.length) return;
+    const acao = d.fvtodos ? "visto" : d.fv;
+    if (s.posts) for (const p of s.posts.posts) if (ids.includes(p.id)) { if (acao === "desfazer") { p.visto_em = p.ignorado_em = null; } else p[acao === "visto" ? "visto_em" : "ignorado_em"] = new Date().toISOString(); }   // sai da frente na hora
+    if (s.posts && acao !== "desfazer") s.posts.abertos = Math.max(0, s.posts.abertos - ids.length);
+    render();
+    await chamar("alfy_post_marcar", { p_ids: ids, p_acao: acao }).catch(() => aviso("Não consegui marcar agora. Tente de novo.", true));
+    if (acao === "ignorar") aviso("🙈 Anotado: o ALFY vai trazer menos disso");
+    await carregarPosts(); render(); return;
+  }
   const fl = e.target.closest("[data-fechalem]");
   if (fl && (e.target === fl || e.target.closest("button")?.dataset.fechalem)) { s.lembrando = false; refolha(); return; }
   const x = e.target.closest("[data-tiraopcao],[data-tiraanexo]");
@@ -2109,7 +2168,7 @@ document.addEventListener("click", async (e) => {
   b.classList.add("ocupado"); b.setAttribute("aria-busy", "true");
   try {
     if (b.id === "eu-av-cel") { s.aba = "eu"; render(); return; }
-    if (d.aba) { s.aba = d.aba; s.pauta = null; s.reuniao = null; if (d.aba === "agenda") { render(); await carregarAgenda(); } if (d.aba === "equipe") { s.aprovado = null; if ((s.naveBusca || "").trim()) s.naveRes = await chamar("alfy_nave_buscar", { p_q: s.naveBusca }).catch(() => null); s.fichas = await chamar("alfy_fichas"); if (comando()) s.equipe = await chamar("alfy_equipe"); } if (d.aba === "feed") FEED = await chamar("alfy_feed", { p_limite: 150 }); if (d.aba === "zap") await carregarZap(); if (d.aba === "placar") await carregarPlacar(); if (d.aba === "rotinas") await carregarRotinas(); if (d.aba === "rotas" && s.vista === "rotinas") await carregarRotinas(); if (d.aba === "comandos" && s.cmd === "perguntar" && !s.chatGeral) s.chatGeral = await chamar("alfy_ia_conversa", { p_escopo: "geral" }); render(); scrollTo(0, 0); return; }
+    if (d.aba) { s.aba = d.aba; s.pauta = null; s.reuniao = null; if (d.aba === "agenda") { render(); await carregarAgenda(); } if (d.aba === "equipe") { s.aprovado = null; if ((s.naveBusca || "").trim()) s.naveRes = await chamar("alfy_nave_buscar", { p_q: s.naveBusca }).catch(() => null); s.fichas = await chamar("alfy_fichas"); if (comando()) s.equipe = await chamar("alfy_equipe"); } if (d.aba === "feed") { if (feedVivo()) await carregarPosts(); else FEED = await chamar("alfy_feed", { p_limite: 150 }); } if (d.aba === "zap") await carregarZap(); if (d.aba === "placar") await carregarPlacar(); if (d.aba === "rotinas") await carregarRotinas(); if (d.aba === "rotas" && s.vista === "rotinas") await carregarRotinas(); if (d.aba === "comandos" && s.cmd === "perguntar" && !s.chatGeral) s.chatGeral = await chamar("alfy_ia_conversa", { p_escopo: "geral" }); render(); scrollTo(0, 0); return; }
     if (d.vista) { s.vista = d.vista; if (d.vista === "rar") await rrCarregar(); if (d.vista === "rotinas") await carregarRotinas(); render(); return; }
     if (d.rrordem) { s.rr.ordem = d.rrordem; s.rr.foco = null; rrSalvar(); render(); return; }
     if (d.rrformato) { s.rr.formato = d.rrformato; rrSalvar(); render(); return; }
@@ -2443,7 +2502,7 @@ async function entrar(k) {
     rrLer(); if (comando() && s.rr.lote) await rrCarregar(); if (comando()) await carregarZap();
     render();
     FEED = await chamar("alfy_feed", { p_limite: 150 }).catch(() => null);
-    if (comando()) s.robo = await chamar("alfy_robo").catch(() => null);
+    if (comando()) { s.robo = await chamar("alfy_robo").catch(() => null); await carregarPosts(); casca(); }
     vigiar();
   } catch (e) { erro.textContent = e.message; token = null; }
 }
@@ -2457,6 +2516,7 @@ function vigiar() {
       const v = await chamar("alfy_versao");
       if (v === null) { sair(); return; }
       if (v !== versao || Object.keys(s.esperando).length || s.despejo.pedido) { await recarregar(); renderSeguro(); }
+      if (comando() && Date.now() - (s.postsEm || 0) > 30000 && (await carregarPosts())) renderSeguro();   // 📡 feed ao vivo: confere a cada 30 s
       if (rrRodando() && s.aba === "rotas" && s.vista === "rar") { await rrCarregar(); renderSeguro(); }
       if (((s.aba === "comandos" && s.cmd === "zap") || s.aba === "zap") && zapRodando()) { await carregarZap(); renderSeguro(); }
     } catch (_) { /* sem rede: tenta de novo */ }
