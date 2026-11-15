@@ -1,4 +1,4 @@
-// ALFY · Mapa de Rotas · Ilha Tech · v2.47.0 · 15/11/2026 · Painel de Ferro · ✨ Melhorar o texto antes de comentar ou enviar
+// ALFY · Mapa de Rotas · Ilha Tech · v2.47.1 · 15/11/2026 · Painel de Ferro · Sortear também envia o comentário escrito
 // Tudo passa pelas funções alfy_* do banco, sempre com a chave pessoal de quem está usando.
 // O banco decide o que cada pessoa vê; a tela só desenha o que voltou.
 // A IA e os comandos são pedidos numa fila (alfy.pedido) que o robô do Mac atende.
@@ -2361,7 +2361,7 @@ document.addEventListener("click", async (e) => {
     if (a === "nave-novo") { s.naveNovo = true; render(); setTimeout(() => $("#nn-nome")?.focus(), 30); return; }
     if (a === "nave-cancelar") { s.naveNovo = false; render(); return; }
     if (a === "nave-salvar-novo") { const fr = $("#nn-frente")?.value, lig = s.naveLigar; const r = await chamar("alfy_pessoa_nova", { p_nome_completo: $("#nn-nome").value, p_apelido: $("#nn-apelido").value, p_whatsapp: $("#nn-zap").value, p_papel: $("#nn-papel")?.value || "colaborador", p_frentes: fr ? [fr] : null, p_funcao: $("#nn-funcao").value, p_alfy: lig || null }); await naveDepois(lig ? {} : r, lig ? "Cadastrado na Nave ID e ligado" : `${r.nome} cadastrado na Nave ID e no ALFY`); return; }
-    if (a === "rr-sortear") { rrSortear(); return; }
+    if (a === "rr-sortear") { const at = s.rr.foco, foi = at && await enviarRascunho(at); if (foi) aviso(`💬 Comentário enviado na ${nomeRota(at)}`); rrSortear(); return; }   // sortear também leva o que ficou escrito, como o Próxima
     if (a === "rr-passar") { await rrPassar(); return; }
     if (a === "rr-novfirst") { s.rr.novFirst = !s.rr.novFirst; s.rr.foco = null; rrSalvar(); render(); return; }
     if (a === "rr-filtros") { s.rrFAberto = !s.rrFAberto; render(); return; }
