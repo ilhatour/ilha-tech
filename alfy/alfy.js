@@ -1,4 +1,4 @@
-// ALFY · Mapa de Rotas · Ilha Tech · v2.49.0 · 15/11/2026 · Painel de Ferro · barra da Passagem em grupos (ALFY, Mandar, Rota)
+// ALFY · Mapa de Rotas · Ilha Tech · v2.50.0 · 15/11/2026 · Painel de Ferro · 🗂️ levar a rota para uma pauta pela Passagem
 // Tudo passa pelas funções alfy_* do banco, sempre com a chave pessoal de quem está usando.
 // O banco decide o que cada pessoa vê; a tela só desenha o que voltou.
 // A IA e os comandos são pedidos numa fila (alfy.pedido) que o robô do Mac atende.
@@ -645,6 +645,7 @@ function rrItem(r, foco) {
           r.status !== "andamento" ? it(`type="button" data-rapido="andamento" data-rrt="${r.rt}"`, "▶", "Em andamento") : "",
           it(`type="button" data-rragendar="${r.rt}"`, "📅", "Agendar"),
           it(`type="button" data-pausar="${r.rt}"`, "💤", "Pausar por alguns dias"),
+          manda() ? it(`type="button" data-pautar="${r.rt}"`, "🗂️", (r.pautas || []).length ? "Pauta (ligada) …" : "Levar para uma pauta…") : "",
           it(`type="button" data-rt="${r.rt}"`, "↗", "Abrir a rota")]);
         return `<div class="acoes4"><div class="grupo4">
         <button class="ac" type="submit" form="${fid}" data-clmodo="comentar">💬<span>Comentar</span></button>${alfy}${mandar}${rota}<button class="ac ok" type="button" data-rapido="concluida" data-rrt="${r.rt}">✓<span>Concluir</span></button></div>
@@ -994,6 +995,26 @@ function pausarCaixa(rt) {
       const x = await chamar("alfy_adiar", { p_rt: rt, p_dias: n }); if (s.aberta === rt && x) s.cartao = { ...s.cartao, ...x };
       aviso(n ? `💤 ${nomeRota(rt)} pausada. Volta ${dd(n)}` : `↺ ${nomeRota(rt)} voltou`); if (s.rr?.foco === rt) s.rr.foco = null;
       await recarregar(); if (s.aberta) { await recarregarCartao(); refolha(); } render(); } catch (er) { falhou(er); } } });
+  document.addEventListener("keydown", tecla, true);
+  document.body.appendChild(c);
+}
+// 🗂️ Levar a rota para uma pauta (o assunto ou tema que junta várias rotas e ideias, para decidir ou conversar)
+function pautaCaixa(rt) {
+  const r = rotaDe(rt); if (!r) return;
+  const ja = new Set(r.pautas || []), abertas = (M.pautas || []).filter((p) => !["arquivada", "decidida", "tratada"].includes(p.status));
+  const c = document.createElement("div");
+  c.className = "qconc"; c.setAttribute("role", "dialog"); c.setAttribute("aria-label", "Levar para uma pauta");
+  c.innerHTML = `<div class="qc-caixa"><b>🗂️ Levar para uma pauta</b><small>${esc(nomeRota(rt))} · ${esc(r.titulo)}</small>
+    <p class="nota" style="margin:0">A pauta é o assunto que junta várias rotas e ideias (ex.: "Atualização do contrato CLT"). A rota continua sendo uma tarefa, agora ligada ao assunto.</p>
+    <div class="qc-ops">${abertas.map((p) => `<button type="button" data-pt="${p.id}" class="${ja.has(p.id) ? "on" : ""}">${ja.has(p.id) ? "" : "🗂️ "}${esc(p.titulo)}</button>`).join("") || '<p class="nota" style="margin:0">Nenhuma pauta aberta ainda.</p>'}</div>
+    <div class="qc-pe"><button type="button" class="mini" data-qx="1">Cancelar</button><button type="button" class="cta" data-ptnova="1">＋ Nova pauta com esta rota</button></div></div>`;
+  const fecha = () => { c.remove(); document.removeEventListener("keydown", tecla, true); };
+  const tecla = (e) => { if (e.key === "Escape") { e.stopPropagation(); fecha(); } };
+  c.addEventListener("click", async (e) => { e.stopPropagation(); const b = e.target.closest("button");
+    if (e.target === c || b?.dataset.qx) return fecha();
+    if (b?.dataset.ptnova) { fecha(); formPauta(null, { titulo: "", frente: r.frente, detalhe: `Começou com a ${nomeRota(rt)}: ${r.titulo}`, rt, tipo: "decidir" }); return; }
+    if (b?.dataset.pt) { const id = +b.dataset.pt, ligar = !ja.has(id); fecha();
+      try { await chamar("alfy_pauta_ligar", { p_pauta: id, p_rt: rt, p_ligar: ligar }); await recarregar(); render(); aviso(ligar ? `🗂️ ${nomeRota(rt)} ligada à pauta` : `${nomeRota(rt)} saiu da pauta`); } catch (er) { falhou(er); } } });
   document.addEventListener("keydown", tecla, true);
   document.body.appendChild(c);
 }
@@ -2260,6 +2281,7 @@ document.addEventListener("click", async (e) => {
     if (d.pilfecha) { const rt = s.pil?.rt; s.pil = null; if (s.aberta === rt) refolha(); render(); return; }
     if (d.pilset) { await pilSalvar(d.pilrt, d.pilset, d.pilv); return; }
     if (d.cm) { cmCaixa(d.cm); return; }
+    if (d.pautar) { pautaCaixa(d.pautar); return; }
     if (d.pausar) { if (s.pil) { s.pil = null; if (s.aberta) refolha(); render(); } pausarCaixa(d.pausar); return; }
     if (d.cmpush) { const r = rotaDe(d.cmpush); if (r) { b.disabled = true; try { await cmMandar(r.responsavel_id, "push", cmTexto("push", r), [r.rt], "tatico"); } catch (er) { falhou(er); } b.disabled = false; } return; }
     if (d.cmmapa) { const mp = mapaPessoa(d.cmmapa); b.disabled = true; try { await cmMandar(d.cmmapa, "mapa", ["🦜 *Contramestre*", "", mp.txt, "", CM_FECHO].join("\n"), mp.rts, "tatico"); s.mapasCopiados = { ...(s.mapasCopiados || {}), [d.cmmapa]: "🦜 " + new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) }; render(); } catch (er) { b.disabled = false; falhou(er); } return; }
