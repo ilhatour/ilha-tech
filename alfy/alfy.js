@@ -1,4 +1,4 @@
-// ALFY · Mapa de Rotas · Ilha Tech · v2.54.0 · 15/11/2026 · Painel de Ferro · 🤝 externo na rota (o CM manda para ele)
+// ALFY · Mapa de Rotas · Ilha Tech · v2.55.0 · 15/11/2026 · Painel de Ferro · ⚡ Revisão rápida (uma rota por vez)
 // Tudo passa pelas funções alfy_* do banco, sempre com a chave pessoal de quem está usando.
 // O banco decide o que cada pessoa vê; a tela só desenha o que voltou.
 // A IA e os comandos são pedidos numa fila (alfy.pedido) que o robô do Mac atende.
@@ -213,7 +213,7 @@ function topo() {
   fi.className = "filtros" + (s.filtrosAbertos ? " aberto" : "");
   const vivo = `<span class="ao-vivo"><i></i>ao vivo</span>`;
   if (s.aba === "rotas") {
-    const alt = `<div class="alterna" role="group" aria-label="Visão"><button type="button" data-vista="lista" aria-pressed="${s.vista === "lista"}">Lista</button><button type="button" data-vista="kanban" aria-pressed="${s.vista === "kanban"}">Kanban</button>${comando() ? `<button type="button" data-vista="rar" aria-pressed="${s.vista === "rar"}" title="Passagem de Rotas">🧭<span class="rr-txt"> Passagem</span></button>` : ""}</div>`;
+    const alt = `<div class="alterna" role="group" aria-label="Visão"><button type="button" data-vista="lista" aria-pressed="${s.vista === "lista"}">Lista</button><button type="button" data-vista="kanban" aria-pressed="${s.vista === "kanban"}">Kanban</button>${comando() ? `<button type="button" data-vista="rar" aria-pressed="${s.vista === "rar"}" title="Passagem de Rotas">🧭<span class="rr-txt"> Passagem</span></button><button type="button" data-vista="rev" aria-pressed="${s.vista === "rev"}" title="Revisão rápida: uma rota por vez, resolve num toque">⚡<span class="rr-txt"> Revisão</span></button>` : ""}</div>`;
     l1.innerHTML = `<h1>Rotas<small>${comando() ? "todas as frentes" : curto(eu().nome)}</small></h1>${alt}<span class="espaco"></span>${vivo}<button class="cta" type="button" data-acao="nova">＋ Nova rota</button>`;
     $("#alterna-cel").innerHTML = alt;
     fi.innerHTML = filtrosHTML(`<button class="chip alerta" type="button" id="f-venc" aria-pressed="${s.venc}">Só vencidas</button>` +
@@ -480,9 +480,47 @@ function vistaAbaRotinas() {
 // e o Miguel passa uma a uma, na ordem que escolheu; o que ele já viu ou deixou para depois sai da fila
 const RR_ORDENS = [["franquia", "Franquia"], ["prioridade", "Prioridade"], ["prazo", "Prazo"], ["vencimento", "Vencimento"]];
 const RR_GUARDA = "alfy-rr";
+// ⚡ Revisão rápida (15/11, Miguel: "preciso passar o olho por tudo"; "foi concluído e ainda está lá"): uma rota por vez, 5 botões
+function revFila() {
+  const q = s.rr.revQuem || "todas", rev = s.rr.rev || {}, agora = new Date().toISOString();
+  return (M.rotas || []).filter((r) => r.rt.startsWith("RT-") && ABERTOS.includes(r.status) && !(r.volta_em && r.volta_em > agora) && !(r.tipo || "").includes("Compromisso") && !rev[r.rt]
+    && (q === "todas" || (q === "minhas" ? r.responsavel_id === eu().id : r.responsavel_id !== eu().id)))
+    .sort((a, b) => (a.responsavel_id === eu().id ? 0 : 1) - (b.responsavel_id === eu().id ? 0 : 1) || a.rt.localeCompare(b.rt, "pt", { numeric: true }));
+}
+function vistaRevisao() {
+  const fila = revFila(), feitas = Object.keys(s.rr.rev || {}).length, r = fila[0], q = s.rr.revQuem || "todas";
+  const topo = `<div class="rev-top"><div class="seg5" role="group">${[["todas", "Todas"], ["minhas", "Só as minhas"], ["equipe", "Da equipe"]].map(([k, n]) => `<button type="button" data-revquem="${k}" aria-pressed="${q === k}">${n}</button>`).join("")}</div>
+    <span class="rev-prog"><b>${fila.length}</b> para revisar · ${feitas} já revisadas</span>${feitas ? '<button type="button" class="lk" data-acao="rev-recomecar">Recomeçar</button>' : ""}</div>`;
+  if (!r) return `<div class="rev">${topo}<div class="vazio">✓ Tudo revisado${q !== "todas" ? " neste filtro" : ""}. Bom trabalho.</div></div>`;
+  const pz = prazoInfo(r), u = r.ult_txt;
+  return `<div class="rev">${topo}<article class="rev-c" data-revrt="${r.rt}">
+    <div class="rev-h">${tag(r)}<div><b class="rev-t">${esc(r.titulo)}</b><small>👤 ${esc(curto(nomeDe(r.responsavel_id)) || "sem dono")} · ${r.prioridade ? prioTxt(r.prioridade) + " · " : ""}<span class="${pz.cls}">📅 ${pz.txt}</span> · ${ST[r.status].um}${r.criado_em ? " · aberta há " + diasEntre(r.criado_em, new Date().toISOString()) + "d" : ""}</small></div></div>
+    ${r.assist && r.assist !== r.titulo ? `<p class="rev-o"><span>O que fazer</span>${esc(r.assist)}</p>` : ""}
+    ${r.como_esta ? `<p class="rev-o"><span>Onde está</span>${esc(r.como_esta.slice(0, 420))}${r.como_esta.length > 420 ? "…" : ""}</p>` : ""}
+    ${u ? `<p class="rev-o"><span>Último</span>${esc(curto(u.quem))} · ${quandoFoi(u.em)}: ${esc(String(u.texto || "").slice(0, 200))}</p>` : ""}
+    <div class="rev-b">
+      <button type="button" class="rev-k ok" data-rev="feita"><kbd>1</kbd>✓ Já foi feita</button>
+      <button type="button" class="rev-k nao" data-rev="cancelar"><kbd>2</kbd>✕ Não faz mais sentido</button>
+      <button type="button" class="rev-k" data-rev="reescrever"><kbd>3</kbd>✏️ Mal feita: o ALFY reescreve</button>
+      <button type="button" class="rev-k" data-rev="pausar"><kbd>4</kbd>💤 Pausar 15 dias</button>
+      <button type="button" class="rev-k segue" data-rev="segue"><kbd>Enter</kbd>👍 Está certa, segue</button>
+    </div><p class="rev-d"><button type="button" class="lk" data-rt="${r.rt}">↗ Abrir a rota para mexer em mais coisas</button></p></article></div>`;
+}
+async function revAgir(acao) {
+  const r = revFila()[0]; if (!r) return; const rt = r.rt;
+  s.rr.rev = { ...(s.rr.rev || {}), [rt]: new Date().toISOString() }; rrSalvar(); render();   // já passa para a próxima; o banco grava por trás
+  try {
+    if (acao === "feita") { await chamar("alfy_mover", { p_rt: rt, p_status: "concluida" }); aviso(`✓ ${nomeRota(rt)} concluída`); }
+    else if (acao === "cancelar") { await chamar("alfy_editar", { p_rt: rt, p_campos: { qualidade: "Não realizada" } }); await chamar("alfy_mover", { p_rt: rt, p_status: "concluida" }); aviso(`✕ ${nomeRota(rt)} cancelada`); }
+    else if (acao === "pausar") { await chamar("alfy_adiar", { p_rt: rt, p_dias: 15 }); aviso(`💤 ${nomeRota(rt)} volta em 15 dias`); }
+    else if (acao === "reescrever") { await chamar("alfy_pedir", { p_tipo: "ia", p_escopo: "rota:" + rt, p_dados: { agir: true, texto: "Esta rota está mal escrita. Reescreva o título no formato \"Pessoa: verbo + o quê\", o O que fazer (1 ou 2 frases, na minha voz falando com quem faz) e o Em que pé está, só com o que a rota e o histórico dizem. Não mude dono, prazo, prioridade nem etapa. Não invente nada." } }); aviso(`✏️ O ALFY está reescrevendo a ${nomeRota(rt)}`); }
+    else marcarVisto(rt);
+    recarregar().then(renderSeguro);
+  } catch (er) { falhou(er); }
+}
 function rrNovo() { return { f: { prio: [], st: [], prazo: [] }, modo: "tudo", ordem: "franquia", formato: "lista", novFirst: true, lote: null, rts: [], itens: {}, ped: null, feitas: {}, depois: {}, foco: null }; }
 s.rr = rrNovo();
-const rrDados = () => { const r = s.rr; return { f: r.f, modo: r.modo, ordem: r.ordem, formato: r.formato, novFirst: r.novFirst, lote: r.lote, rts: r.rts, feitas: r.feitas, depois: r.depois }; };
+const rrDados = () => { const r = s.rr; return { f: r.f, modo: r.modo, ordem: r.ordem, formato: r.formato, novFirst: r.novFirst, lote: r.lote, rts: r.rts, feitas: r.feitas, depois: r.depois, rev: r.rev || {}, revQuem: r.revQuem || "todas" }; };
 function rrSalvar() { try { localStorage.setItem(RR_GUARDA, JSON.stringify(rrDados())); } catch (_) { /* privado */ } contaSalvar("rr", rrDados); }
 // o "já vi" e os vistos ficam também na conta (vale no celular e no computador); grava 2 s depois da última mudança
 const contaT = {};
@@ -2098,7 +2136,7 @@ function render() {
   if (!M) return;
   casca(); topo(); medidores(); bolhas();
   const c = $("#conteudo");
-  c.innerHTML = { rotinas: vistaAbaRotinas, placar: vistaPlacar, zap: () => `<div style="max-width:1080px">${zapHTML("")}</div>`, rotas: () => (s.vista === "rar" && comando() ? vistaRotaARota() : s.vista === "kanban" ? vistaKanban() : vistaLista()), feed: () => (feedVivo() ? vistaFeedVivo() : vistaFeed()), agenda: vistaAgenda, equipe: vistaEquipe, pautas: vistaPautas, comandos: vistaComandos, eu: vistaEu }[s.aba]();
+  c.innerHTML = { rotinas: vistaAbaRotinas, placar: vistaPlacar, zap: () => `<div style="max-width:1080px">${zapHTML("")}</div>`, rotas: () => (s.vista === "rar" && comando() ? vistaRotaARota() : s.vista === "rev" && comando() ? vistaRevisao() : s.vista === "kanban" ? vistaKanban() : vistaLista()), feed: () => (feedVivo() ? vistaFeedVivo() : vistaFeed()), agenda: vistaAgenda, equipe: vistaEquipe, pautas: vistaPautas, comandos: vistaComandos, eu: vistaEu }[s.aba]();
   { const r = s.robo, semRobo = r?.visto_em && Date.now() - new Date(r.visto_em) > 5 * 60000, semIa = r && !r.ia_ok, semWa = r && r.wa_ok === false;   // aviso no topo: robô, IA ou leitura do WhatsApp fora
     if (comando() && (semRobo || semIa || semWa)) c.insertAdjacentHTML("afterbegin", `<div class="alerta-ia">${semRobo ? `💻 O robô do Mac está sem sinal desde ${quandoFoi(r.visto_em)}: os pedidos ao ALFY ficam na fila até ele voltar.` : semIa ? `🐙 A IA do ALFY está desligada: ${esc(r.ia_msg || "")} Os pedidos que falharam voltam sozinhos quando ligar.` : `📱 A leitura do WhatsApp do Mac falhou ${r.wa_falhas || 3} vezes seguidas${r.wa_em ? ` (última leitura boa ${quandoFoi(r.wa_em)})` : ""}. O robô já reiniciou e tenta de novo a cada 90 s. Se continuar: o WhatsApp do Mac está aberto? Apareceu janela pedindo permissão?`}</div>`); }
   if (s.aba === "rotas" && s.vista === "kanban") ligarKanban();
@@ -2264,6 +2302,11 @@ document.addEventListener("input", (e) => {
     const ops = [...sel.options].filter((o) => o.value); if (q && ops.length === 1) sel.value = ops[0].value;
   }
 }, true);
+document.addEventListener("keydown", (e) => {   // ⚡ Revisão: 1 feita · 2 não faz sentido · 3 reescrever · 4 pausar · Enter segue
+  if (s.aba !== "rotas" || s.vista !== "rev" || e.metaKey || e.ctrlKey || e.altKey || /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName) || document.querySelector(".qconc")) return;
+  const k = { "1": "feita", "2": "cancelar", "3": "reescrever", "4": "pausar", Enter: "segue", ArrowRight: "segue" }[e.key];
+  if (k && revFila().length) { e.preventDefault(); revAgir(k); }
+});
 document.addEventListener("keydown", (e) => {   // Enter no campo de busca: escolhe a primeira pessoa que bate
   const t = e.target; if (e.key !== "Enter") return;
   if (t.dataset?.pesbusca) { e.preventDefault(); e.stopPropagation(); t.parentElement.querySelector(".pm-pes .pm-op")?.click(); return; }
@@ -2359,6 +2402,8 @@ document.addEventListener("click", async (e) => {
     if (d.pilset) { await pilSalvar(d.pilrt, d.pilset, d.pilv); return; }
     if (d.cm) { cmCaixa(d.cm); return; }
     if (d.pautar) { pautaCaixa(d.pautar); return; }
+    if (d.rev) { revAgir(d.rev); return; }
+    if (d.revquem) { s.rr.revQuem = d.revquem; rrSalvar(); render(); return; }
     if (d.externo) { externoCaixa(d.externo); return; }
     if (d.cmext) { cmCaixa(d.cmext, "externo"); return; }
     if (d.cancrota) { const rt = d.cancrota;   // ✕ cancelar num toque: concluída como "não realizada"
@@ -2512,6 +2557,7 @@ document.addEventListener("click", async (e) => {
     if (a === "nave-novo") { s.naveNovo = true; render(); setTimeout(() => $("#nn-nome")?.focus(), 30); return; }
     if (a === "nave-cancelar") { s.naveNovo = false; render(); return; }
     if (a === "nave-salvar-novo") { const fr = $("#nn-frente")?.value, lig = s.naveLigar; const r = await chamar("alfy_pessoa_nova", { p_nome_completo: $("#nn-nome").value, p_apelido: $("#nn-apelido").value, p_whatsapp: $("#nn-zap").value, p_papel: $("#nn-papel")?.value || "colaborador", p_frentes: fr ? [fr] : null, p_funcao: $("#nn-funcao").value, p_alfy: lig || null }); await naveDepois(lig ? {} : r, lig ? "Cadastrado na Nave ID e ligado" : `${r.nome} cadastrado na Nave ID e no ALFY`); return; }
+    if (a === "rev-recomecar") { s.rr.rev = {}; rrSalvar(); render(); return; }
     if (a === "rr-sortear") { const at = s.rr.foco, foi = at && await enviarRascunho(at); if (foi) aviso(`💬 Comentário enviado na ${nomeRota(at)}`); rrSortear(); return; }   // sortear também leva o que ficou escrito, como o Próxima
     if (a === "rr-passar") { await rrPassar(); return; }
     if (a === "rr-novfirst") { s.rr.novFirst = !s.rr.novFirst; s.rr.foco = null; rrSalvar(); render(); return; }
