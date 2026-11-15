@@ -1,4 +1,4 @@
-// ALFY · Mapa de Rotas · Ilha Tech · v2.52.0 · 15/11/2026 · Painel de Ferro · ✕ cancelar a rota num toque
+// ALFY · Mapa de Rotas · Ilha Tech · v2.54.0 · 15/11/2026 · Painel de Ferro · 🤝 externo na rota (o CM manda para ele)
 // Tudo passa pelas funções alfy_* do banco, sempre com a chave pessoal de quem está usando.
 // O banco decide o que cada pessoa vê; a tela só desenha o que voltou.
 // A IA e os comandos são pedidos numa fila (alfy.pedido) que o robô do Mac atende.
@@ -482,7 +482,19 @@ const RR_ORDENS = [["franquia", "Franquia"], ["prioridade", "Prioridade"], ["pra
 const RR_GUARDA = "alfy-rr";
 function rrNovo() { return { f: { prio: [], st: [], prazo: [] }, modo: "tudo", ordem: "franquia", formato: "lista", novFirst: true, lote: null, rts: [], itens: {}, ped: null, feitas: {}, depois: {}, foco: null }; }
 s.rr = rrNovo();
-function rrSalvar() { const r = s.rr; try { localStorage.setItem(RR_GUARDA, JSON.stringify({ f: r.f, modo: r.modo, ordem: r.ordem, formato: r.formato, novFirst: r.novFirst, lote: r.lote, rts: r.rts, feitas: r.feitas, depois: r.depois })); } catch (_) { /* privado */ } }
+const rrDados = () => { const r = s.rr; return { f: r.f, modo: r.modo, ordem: r.ordem, formato: r.formato, novFirst: r.novFirst, lote: r.lote, rts: r.rts, feitas: r.feitas, depois: r.depois }; };
+function rrSalvar() { try { localStorage.setItem(RR_GUARDA, JSON.stringify(rrDados())); } catch (_) { /* privado */ } contaSalvar("rr", rrDados); }
+// o "já vi" e os vistos ficam também na conta (vale no celular e no computador); grava 2 s depois da última mudança
+const contaT = {};
+function contaSalvar(chave, dados) { clearTimeout(contaT[chave]); contaT[chave] = setTimeout(() => chamar("alfy_estado_salvar", { p_chave: chave, p_valor: dados() }).catch(() => {}), 2000); }
+async function contaLer() {
+  const e = await chamar("alfy_estado_ler", {}).catch(() => null); if (!e) return;
+  if (e.rr) { const l = rrDados(), c = e.rr;
+    Object.assign(s.rr, c, { feitas: { ...(l.feitas || {}), ...(c.feitas || {}) }, depois: { ...(l.depois || {}), ...(c.depois || {}) }, lote: c.lote || l.lote, rts: (c.rts || []).length ? c.rts : l.rts });
+    try { localStorage.setItem(RR_GUARDA, JSON.stringify(rrDados())); } catch (_) { /* privado */ } }
+  if (e.visto) { const v = vistoTodos(); for (const [k, t] of Object.entries(e.visto)) if (!v[k] || t > v[k]) v[k] = t; if (e.visto._base && e.visto._base < v._base) v._base = e.visto._base;
+    try { localStorage.setItem(VISTO, JSON.stringify(v)); } catch (_) { /* privado */ } }
+}
 function rrLer() { try { Object.assign(s.rr, JSON.parse(localStorage.getItem(RR_GUARDA) || "{}")); } catch (_) { /* privado */ } }
 const rrRodando = () => !!s.rr.lote && !!s.rr.ped && (s.rr.ped.status === "fila" || s.rr.ped.status === "rodando");
 async function rrCarregar() {
@@ -646,6 +658,7 @@ function rrItem(r, foco) {
           podeCM(r) ? it(`type="button" data-cmpush="${r.rt}"`, "🔔", "Push: cobrar o andamento") : "",
           podeCM(r) ? it(`type="submit" form="${fid}" data-clmodo="cmcom"`, "💬", "Enviar o meu comentário") : "",
           podeCM(r) ? it(`type="button" data-cm="${r.rt}"`, "🦜", "A rota, um recado ou no privado…") : "",
+          comando() && r.externo ? `<small class="dd4-t">🤝 Externo</small>` + it(`type="button" data-cmext="${r.rt}"`, "🤝", `Recado para ${esc(r.externo.nome)}`) : "",
           `<small class="dd4-t">📋 Copiar para o meu WhatsApp</small>`,
           it(`type="button" data-copiarrota="${r.rt}"`, "📋", "Copiar a rota"),
           podeCobrar(r) ? it(`type="button" data-cobrar="${r.rt}"`, "📣", "Copiar um “e aí?”") : ""]);
@@ -653,6 +666,7 @@ function rrItem(r, foco) {
           r.status !== "andamento" ? it(`type="button" data-rapido="andamento" data-rrt="${r.rt}"`, "▶", "Em andamento") : "",
           it(`type="button" data-rragendar="${r.rt}"`, "📅", "Agendar"),
           it(`type="button" data-pausar="${r.rt}"`, "💤", "Pausar por alguns dias"),
+          comando() ? it(`type="button" data-externo="${r.rt}"`, "🤝", r.externo ? `Externo: ${esc(r.externo.nome)}…` : "Ligar um externo (fornecedor)…") : "",
           manda() ? it(`type="button" data-pautar="${r.rt}"`, "🗂️", (r.pautas || []).length ? "Pauta (ligada) …" : "Levar para uma pauta…") : "",
           it(`type="button" data-rt="${r.rt}"`, "↗", "Abrir a rota"),
           manda() ? it(`type="button" data-cancrota="${r.rt}"`, "✕", "Cancelar a rota (não realizada)", "Sai da fila na hora; não pontua no Placar") : ""]);
@@ -965,6 +979,7 @@ function textoCobrar(r) {
 }
 // 🦜 Contramestre: o app monta o texto, o Miguel confere e manda; o robô envia pelo WhatsApp do CM (modo teste: chega no WhatsApp do Miguel)
 const CM_FECHO = "Como deve ser. ⚔️";
+const cmExterno = (r, recado) => ["🦜 *Contramestre · Grupo Ilha Tour*", "", `Olá, ${(r.externo?.nome || "").split(" ")[0]}! ${(recado || "").trim().replace(/^./, (c) => c.toUpperCase())}`, "", "Pode responder aqui mesmo."].join("\n");
 function cmTexto(tipo, r, extra) {
   const nome = curto(nomeDe(r?.responsavel_id) || ""), n = r ? nomeRota(r.rt).replace(/^Rota /, "") : "", resp = r ? `Responde aqui com *Rota ${n}* + como está.` : "";
   const corpo = {
@@ -1028,23 +1043,54 @@ function pautaCaixa(rt) {
   document.addEventListener("keydown", tecla, true);
   document.body.appendChild(c);
 }
+// 🤝 Externo: fornecedor ou parceiro ligado à rota (nome, empresa, WhatsApp); o CM manda para ele o recado que o Miguel pedir
+async function externoCaixa(rt) {
+  const r = rotaDe(rt) || (s.cartao?.rt === rt ? s.cartao : null); if (!r) return;
+  const lista = await chamar("alfy_externos", {}).catch(() => []);
+  const c = document.createElement("div");
+  c.className = "qconc"; c.setAttribute("role", "dialog"); c.setAttribute("aria-label", "Externo da rota");
+  const linha = (x) => `<button type="button" data-ex="${x.id}" class="${r.externo?.id === x.id ? "on" : ""}">🤝 ${esc(x.nome)}${x.empresa ? ` <small style="color:var(--aco)">· ${esc(x.empresa)}</small>` : ""}${x.fone ? "" : ' <small style="color:var(--amber)">sem WhatsApp</small>'}</button>`;
+  c.innerHTML = `<div class="qc-caixa"><b>🤝 Externo da rota</b><small>${esc(nomeRota(rt))} · ${esc(r.titulo)}</small>
+    <p class="nota" style="margin:0">Fornecedor ou parceiro de quem a rota depende. O dono continua sendo da equipe; o 🦜 manda para o externo o recado que você pedir.</p>
+    <input class="pes-busca" id="ex-q" type="search" placeholder="🔎 Procurar externo" autocomplete="off">
+    <div class="qc-ops" id="ex-l">${lista.map(linha).join("") || '<p class="nota" style="margin:0">Nenhum externo cadastrado ainda.</p>'}</div>
+    <details class="qc-mais"${lista.length ? "" : " open"}><summary>＋ Cadastrar externo</summary>
+      <label>Nome<input id="ex-nome" class="pes-busca" placeholder="Ex.: Pierre"></label><label>Empresa<input id="ex-emp" class="pes-busca" placeholder="Ex.: Mercury Itacuruçá"></label>
+      <label>WhatsApp<input id="ex-fone" class="pes-busca" inputmode="tel" placeholder="21 99999-9999"></label>
+      <button type="button" class="cta" data-exnovo="1">Cadastrar e ligar à rota</button></details>
+    <div class="qc-pe">${r.externo ? '<button type="button" class="mini" data-ex="0">Tirar o externo</button>' : ""}<button type="button" class="mini" data-qx="1">Fechar</button></div></div>`;
+  const fecha = () => { c.remove(); document.removeEventListener("keydown", tecla, true); };
+  const tecla = (e) => { if (e.key === "Escape") { e.stopPropagation(); fecha(); } };
+  const ligar = async (id) => { const x = await chamar("alfy_rota_externo", { p_rt: rt, p_externo: id || null }); if (s.aberta === rt && x) s.cartao = { ...s.cartao, ...x }; await recarregar(); if (s.aberta) refolha(); render(); aviso(id ? "🤝 Externo ligado à rota" : "Externo tirado da rota"); };
+  c.querySelector("#ex-q").addEventListener("input", (e) => { const q = semAc(e.target.value); c.querySelector("#ex-l").innerHTML = lista.filter((x) => semAc(x.nome + " " + (x.empresa || "")).includes(q)).map(linha).join("") || '<p class="nota" style="margin:0">Nenhum com esse nome.</p>'; });
+  c.addEventListener("click", async (e) => { e.stopPropagation(); const b = e.target.closest("button");
+    if (e.target === c || b?.dataset.qx) return fecha();
+    try {
+      if (b?.dataset.ex !== undefined) { fecha(); await ligar(+b.dataset.ex); return; }
+      if (b?.dataset.exnovo) { const nome = c.querySelector("#ex-nome").value.trim(); if (!nome) { aviso("Escreva o nome", true); return; }
+        const x = await chamar("alfy_externo_salvar", { p_id: null, p_nome: nome, p_empresa: c.querySelector("#ex-emp").value, p_fone: c.querySelector("#ex-fone").value }); fecha(); await ligar(x.id); }
+    } catch (er) { falhou(er); } });
+  document.addEventListener("keydown", tecla, true);
+  document.body.appendChild(c);
+}
 function cmCaixa(rt, tipo0) {   // escolher o que mandar, conferir o texto e mandar
   const r = rotaDe(rt) || (s.cartao?.rt === rt ? s.cartao : null); if (!r) return;
-  if (!r.responsavel_id) { aviso("Esta rota está sem dono: escolha quem faz antes de mandar", true); return; }
-  let tipo = tipo0 || "push", destino = "tatico";
+  if (!r.responsavel_id && !r.externo) { aviso("Esta rota está sem dono: escolha quem faz antes de mandar", true); return; }
+  let tipo = tipo0 || "push", destino = tipo0 === "externo" || !r.responsavel_id ? "externo" : "tatico";
   chamar("alfy_cm_destinos", {}).then((d) => { s.cmDest = d || {}; if (document.body.contains(c)) desenha($("#cm-livre")?.value); }).catch(() => {});
   const c = document.createElement("div");
   c.className = "qconc cmcx"; c.setAttribute("role", "dialog"); c.setAttribute("aria-label", "Mandar pelo Contramestre");
   const ops = [["push", "🔔 Push (andamento)"], ["rota", "📋 A rota"], ["livre", "✍️ Recado"]];
   const desenha = (livre) => { c.innerHTML = `<div class="qc-caixa"><b>🦜 Mandar pelo Contramestre</b><small>para ${esc(nomeDe(r.responsavel_id))} · ${esc(nomeRota(rt))}</small>
       <div class="seg5 cm-tipos" role="group" aria-label="O que mandar">${ops.map(([k, n]) => `<button type="button" data-cmt="${k}" aria-pressed="${tipo === k}">${n}</button>`).join("")}</div>
-      <div class="seg5 cm-tipos" role="group" aria-label="Onde">${[["tatico", "🎯 No tático"], ["privado", "👤 No privado"]].map(([k, n]) => `<button type="button" data-cmd="${k}" aria-pressed="${destino === k}">${n}</button>`).join("")}</div>
+      <div class="seg5 cm-tipos" role="group" aria-label="Onde">${[...(r.responsavel_id ? [["tatico", "🎯 No tático"], ["privado", "👤 No privado"]] : []), ...(r.externo ? [["externo", "🤝 " + r.externo.nome]] : [])].map(([k, n]) => `<button type="button" data-cmd="${k}" aria-pressed="${destino === k}">${esc(n)}</button>`).join("")}</div>
       <small class="cm-onde">${destino === "tatico" ? (s.cmDest?.[r.responsavel_id] ? "Grupo: " + esc(s.cmDest[r.responsavel_id]) : s.cmDest ? "⚠️ Esta pessoa ainda não tem grupo tático cadastrado" : "") : "Só quando você quiser: vai direto para o WhatsApp da pessoa."}</small>
       ${tipo === "livre" ? `<textarea id="cm-livre" rows="3" placeholder="O que o Contramestre deve dizer">${esc(livre || "")}</textarea>` : ""}
       <pre class="cm-prev" id="cm-prev"></pre>
       <p class="cm-modo">${s.cmDest?._modo === "equipe" ? "🦜 Vai de verdade, pelo número do Contramestre." : "🧪 Modo teste: chega no seu WhatsApp, pelo número do Contramestre, dizendo para quem e onde iria."}</p>
       <div class="qc-pe"><button type="button" class="mini" data-qx="1">Cancelar</button><button type="button" class="cta" data-cmok="1">🦜 Mandar</button></div></div>`;
-    const prev = () => { $("#cm-prev").textContent = cmTexto(tipo, r, $("#cm-livre")?.value || ""); }; prev(); $("#cm-livre")?.addEventListener("input", prev); $("#cm-livre")?.focus(); };
+    if (destino === "externo" && tipo !== "livre") { tipo = "livre"; return desenha(livre); }
+    const prev = () => { $("#cm-prev").textContent = destino === "externo" ? cmExterno(r, $("#cm-livre")?.value || "") : cmTexto(tipo, r, $("#cm-livre")?.value || ""); }; prev(); $("#cm-livre")?.addEventListener("input", prev); $("#cm-livre")?.focus(); };
   const fecha = () => { c.remove(); document.removeEventListener("keydown", tecla, true); };
   const tecla = (e) => { if (e.key === "Escape") { e.stopPropagation(); fecha(); } };
   c.addEventListener("click", async (e) => { e.stopPropagation(); const b = e.target.closest("button");
@@ -1052,7 +1098,8 @@ function cmCaixa(rt, tipo0) {   // escolher o que mandar, conferir o texto e man
     if (b?.dataset.cmt) { const lv = $("#cm-livre")?.value; tipo = b.dataset.cmt; desenha(lv); return; }
     if (b?.dataset.cmd) { const lv = $("#cm-livre")?.value; destino = b.dataset.cmd; desenha(lv); return; }
     if (b?.dataset.cmok) { if (tipo === "livre" && !($("#cm-livre")?.value || "").trim()) { aviso("Escreva o recado", true); return; }
-      const texto = cmTexto(tipo, r, $("#cm-livre")?.value || ""); b.disabled = true; try { await cmMandar(r.responsavel_id, tipo, texto, [rt], destino); fecha(); } catch (er) { b.disabled = false; falhou(er); } } });
+      const texto = destino === "externo" ? cmExterno(r, $("#cm-livre")?.value || "") : cmTexto(tipo, r, $("#cm-livre")?.value || ""); b.disabled = true;
+      try { if (destino === "externo") { const x = await chamar("alfy_cm_externo", { p_rt: rt, p_texto: texto }); aviso(x?.modo === "equipe" ? `🦜 Mandando para ${r.externo.nome}` : "🦜 Teste: chega no seu WhatsApp"); recarregar().then(renderSeguro); } else await cmMandar(r.responsavel_id, tipo, texto, [rt], destino); fecha(); } catch (er) { b.disabled = false; falhou(er); } } });
   document.addEventListener("keydown", tecla, true);
   document.body.appendChild(c); desenha("");
 }
@@ -1446,7 +1493,7 @@ const SECOES_F = [["fazer", "🎯 Rota"], ["interagir", "💬 Conversa"], ["deta
 const VISTO = "alfy-visto";
 function vistoTodos() { try { const v = JSON.parse(localStorage.getItem(VISTO) || "{}"); if (!v._base) { v._base = new Date().toISOString(); localStorage.setItem(VISTO, JSON.stringify(v)); } return v; } catch (_) { return { _base: new Date().toISOString() }; } }
 const vistoDe = (rt) => { const v = vistoTodos(); return v[rt] || v._base; };
-function marcarVisto(rt) { try { const v = vistoTodos(); v[rt] = new Date().toISOString(); localStorage.setItem(VISTO, JSON.stringify(v)); } catch (_) { /* privado */ } }
+function marcarVisto(rt) { try { const v = vistoTodos(); v[rt] = new Date().toISOString(); localStorage.setItem(VISTO, JSON.stringify(v)); } catch (_) { /* privado */ } contaSalvar("visto", vistoTodos); }
 const temNova = (r) => { const u = r.ult_txt; return !!u && u.quem !== eu().nome && u.quem !== "ALFY" && !String(u.texto || "").startsWith("🤖") && String(u.em) > vistoDe(r.rt); };
 const lembreteDe = (rt) => (M?.lembretes || []).find((l) => l.rt === rt);
 const adiada = (r) => { const l = lembreteDe(r.rt); return !!l && new Date(l.quando) > new Date(); };
@@ -1497,7 +1544,7 @@ function folha() {
       <nav class="ancoras3" aria-label="Seções">${SECOES_F.map(([k, n]) => `<button type="button" data-irf="${k}" aria-current="${k === "fazer"}">${n}${k === "interagir" ? (novas ? ` <small class="novas4">${novas} nova${novas > 1 ? "s" : ""}</small>` : tempo.length ? ` <small>${tempo.length}</small>` : "") : ""}${k === "lembrete" && lem ? " ⏰" : ""}</button>`).join("")}</nav></div></div>
     <div class="col3">
       <section class="secao3" id="f-fazer">
-        <div class="selos4">${pil(r, "st", "sl4 st-" + r.status, "<i></i>" + ST[r.status].um)}${pil(r, "prio", "sl4", r.prioridade ? prioTxt(r.prioridade) : "Sem prioridade")}${pil(r, "prazo", "sl4 " + pz.cls, "📅 " + pz.txt)}${pil(r, "dono", "sl4", "👤 " + esc(curto(nomeDe(r.responsavel_id))) + (r.co_responsavel_id ? " + " + esc(curto(nomeDe(r.co_responsavel_id))) : ""))}${(() => { const v = valorRota(r); return v ? `<button type="button" class="sl4 pts" data-irf="det-tipo" title="Quanto esta rota vale no Placar">🏆 ${v.feito ? "" : "vale "}${(v.feito || v.mod === 1 ? (v.feito ? v.pts : v.base) : v.pts).toLocaleString("pt-BR")} pts</button>` : ""; })()}${r.repete ? `<span class="sl4">🔁 ${REPETE_TXT[r.repete]}</span>` : ""}${r.sensivel ? '<span class="sl4">🔒 só eu</span>' : ""}</div>${pilMenu(r)}${cobrHTML(r)}
+        <div class="selos4">${pil(r, "st", "sl4 st-" + r.status, "<i></i>" + ST[r.status].um)}${pil(r, "prio", "sl4", r.prioridade ? prioTxt(r.prioridade) : "Sem prioridade")}${pil(r, "prazo", "sl4 " + pz.cls, "📅 " + pz.txt)}${pil(r, "dono", "sl4", "👤 " + esc(curto(nomeDe(r.responsavel_id))) + (r.co_responsavel_id ? " + " + esc(curto(nomeDe(r.co_responsavel_id))) : ""))}${(() => { const v = valorRota(r); return v ? `<button type="button" class="sl4 pts" data-irf="det-tipo" title="Quanto esta rota vale no Placar">🏆 ${v.feito ? "" : "vale "}${(v.feito || v.mod === 1 ? (v.feito ? v.pts : v.base) : v.pts).toLocaleString("pt-BR")} pts</button>` : ""; })()}${r.repete ? `<span class="sl4">🔁 ${REPETE_TXT[r.repete]}</span>` : ""}${r.sensivel ? '<span class="sl4">🔒 só eu</span>' : ""}${comando() ? `<button type="button" class="sl4 ${r.externo ? "" : "vazio"}" data-externo="${r.rt}" title="Fornecedor ou parceiro de quem a rota depende">🤝 ${r.externo ? esc(r.externo.nome) + (r.externo.empresa ? " · " + esc(r.externo.empresa) : "") : "Externo"}</button>` : ""}</div>${pilMenu(r)}${cobrHTML(r)}
         ${campo4(r, "assist", "resumo4")}${campo4(r, "instr")}${campo4(r, "resultado")}
         ${campo4(r, "como_esta", "agora4")}
       </section>
@@ -2312,6 +2359,8 @@ document.addEventListener("click", async (e) => {
     if (d.pilset) { await pilSalvar(d.pilrt, d.pilset, d.pilv); return; }
     if (d.cm) { cmCaixa(d.cm); return; }
     if (d.pautar) { pautaCaixa(d.pautar); return; }
+    if (d.externo) { externoCaixa(d.externo); return; }
+    if (d.cmext) { cmCaixa(d.cmext, "externo"); return; }
     if (d.cancrota) { const rt = d.cancrota;   // ✕ cancelar num toque: concluída como "não realizada"
       try { if (s.aba === "rotas" && s.vista === "rar") await enviarRascunho(rt);
         await chamar("alfy_editar", { p_rt: rt, p_campos: { qualidade: "Não realizada" } }); await chamar("alfy_mover", { p_rt: rt, p_status: "concluida" });
@@ -2615,7 +2664,7 @@ async function entrar(k) {
     guardar(k); M = m; versao = m.versao;
     $("#tela-entrada").hidden = true; $("#tela-painel").hidden = false; $("#barra-baixo").hidden = false;
     try { const g = JSON.parse(localStorage.getItem("alfy-vista") || "{}"); if (g.vista) s.vista = g.vista; if (g.agrupar && g.v28) s.agrupar = g.agrupar; else if (!comando()) s.agrupar = "prioridade"; } catch (_) { /* privado */ }
-    rrLer(); if (comando() && s.rr.lote) await rrCarregar(); if (comando()) await carregarZap();
+    rrLer(); await contaLer(); if (comando() && s.rr.lote) await rrCarregar(); if (comando()) await carregarZap();
     render();
     FEED = await chamar("alfy_feed", { p_limite: 150 }).catch(() => null);
     if (comando()) { s.robo = await chamar("alfy_robo").catch(() => null); await carregarPosts(); casca(); }
