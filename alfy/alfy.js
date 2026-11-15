@@ -1,4 +1,4 @@
-// ALFY · Mapa de Rotas · Ilha Tech · v2.48.0 · 15/11/2026 · Painel de Ferro · 💤 Pausar por alguns dias (volta sozinha)
+// ALFY · Mapa de Rotas · Ilha Tech · v2.49.0 · 15/11/2026 · Painel de Ferro · barra da Passagem em grupos (ALFY, Mandar, Rota)
 // Tudo passa pelas funções alfy_* do banco, sempre com a chave pessoal de quem está usando.
 // O banco decide o que cada pessoa vê; a tela só desenha o que voltou.
 // A IA e os comandos são pedidos numa fila (alfy.pedido) que o robô do Mac atende.
@@ -626,11 +626,29 @@ function rrItem(r, foco) {
     ${foco ? caixaLinha(r, true) : ""}
     ${s.rrAg === r.rt ? `<div class="rr-agenda">${quandoCaixa(["ag-dia", "ag-ini", "ag-fim"], r.responsavel_id, r.rt)}<label>Dia<input type="date" id="ag-dia" value="${r.inicio ? dia(r.inicio) : hojeDia()}"></label><label>Das<input type="time" id="ag-ini" value="${r.inicio ? hhmm(r.inicio) : "09:00"}"></label><label>Até<input type="time" id="ag-fim" value="${r.fim ? hhmm(r.fim) : ""}"></label>
       <span class="rr-acoes"><button class="btn turq peq" type="button" data-agpor="${r.rt}">📅 Pôr na agenda</button><button class="btn peq" type="button" data-agprazo="${r.rt}">Só mudar o prazo</button></span></div>` : ""}
-    ${foco ? `<div class="acoes4"><div class="grupo4">
-        <button class="ac" type="submit" form="${fid}" data-clmodo="comentar">💬<span>Comentar</span></button>${comando() ? `<button class="ac ia" type="submit" form="${fid}" data-clmodo="melhorar" title="O ALFY melhora o seu texto com o que já sabe da rota (você confere antes de mandar)">✨<span>Melhorar</span></button>` : ""}${comando() ? `<button class="ac ia" type="submit" form="${fid}" data-clmodo="alfy">🐙<span>Pedir ao ALFY</span></button>` : ""}${comando() && r.rt.startsWith("RT-") ? `<button class="ac" type="button" data-rastrear="${r.rt}">📡<span>Rastrear</span></button>` : ""}
-        <button class="ac ${s.rrAg === r.rt ? "on" : ""}" type="button" data-rragendar="${r.rt}">📅<span>Agendar</span></button><button class="ac" type="button" data-copiarrota="${r.rt}" title="Copiar esta rota para mandar no WhatsApp">📋<span>Copiar</span></button>${podeCobrar(r) ? `<button class="ac" type="button" data-cobrar="${r.rt}" title="Copia um 'e aí?' para a pessoa e conta a cobrança">📣<span>Cobrar</span></button>` : ""}${r.status !== "andamento" ? `<button class="ac" type="button" data-rapido="andamento" data-rrt="${r.rt}">▶<span>Em andamento</span></button>` : ""}<button class="ac ok" type="button" data-rapido="concluida" data-rrt="${r.rt}">✓<span>Concluir</span></button><button class="ac" type="button" data-rt="${r.rt}">↗<span>Abrir</span></button></div>
-      ${podeCM(r) ? `<div class="grupo4 cmg" role="group" aria-label="Contramestre"><span class="cmg-r">🦜 CM</span><button class="ac cm" type="button" data-cmpush="${r.rt}" title="Cobra o andamento no tático da pessoa">🔔<span>Push</span></button><button class="ac cm" type="submit" form="${fid}" data-clmodo="cmcom" title="Comenta na rota e manda o mesmo texto no tático">💬<span>Enviar comentário</span></button><button class="ac cm" type="button" data-cm="${r.rt}" title="Mandar a rota ou um recado">⋯<span>Mais</span></button></div>` : ""}
-      <div class="grupo4 dir"><button class="ac" type="button" data-rrdepois="${r.rt}" title="Agora não: a rota some até amanhã de manhã">⏭<span>Amanhã</span></button><button class="ac" type="button" data-pausar="${r.rt}" title="Pausar por alguns dias: volta sozinha depois">💤<span>Pausar</span></button><button class="ac" type="button" data-acao="rr-sortear" title="Sortear a próxima (S)">🎲<span>Sortear</span></button><button class="btn turq" type="button" data-rrfeita="${r.rt}" title="Já vi: a rota vai para o fim da fila (com novidade, volta ao lugar dela)">Próxima →</button></div></div>`
+    ${foco ? (() => {   // barra da vez: poucos botões soltos; o resto em grupos que abrem (🐙 ALFY · 📤 Mandar · ⋯ Rota)
+        const it = (attrs, ic, nm, dica) => `<button class="dd4-it" ${attrs} ${dica ? `title="${dica}"` : ""}><i>${ic}</i>${nm}</button>`;
+        const grupo = (k, ic, nm, cls, itens) => itens.filter(Boolean).length ? `<details class="dd4 ${cls || ""}" data-dd="${k}"><summary class="ac">${ic}<span>${nm}</span><em>▾</em></summary><div class="dd4-m" role="menu">${itens.filter(Boolean).join("")}</div></details>` : "";
+        const alfy = comando() ? grupo("alfy", "🐙", "ALFY", "ia", [
+          it(`type="submit" form="${fid}" data-clmodo="melhorar"`, "✨", "Melhorar o meu texto", "Reescreve o que você digitou, no próprio campo; nada vai para a rota"),
+          it(`type="submit" form="${fid}" data-clmodo="alfy"`, "🐙", "Pedir ao ALFY", "O ALFY age na rota (dono, prazo, campos, mensagem) e responde"),
+          r.rt.startsWith("RT-") ? it(`type="button" data-rastrear="${r.rt}"`, "📡", "Rastrear no WhatsApp", "Procura novidade desta rota no WhatsApp e no e-mail") : ""]) : "";
+        const mandar = grupo("mandar", "📤", "Mandar", "cm", [
+          podeCM(r) ? `<small class="dd4-t">🦜 Contramestre, no tático</small>` : "",
+          podeCM(r) ? it(`type="button" data-cmpush="${r.rt}"`, "🔔", "Push: cobrar o andamento") : "",
+          podeCM(r) ? it(`type="submit" form="${fid}" data-clmodo="cmcom"`, "💬", "Enviar o meu comentário") : "",
+          podeCM(r) ? it(`type="button" data-cm="${r.rt}"`, "🦜", "A rota, um recado ou no privado…") : "",
+          `<small class="dd4-t">📋 Copiar para o meu WhatsApp</small>`,
+          it(`type="button" data-copiarrota="${r.rt}"`, "📋", "Copiar a rota"),
+          podeCobrar(r) ? it(`type="button" data-cobrar="${r.rt}"`, "📣", "Copiar um “e aí?”") : ""]);
+        const rota = grupo("rota", "⋯", "Rota", "", [
+          r.status !== "andamento" ? it(`type="button" data-rapido="andamento" data-rrt="${r.rt}"`, "▶", "Em andamento") : "",
+          it(`type="button" data-rragendar="${r.rt}"`, "📅", "Agendar"),
+          it(`type="button" data-pausar="${r.rt}"`, "💤", "Pausar por alguns dias"),
+          it(`type="button" data-rt="${r.rt}"`, "↗", "Abrir a rota")]);
+        return `<div class="acoes4"><div class="grupo4">
+        <button class="ac" type="submit" form="${fid}" data-clmodo="comentar">💬<span>Comentar</span></button>${alfy}${mandar}${rota}<button class="ac ok" type="button" data-rapido="concluida" data-rrt="${r.rt}">✓<span>Concluir</span></button></div>
+      <div class="grupo4 dir"><button class="ac" type="button" data-rrdepois="${r.rt}" title="Agora não: a rota some até amanhã de manhã (D)">⏭<span>Amanhã</span></button><button class="ac so-icone" type="button" data-acao="rr-sortear" title="Sortear a próxima (S)" aria-label="Sortear">🎲</button><button class="btn turq" type="button" data-rrfeita="${r.rt}" title="Já vi: a rota vai para o fim da fila (com novidade, volta ao lugar dela)">Próxima →</button></div></div>`; })()
       : `<div class="acoes4 mini4"><button class="ac" type="button" data-rrfoco="${r.rt}">✎<span>Tratar</span></button><button class="ac" type="button" data-rrfeita="${r.rt}">✓<span>Vista</span></button><button class="ac" type="button" data-rrdepois="${r.rt}">⏭<span>Depois</span></button></div>`}
   </article>`;
 }
@@ -2154,6 +2172,11 @@ async function usarItemDespejo(i) {
 }
 
 // ---------------------------------------------------------------- eventos
+// grupos da barra (🐙 ALFY · 📤 Mandar · ⋯ Rota): um aberto por vez; fecha ao escolher ou clicar fora
+document.addEventListener("click", (e) => {
+  const aberto = e.target.closest("details.dd4");
+  document.querySelectorAll("details.dd4[open]").forEach((d) => { if (d !== aberto || e.target.closest(".dd4-it")) d.open = false; });
+}, true);
 document.addEventListener("click", async (e) => {
   if (e.target.id === "veu") { fechar(); return; }
   const fvb = e.target.closest("[data-fv],[data-fvf],[data-fvtodos],[data-fvantigo]");
