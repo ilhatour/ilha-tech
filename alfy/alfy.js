@@ -1,4 +1,4 @@
-// ALFY · Mapa de Rotas · Ilha Tech · v2.44.0 · 15/11/2026 · Painel de Ferro · bloco próprio do 🦜 CM; equipe toda da Nave ID
+// ALFY · Mapa de Rotas · Ilha Tech · v2.45.0 · 15/11/2026 · Painel de Ferro · WhatsApp em tempo real (escuta do Mac e dos grupos), IA nunca conclui (🏁)
 // Tudo passa pelas funções alfy_* do banco, sempre com a chave pessoal de quem está usando.
 // O banco decide o que cada pessoa vê; a tela só desenha o que voltou.
 // A IA e os comandos são pedidos numa fila (alfy.pedido) que o robô do Mac atende.
@@ -470,6 +470,8 @@ async function rrCarregar() {
   const x = await chamar("alfy_rastreios", { p_lote: s.rr.lote }).catch(() => null);
   if (x) { s.rr.itens = x.itens || {}; s.rr.ped = x.pedido; if (!x.pedido) { s.rr.lote = null; rrSalvar(); } }   // passada que sumiu do banco: começa do zero
 }
+// 🏁 Parece concluída: o rastreio achou, ou a IA leu um retorno dizendo que foi feito (a IA nunca conclui: só marca, 15/11)
+const parece = (r) => !!(s.rr.itens[r.rt]?.concluida || r.parece_concluida);
 const rrTem = (rt) => { const i = s.rr.itens[rt]; return !!i && !!(i.sugestao || (i.novidades && !/^(nada relevante|nada novo)/i.test(i.novidades))); };
 // 🔔 O que mudou: novidade de outra pessoa (comentário, WhatsApp, mexida) ou do rastreio depois da última vez que você passou pela rota
 const deOutro = (q) => !!q && q !== eu().nome && q !== "ALFY";
@@ -491,7 +493,7 @@ const rrF = () => { const f = s.rr.f || (s.rr.f = { prio: [], st: [], prazo: [] 
 function rrPassaFiltro(x) {
   const f = rrF(), pz = !x.prazo || pcod(x.prioridade) === "P5" ? "sem" : dias(x.prazo) < 0 ? "venc" : dias(x.prazo) === 0 ? "hoje" : dias(x.prazo) <= 7 ? "semana" : "depois";
   return (!f.prio.length || f.prio.includes(pcod(x.prioridade) || "sem")) && (!f.st.length || f.st.includes(x.status))
-    && (!f.prazo.length || f.prazo.includes(pz) || (f.prazo.includes("semana") && (pz === "hoje"))) && (!f.fim.length || !!s.rr.itens[x.rt]?.concluida);
+    && (!f.prazo.length || f.prazo.includes(pz) || (f.prazo.includes("semana") && (pz === "hoje"))) && (!f.fim.length || parece(x));
 }
 const rrNFiltros = () => Object.values(rrF()).reduce((n, l) => n + l.length, 0) + (s.pessoa ? 1 : 0) + (s.frente ? 1 : 0);
 function rrFiltrosHTML() {   // filtros à mostra: grupos curtos numa linha (no celular, desliza para o lado)
@@ -501,7 +503,7 @@ function rrFiltrosHTML() {   // filtros à mostra: grupos curtos numa linha (no 
   return `<div class="rrf2">${grupo("prio", "Prioridade", RR_FILTROS.prio[1].map(([v]) => [v, curto_[v]]))}
     ${grupo("st", "Etapa", [["rota", "🔴 Não iniciada"], ["andamento", "🟡 Andamento"], ["pausada", "🟠 Pausada"]])}
     ${grupo("prazo", "Prazo", [["venc", "Vencidas"], ["hoje", "Hoje"], ["semana", "7 dias"], ["sem", "Sem prazo"]])}
-    ${(() => { const n = (M.rotas || []).filter((r) => ABERTOS.includes(r.status) && s.rr.itens[r.rt]?.concluida).length; return n || f.fim.length ? grupo("fim", "ALFY", [["sim", `🏁 Parece concluída · ${n}`]]) : ""; })()}
+    ${(() => { const n = (M.rotas || []).filter((r) => ABERTOS.includes(r.status) && parece(r)).length; return n || f.fim.length ? grupo("fim", "ALFY", [["sim", `🏁 Parece concluída · ${n}`]]) : ""; })()}
     <div class="rrf2-g"><select class="rrf2-sel ${s.pessoa ? "on" : ""}" data-rrsel="pessoa" aria-label="Pessoa">${opc([["semdono", "👻 Sem dono"], ...pes], s.pessoa, "👤 Todas as pessoas")}</select><select class="rrf2-sel ${s.frente ? "on" : ""}" data-rrsel="frente" aria-label="Frente">${opc(FRENTES.map((x) => [x, frenteCurta(x)]), s.frente, "🗺️ Todas as frentes")}</select></div>
     ${n ? `<button type="button" class="lk rrf2-limpa" data-acao="rr-filtros-limpar">Limpar ${n}</button>` : ""}</div>`;
 }
@@ -599,7 +601,7 @@ function rrFicha(r) {
     ${mudou.length ? `<div class="f5-l"><span class="f5-r">O que mudou</span><ul>${mudou.map((m) => `<li><span class="f5-q">${esc(m.quando || "")}${m.quem ? " · " + esc(m.quem) : ""}</span>${esc(m.o_que)}${CANAL[m.canal] ? ` <span class="f5-canal c-${m.canal}">${CANAL[m.canal]}</span>` : ""}</li>`).join("")}</ul></div>` : ""}
     ${lendo ? `<div class="f5-l"><span class="f5-r">Rastreio</span><p class="f5-vazio">📡 lendo WhatsApp, e-mail, Drive e ALFY…</p></div>` : ""}
     ${i.sugestao ? `<div class="f5-prox"><span class="f5-r">Próximo passo</span><p>${esc(i.sugestao)}</p><button class="mini ia" type="button" data-rraplicar="${r.rt}">🐙 Fazer isso</button></div>` : ""}
-    ${i.concluida ? `<div class="f5-prox fim"><span class="f5-r">Parece pronta</span><p>Pelo que o ALFY leu, esta rota já foi feita.</p><button class="mini" type="button" data-rapido="concluida" data-rrt="${r.rt}">✓ Concluir</button></div>` : ""}
+    ${parece(r) ? `<div class="f5-prox fim"><span class="f5-r">🏁 Parece pronta</span><p>${r.parece_motivo ? esc(r.parece_motivo) : "Pelo que o ALFY leu, esta rota já foi feita."} Quem conclui é você.</p><button class="mini" type="button" data-rapido="concluida" data-rrt="${r.rt}">✓ Concluir</button></div>` : ""}
     ${u || i.fontes ? `<details class="f5-mais"><summary>Ver detalhes</summary>${u ? `<p><small>Último registro · ${esc(curto(u.quem))} · ${quandoFoi(u.em)}</small>${esc(rotaTxt(u.texto))}</p>` : ""}${i.fontes ? `<p><small>Rastreio leu${i.em ? " · " + quandoFoi(i.em) : ""}</small>${Object.entries(i.fontes).filter(([, n]) => n).map(([k, n]) => `${n} ${{ whatsapp: "WhatsApp", email: "e-mail", drive: "Drive", alfy: "ALFY" }[k] || k}`).join(" · ") || "nada"}</p>` : ""}</details>` : ""}
   </div>`;
 }
@@ -1074,6 +1076,8 @@ function pulsoHTML() {
   const vivo = r.visto_em && Date.now() - new Date(r.visto_em) < 5 * 60000;
   return `<div class="pulso"><span><i style="background:${vivo ? "var(--foam)" : "var(--verm)"}"></i>💻 Robô do Mac: ${vivo ? "ligado" : "sem sinal" + (r.visto_em ? " desde " + quandoFoi(r.visto_em) : "") + " (o Mac do escritório está ligado?)"}</span>
     <span><i style="background:${r.ia_ok ? "var(--foam)" : "var(--amber)"}"></i>🐙 IA: ${r.ia_ok ? "ligada" : esc(r.ia_msg || "desligada")}</span>
+    <span><i style="background:${r.wa_ok === false ? "var(--amber)" : r.wa_em && Date.now() - new Date(r.wa_em) < 10 * 60000 ? "var(--foam)" : "var(--aco)"}"></i>📱 WhatsApp do Mac: ${r.wa_ok === false ? "falhando" : r.wa_em ? "lido " + quandoFoi(r.wa_em) : "ainda não leu"}</span>
+    <span><i style="background:${r.grupos_em ? "var(--foam)" : "var(--aco)"}"></i>🦜 Grupos (só escuta): ${r.grupos_em ? "última mensagem " + quandoFoi(r.grupos_em) : "nenhuma ainda"}</span>
     <span><i style="background:${r.email_em ? "var(--foam)" : "var(--aco)"}"></i>✉️ E-mail: ${r.email_em ? "recebido " + quandoFoi(r.email_em) : "ainda não ligado"}</span></div>`;
 }
 const SCRIPT_EMAIL = (chave) => `// ALFY · e-mail (só leitura) e Google Agenda (nos dois sentidos). Cole no script.google.com, salve e rode alfyInstalar uma vez.
@@ -1928,8 +1932,8 @@ function render() {
   casca(); topo(); medidores(); bolhas();
   const c = $("#conteudo");
   c.innerHTML = { rotinas: vistaAbaRotinas, placar: vistaPlacar, zap: () => `<div style="max-width:1080px">${zapHTML("")}</div>`, rotas: () => (s.vista === "rar" && comando() ? vistaRotaARota() : s.vista === "kanban" ? vistaKanban() : vistaLista()), feed: vistaFeed, agenda: vistaAgenda, equipe: vistaEquipe, pautas: vistaPautas, comandos: vistaComandos, eu: vistaEu }[s.aba]();
-  { const r = s.robo, semRobo = r?.visto_em && Date.now() - new Date(r.visto_em) > 5 * 60000, semIa = r && !r.ia_ok;   // aviso no topo: robô ou IA fora
-    if (comando() && (semRobo || semIa)) c.insertAdjacentHTML("afterbegin", `<div class="alerta-ia">${semRobo ? `💻 O robô do Mac está sem sinal desde ${quandoFoi(r.visto_em)}: os pedidos ao ALFY ficam na fila até ele voltar.` : `🐙 A IA do ALFY está desligada: ${esc(r.ia_msg || "")} Os pedidos que falharam voltam sozinhos quando ligar.`}</div>`); }
+  { const r = s.robo, semRobo = r?.visto_em && Date.now() - new Date(r.visto_em) > 5 * 60000, semIa = r && !r.ia_ok, semWa = r && r.wa_ok === false;   // aviso no topo: robô, IA ou leitura do WhatsApp fora
+    if (comando() && (semRobo || semIa || semWa)) c.insertAdjacentHTML("afterbegin", `<div class="alerta-ia">${semRobo ? `💻 O robô do Mac está sem sinal desde ${quandoFoi(r.visto_em)}: os pedidos ao ALFY ficam na fila até ele voltar.` : semIa ? `🐙 A IA do ALFY está desligada: ${esc(r.ia_msg || "")} Os pedidos que falharam voltam sozinhos quando ligar.` : `📱 A leitura do WhatsApp do Mac falhou ${r.wa_falhas || 3} vezes seguidas${r.wa_em ? ` (última leitura boa ${quandoFoi(r.wa_em)})` : ""}. O robô já reiniciou e tenta de novo a cada 90 s. Se continuar: o WhatsApp do Mac está aberto? Apareceu janela pedindo permissão?`}</div>`); }
   if (s.aba === "rotas" && s.vista === "kanban") ligarKanban();
   if (s.aba === "agenda") ligarAgendaKanban();
   try { localStorage.setItem("alfy-vista", JSON.stringify({ vista: s.vista, agrupar: s.agrupar, v28: true })); } catch (_) { /* privado */ }
