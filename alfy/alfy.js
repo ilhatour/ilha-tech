@@ -1,4 +1,4 @@
-// ALFY · Mapa de Rotas · Ilha Tech · v2.51.0 · 15/11/2026 · Painel de Ferro · 🔎 achar pessoa digitando o nome
+// ALFY · Mapa de Rotas · Ilha Tech · v2.52.0 · 15/11/2026 · Painel de Ferro · ✕ cancelar a rota num toque
 // Tudo passa pelas funções alfy_* do banco, sempre com a chave pessoal de quem está usando.
 // O banco decide o que cada pessoa vê; a tela só desenha o que voltou.
 // A IA e os comandos são pedidos numa fila (alfy.pedido) que o robô do Mac atende.
@@ -654,7 +654,8 @@ function rrItem(r, foco) {
           it(`type="button" data-rragendar="${r.rt}"`, "📅", "Agendar"),
           it(`type="button" data-pausar="${r.rt}"`, "💤", "Pausar por alguns dias"),
           manda() ? it(`type="button" data-pautar="${r.rt}"`, "🗂️", (r.pautas || []).length ? "Pauta (ligada) …" : "Levar para uma pauta…") : "",
-          it(`type="button" data-rt="${r.rt}"`, "↗", "Abrir a rota")]);
+          it(`type="button" data-rt="${r.rt}"`, "↗", "Abrir a rota"),
+          manda() ? it(`type="button" data-cancrota="${r.rt}"`, "✕", "Cancelar a rota (não realizada)", "Sai da fila na hora; não pontua no Placar") : ""]);
         return `<div class="acoes4"><div class="grupo4">
         <button class="ac" type="submit" form="${fid}" data-clmodo="comentar">💬<span>Comentar</span></button>${alfy}${mandar}${rota}<button class="ac ok" type="button" data-rapido="concluida" data-rrt="${r.rt}">✓<span>Concluir</span></button></div>
       <div class="grupo4 dir"><button class="ac" type="button" data-rrdepois="${r.rt}" title="Agora não: a rota some até amanhã de manhã (D)">⏭<span>Amanhã</span></button><button class="ac so-icone" type="button" data-acao="rr-sortear" title="Sortear a próxima (S)" aria-label="Sortear">🎲</button><button class="btn turq" type="button" data-rrfeita="${r.rt}" title="Já vi: a rota vai para o fim da fila (com novidade, volta ao lugar dela)">Próxima →</button></div></div>`; })()
@@ -2311,6 +2312,11 @@ document.addEventListener("click", async (e) => {
     if (d.pilset) { await pilSalvar(d.pilrt, d.pilset, d.pilv); return; }
     if (d.cm) { cmCaixa(d.cm); return; }
     if (d.pautar) { pautaCaixa(d.pautar); return; }
+    if (d.cancrota) { const rt = d.cancrota;   // ✕ cancelar num toque: concluída como "não realizada"
+      try { if (s.aba === "rotas" && s.vista === "rar") await enviarRascunho(rt);
+        await chamar("alfy_editar", { p_rt: rt, p_campos: { qualidade: "Não realizada" } }); await chamar("alfy_mover", { p_rt: rt, p_status: "concluida" });
+        if (s.rr?.foco === rt) { s.rr.feitas = { ...s.rr.feitas, [rt]: true }; s.rr.foco = null; rrSalvar(); }
+        aviso(`✕ ${nomeRota(rt)} cancelada (não realizada)`); await recarregar(); render(); } catch (er) { falhou(er); } return; }
     if (d.pausar) { if (s.pil) { s.pil = null; if (s.aberta) refolha(); render(); } pausarCaixa(d.pausar); return; }
     if (d.cmpush) { const r = rotaDe(d.cmpush); if (r) { b.disabled = true; try { await cmMandar(r.responsavel_id, "push", cmTexto("push", r), [r.rt], "tatico"); } catch (er) { falhou(er); } b.disabled = false; } return; }
     if (d.cmmapa) { const mp = mapaPessoa(d.cmmapa); b.disabled = true; try { await cmMandar(d.cmmapa, "mapa", ["🦜 *Contramestre*", "", mp.txt, "", CM_FECHO].join("\n"), mp.rts, "tatico"); s.mapasCopiados = { ...(s.mapasCopiados || {}), [d.cmmapa]: "🦜 " + new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) }; render(); } catch (er) { b.disabled = false; falhou(er); } return; }
