@@ -1564,3 +1564,7 @@ button.cobr-l{cursor:pointer}button.cobr-l:hover{color:var(--texto)}
 .cm-av small{color:var(--aco);font-size:13.5px}
 .cm-av .chip[aria-pressed="true"]{border-color:var(--amber);color:var(--texto)}
 .cm-onde{color:var(--aco);font-size:13.5px;margin-top:-4px}
+/* 2.44 bloco do Contramestre na Passagem */
+.cmg{border-left:1px solid var(--linha);padding-left:10px;align-items:center}
+.cmg-r{font-size:13px;color:var(--amber);font-weight:600;white-space:nowrap}
+@media (max-width:700px){.cmg{border-left:0;padding-left:0;border-top:1px solid var(--linha);padding-top:6px}}
