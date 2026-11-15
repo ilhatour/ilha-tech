@@ -1,4 +1,4 @@
-// ALFY · Mapa de Rotas · Ilha Tech · v2.55.1 · 15/11/2026 · Painel de Ferro · ✕ Cancelar à mostra (Passagem, lista e cartão)
+// ALFY · Mapa de Rotas · Ilha Tech · v2.55.2 · 15/11/2026 · Painel de Ferro · Andamento, Agendar e Pausar à mostra na Passagem
 // Tudo passa pelas funções alfy_* do banco, sempre com a chave pessoal de quem está usando.
 // O banco decide o que cada pessoa vê; a tela só desenha o que voltou.
 // A IA e os comandos são pedidos numa fila (alfy.pedido) que o robô do Mac atende.
@@ -700,16 +700,13 @@ function rrItem(r, foco) {
           `<small class="dd4-t">📋 Copiar para o meu WhatsApp</small>`,
           it(`type="button" data-copiarrota="${r.rt}"`, "📋", "Copiar a rota"),
           podeCobrar(r) ? it(`type="button" data-cobrar="${r.rt}"`, "📣", "Copiar um “e aí?”") : ""]);
-        const rota = grupo("rota", "⋯", "Rota", "", [
-          r.status !== "andamento" ? it(`type="button" data-rapido="andamento" data-rrt="${r.rt}"`, "▶", "Em andamento") : "",
-          it(`type="button" data-rragendar="${r.rt}"`, "📅", "Agendar"),
-          it(`type="button" data-pausar="${r.rt}"`, "💤", "Pausar por alguns dias"),
+        const rota = grupo("rota", "⋯", "Mais", "", [
           comando() ? it(`type="button" data-externo="${r.rt}"`, "🤝", r.externo ? `Externo: ${esc(r.externo.nome)}…` : "Ligar um externo (fornecedor)…") : "",
           manda() ? it(`type="button" data-pautar="${r.rt}"`, "🗂️", (r.pautas || []).length ? "Pauta (ligada) …" : "Levar para uma pauta…") : "",
           it(`type="button" data-rt="${r.rt}"`, "↗", "Abrir a rota"),
           ]);
         return `<div class="acoes4"><div class="grupo4">
-        <button class="ac" type="submit" form="${fid}" data-clmodo="comentar">💬<span>Comentar</span></button>${alfy}${mandar}${rota}<button class="ac ok" type="button" data-rapido="concluida" data-rrt="${r.rt}">✓<span>Concluir</span></button>${manda() ? `<button class="ac nao" type="button" data-cancrota="${r.rt}" title="Cancelar: não faz mais sentido (X)">✕<span>Cancelar</span></button>` : ""}</div>
+        <button class="ac" type="submit" form="${fid}" data-clmodo="comentar">💬<span>Comentar</span></button>${alfy}${mandar}${r.status !== "andamento" ? `<button class="ac" type="button" data-rapido="andamento" data-rrt="${r.rt}" title="Em andamento">▶<span>Andamento</span></button>` : ""}<button class="ac ${s.rrAg === r.rt ? "on" : ""}" type="button" data-rragendar="${r.rt}" title="Agendar (dia e hora)">📅<span>Agendar</span></button><button class="ac" type="button" data-pausar="${r.rt}" title="Pausar por alguns dias: volta sozinha">💤<span>Pausar</span></button>${rota}<button class="ac ok" type="button" data-rapido="concluida" data-rrt="${r.rt}">✓<span>Concluir</span></button>${manda() ? `<button class="ac nao" type="button" data-cancrota="${r.rt}" title="Cancelar: não faz mais sentido (X)">✕<span>Cancelar</span></button>` : ""}</div>
       <div class="grupo4 dir"><button class="ac" type="button" data-rrdepois="${r.rt}" title="Agora não: a rota some até amanhã de manhã (D)">⏭<span>Amanhã</span></button><button class="ac so-icone" type="button" data-acao="rr-sortear" title="Sortear a próxima (S)" aria-label="Sortear">🎲</button><button class="btn turq" type="button" data-rrfeita="${r.rt}" title="Já vi: a rota vai para o fim da fila (com novidade, volta ao lugar dela)">Próxima →</button></div></div>`; })()
       : `<div class="acoes4 mini4"><button class="ac" type="button" data-rrfoco="${r.rt}">✎<span>Tratar</span></button><button class="ac" type="button" data-rrfeita="${r.rt}">✓<span>Vista</span></button><button class="ac" type="button" data-rrdepois="${r.rt}">⏭<span>Depois</span></button></div>`}
   </article>`;
