@@ -1,4 +1,4 @@
-// ALFY · Mapa de Rotas · Ilha Tech · v2.55.0 · 15/11/2026 · Painel de Ferro · ⚡ Revisão rápida (uma rota por vez)
+// ALFY · Mapa de Rotas · Ilha Tech · v2.55.1 · 15/11/2026 · Painel de Ferro · ✕ Cancelar à mostra (Passagem, lista e cartão)
 // Tudo passa pelas funções alfy_* do banco, sempre com a chave pessoal de quem está usando.
 // O banco decide o que cada pessoa vê; a tela só desenha o que voltou.
 // A IA e os comandos são pedidos numa fila (alfy.pedido) que o robô do Mac atende.
@@ -264,7 +264,7 @@ const podeMexer = (r) => manda() || r.responsavel_id === eu().id || r.co_respons
 function acoesLinha(r) {
   if (!podeMexer(r)) return "";
   const ab = ABERTOS.includes(r.status);
-  return `<span class="acoes-linha"><button class="ac" type="button" data-copiarrota="${r.rt}" title="Copiar esta rota para mandar no WhatsApp">📋<span>Copiar</span></button>${podeCobrar(r) ? `<button class="ac" type="button" data-cobrar="${r.rt}" title="Copia um 'e aí?' para a pessoa e conta a cobrança">📣<span>Cobrar</span></button>` : ""}${podeCM(r) ? `<button class="ac cm" type="button" data-cm="${r.rt}" title="O Contramestre manda pelo WhatsApp">🦜<span>CM</span></button>` : ""}${ab ? `<button class="ac ok" type="button" data-rapido="concluida" data-rrt="${r.rt}" title="Concluir">✓<span>Concluir</span></button>` : ""}${r.status === "rota" ? `<button class="ac" type="button" data-rapido="andamento" data-rrt="${r.rt}" title="Começar">▶<span>Começar</span></button>` : ""}${ab && r.rt.startsWith("RT-") ? `<button class="ac" type="button" data-agdar="${r.rt}" title="${r.inicio ? "Mudar o horário na agenda" : "Dar um horário na agenda"}">📅<span>${r.inicio ? hhmm(r.inicio) : "Agendar"}</span></button>` : ""}${comando() && r.rt.startsWith("RT-") ? `<button class="ac" type="button" data-rastrear="${r.rt}" title="Rastrear: procura novidade desta rota no WhatsApp e no e-mail">📡<span>Rastrear</span></button>` : ""}<button class="ac ${s.linhasAbertas?.[r.rt] ? "on" : ""} ${s.respLinha?.[r.rt] && !s.linhasAbertas?.[r.rt] ? "pronto" : ""}" type="button" data-linhacaixa="${r.rt}" title="${comando() ? "Comentar ou pedir ao ALFY" : "Comentar"}">${comando() ? "🐙" : "💬"}<span>${comando() ? "ALFY" : "Comentar"}</span></button></span>`;
+  return `<span class="acoes-linha"><button class="ac" type="button" data-copiarrota="${r.rt}" title="Copiar esta rota para mandar no WhatsApp">📋<span>Copiar</span></button>${podeCobrar(r) ? `<button class="ac" type="button" data-cobrar="${r.rt}" title="Copia um 'e aí?' para a pessoa e conta a cobrança">📣<span>Cobrar</span></button>` : ""}${podeCM(r) ? `<button class="ac cm" type="button" data-cm="${r.rt}" title="O Contramestre manda pelo WhatsApp">🦜<span>CM</span></button>` : ""}${ab ? `<button class="ac ok" type="button" data-rapido="concluida" data-rrt="${r.rt}" title="Concluir">✓<span>Concluir</span></button>` : ""}${ab && manda() && r.rt.startsWith("RT-") ? `<button class="ac nao" type="button" data-cancrota="${r.rt}" title="Cancelar: não faz mais sentido">✕<span>Cancelar</span></button>` : ""}${r.status === "rota" ? `<button class="ac" type="button" data-rapido="andamento" data-rrt="${r.rt}" title="Começar">▶<span>Começar</span></button>` : ""}${ab && r.rt.startsWith("RT-") ? `<button class="ac" type="button" data-agdar="${r.rt}" title="${r.inicio ? "Mudar o horário na agenda" : "Dar um horário na agenda"}">📅<span>${r.inicio ? hhmm(r.inicio) : "Agendar"}</span></button>` : ""}${comando() && r.rt.startsWith("RT-") ? `<button class="ac" type="button" data-rastrear="${r.rt}" title="Rastrear: procura novidade desta rota no WhatsApp e no e-mail">📡<span>Rastrear</span></button>` : ""}<button class="ac ${s.linhasAbertas?.[r.rt] ? "on" : ""} ${s.respLinha?.[r.rt] && !s.linhasAbertas?.[r.rt] ? "pronto" : ""}" type="button" data-linhacaixa="${r.rt}" title="${comando() ? "Comentar ou pedir ao ALFY" : "Comentar"}">${comando() ? "🐙" : "💬"}<span>${comando() ? "ALFY" : "Comentar"}</span></button></span>`;
 }
 function caixaLinha(r, forcar) {
   if (!forcar && !s.linhasAbertas?.[r.rt]) return "";
@@ -707,9 +707,9 @@ function rrItem(r, foco) {
           comando() ? it(`type="button" data-externo="${r.rt}"`, "🤝", r.externo ? `Externo: ${esc(r.externo.nome)}…` : "Ligar um externo (fornecedor)…") : "",
           manda() ? it(`type="button" data-pautar="${r.rt}"`, "🗂️", (r.pautas || []).length ? "Pauta (ligada) …" : "Levar para uma pauta…") : "",
           it(`type="button" data-rt="${r.rt}"`, "↗", "Abrir a rota"),
-          manda() ? it(`type="button" data-cancrota="${r.rt}"`, "✕", "Cancelar a rota (não realizada)", "Sai da fila na hora; não pontua no Placar") : ""]);
+          ]);
         return `<div class="acoes4"><div class="grupo4">
-        <button class="ac" type="submit" form="${fid}" data-clmodo="comentar">💬<span>Comentar</span></button>${alfy}${mandar}${rota}<button class="ac ok" type="button" data-rapido="concluida" data-rrt="${r.rt}">✓<span>Concluir</span></button></div>
+        <button class="ac" type="submit" form="${fid}" data-clmodo="comentar">💬<span>Comentar</span></button>${alfy}${mandar}${rota}<button class="ac ok" type="button" data-rapido="concluida" data-rrt="${r.rt}">✓<span>Concluir</span></button>${manda() ? `<button class="ac nao" type="button" data-cancrota="${r.rt}" title="Cancelar: não faz mais sentido (X)">✕<span>Cancelar</span></button>` : ""}</div>
       <div class="grupo4 dir"><button class="ac" type="button" data-rrdepois="${r.rt}" title="Agora não: a rota some até amanhã de manhã (D)">⏭<span>Amanhã</span></button><button class="ac so-icone" type="button" data-acao="rr-sortear" title="Sortear a próxima (S)" aria-label="Sortear">🎲</button><button class="btn turq" type="button" data-rrfeita="${r.rt}" title="Já vi: a rota vai para o fim da fila (com novidade, volta ao lugar dela)">Próxima →</button></div></div>`; })()
       : `<div class="acoes4 mini4"><button class="ac" type="button" data-rrfoco="${r.rt}">✎<span>Tratar</span></button><button class="ac" type="button" data-rrfeita="${r.rt}">✓<span>Vista</span></button><button class="ac" type="button" data-rrdepois="${r.rt}">⏭<span>Depois</span></button></div>`}
   </article>`;
@@ -752,7 +752,7 @@ function vistaRotaARota() {
   const mini = (x) => `<div class="rr-mini4" role="button" tabindex="0" data-rrfoco="${x.rt}">${tag(x)}<span class="tt"><b>${esc(x.titulo)}</b><small>${r.modo === "mudou" && rrMudou(x) ? `<span class="nova-l">${esc(rrMudou(x).txt)}</span> · ` : temNova(x) ? '<span class="nova-l">💬 nova resposta</span> · ' : ""}${esc(ST[x.status].um)} · ${esc(prazoInfo(x).txt)} · ${esc(curto(nomeDe(x.responsavel_id)))}${rrTem(x.rt) ? " · 📡 novidade" : ""}${s.rr.itens[x.rt]?.resumo ? " · " + esc(s.rr.itens[x.rt].resumo.slice(0, 120)) : x.como_esta ? " · " + esc(x.como_esta.slice(0, 110)) : ""}</small></span></div>`;
   const resto = gs.map(([n, l]) => { const ll = l.filter((x) => x.rt !== foco); return ll.length ? `<section class="rr-grupo"><h2>${esc(n)}<span class="ct">${ll.length}</span></h2><div class="lista">${ll.map(mini).join("")}</div></section>` : ""; }).join("");
   return painel + (fx ? `<div class="rr-deck" id="rr-deck">${rrItem(fx, true)}</div>` : "")
-    + `<p class="rr-dica">Atalhos: <kbd>⌘ Enter</kbd> comenta e passa · <kbd>⌘ Shift Enter</kbd> pede ao ALFY e passa · <kbd>→</kbd> próxima (já vi) · <kbd>D</kbd> amanhã · <kbd>C</kbd> concluir · <kbd>S</kbd> sortear · <kbd>E</kbd> escrever · <kbd>Esc</kbd> sai do campo</p>`
+    + `<p class="rr-dica">Atalhos: <kbd>⌘ Enter</kbd> comenta e passa · <kbd>⌘ Shift Enter</kbd> pede ao ALFY e passa · <kbd>→</kbd> próxima (já vi) · <kbd>D</kbd> amanhã · <kbd>C</kbd> concluir · <kbd>X</kbd> cancelar · <kbd>S</kbd> sortear · <kbd>E</kbd> escrever · <kbd>Esc</kbd> sai do campo</p>`
     + (resto ? `<h3 class="rr-fila-t">Na fila · ${fila.length - (fx ? 1 : 0)}</h3>${resto}` : "");
 }
 
@@ -1626,7 +1626,8 @@ function folha() {
         podeCM(r) ? `<button type="button" class="b3" data-cm="${r.rt}"><span>🦜</span>CM</button>` : "",
         r.status === "concluida" || !r.rt.startsWith("RT-") ? "" : `<button type="button" class="b3" data-agdar="${r.rt}"><span>📅</span>${r.inicio ? hhmm(r.inicio) : "Agendar"}</button>`,
         `<button type="button" class="b3 lem" data-irf="lembrete"><span>⏰</span>Lembrar</button>`,
-        r.status === "concluida" ? "" : `<button type="button" class="b3 ok" data-mover="concluida"><span>✓</span>Concluir</button>`].filter(Boolean);
+        r.status === "concluida" ? "" : `<button type="button" class="b3 ok" data-mover="concluida"><span>✓</span>Concluir</button>`,
+        r.status === "concluida" || !manda() || !r.rt.startsWith("RT-") ? "" : `<button type="button" class="b3 nao" data-cancrota="${r.rt}"><span>✕</span>Cancelar</button>`].filter(Boolean);
       return `<div class="col3 barra3-in" style="grid-template-columns:36px repeat(${bt.length},minmax(0,1fr)) 36px"><button type="button" class="seta3" data-fnav="-1" ${i > 0 ? "" : "disabled"} aria-label="Rota anterior">‹</button>${bt.join("")}<button type="button" class="seta3" data-fnav="1" ${i < ord.length - 1 ? "" : "disabled"} aria-label="Próxima rota">›</button></div>`; })()}</nav>
   </section></div>`;
   // nada mudou: não redesenha (o vigia recarrega a cada 3 s enquanto o ALFY trabalha e a gaveta piscava)
@@ -2410,7 +2411,7 @@ document.addEventListener("click", async (e) => {
       try { if (s.aba === "rotas" && s.vista === "rar") await enviarRascunho(rt);
         await chamar("alfy_editar", { p_rt: rt, p_campos: { qualidade: "Não realizada" } }); await chamar("alfy_mover", { p_rt: rt, p_status: "concluida" });
         if (s.rr?.foco === rt) { s.rr.feitas = { ...s.rr.feitas, [rt]: true }; s.rr.foco = null; rrSalvar(); }
-        aviso(`✕ ${nomeRota(rt)} cancelada (não realizada)`); await recarregar(); render(); } catch (er) { falhou(er); } return; }
+        aviso(`✕ ${nomeRota(rt)} cancelada (não realizada)`); await recarregar(); if (s.aberta === rt) { await recarregarCartao(); refolha(); } render(); } catch (er) { falhou(er); } return; }
     if (d.pausar) { if (s.pil) { s.pil = null; if (s.aberta) refolha(); render(); } pausarCaixa(d.pausar); return; }
     if (d.cmpush) { const r = rotaDe(d.cmpush); if (r) { b.disabled = true; try { await cmMandar(r.responsavel_id, "push", cmTexto("push", r), [r.rt], "tatico"); } catch (er) { falhou(er); } b.disabled = false; } return; }
     if (d.cmmapa) { const mp = mapaPessoa(d.cmmapa); b.disabled = true; try { await cmMandar(d.cmmapa, "mapa", ["🦜 *Contramestre*", "", mp.txt, "", CM_FECHO].join("\n"), mp.rts, "tatico"); s.mapasCopiados = { ...(s.mapasCopiados || {}), [d.cmmapa]: "🦜 " + new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) }; render(); } catch (er) { b.disabled = false; falhou(er); } return; }
@@ -2690,6 +2691,7 @@ document.addEventListener("keydown", (e) => {
       if (e.key === "ArrowRight" || (!naCaixa && e.key === "j")) { aperta("[data-rrfeita]"); e.target.blur?.(); }
       else if (!naCaixa && (e.key === "d" || e.key === "D")) aperta("[data-rrdepois]");
       else if (!naCaixa && (e.key === "c" || e.key === "C")) aperta('[data-rapido="concluida"]');
+      else if (!naCaixa && (e.key === "x" || e.key === "X")) aperta("[data-cancrota]");
       else if (!naCaixa && (e.key === "s" || e.key === "S")) { e.preventDefault(); rrSortear(); }
       else if (!naCaixa && (e.key === "e" || e.key === "/")) { e.preventDefault(); deck.querySelector("textarea")?.focus({ preventScroll: true }); }
     }

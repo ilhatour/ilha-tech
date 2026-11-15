@@ -1626,3 +1626,6 @@ textarea.melhorando{opacity:.6;border-color:var(--lilas)!important}
 .rev-k.ok{border-color:rgba(127,203,160,.5)}.rev-k.nao{border-color:rgba(229,72,77,.45)}.rev-k.segue{background:var(--turq-esc);border-color:var(--turq)}
 .rev-d{margin:0}
 @media (max-width:600px){.rev-k kbd{display:none}.rev-b{grid-template-columns:1fr 1fr}.rev-k.segue{grid-column:1/-1}}
+/* 2.55.1 cancelar à mostra */
+.ac.nao span{color:#FF9A9C}
+.b3.nao span:first-child{color:#FF9A9C}
