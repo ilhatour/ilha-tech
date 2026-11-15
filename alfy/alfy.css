@@ -1585,3 +1585,5 @@ button.cobr-l{cursor:pointer}button.cobr-l:hover{color:var(--texto)}
 .fv-rota{margin-top:6px;background:none;border:0;padding:0;color:var(--turq);font:inherit;font-size:13px;cursor:pointer}
 .fv-ac{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
 @media (max-width:640px){.fv{grid-template-columns:28px minmax(0,1fr)}.fv-ic{width:28px;height:28px}.fv-ac{grid-column:2;justify-content:flex-start}}
+/* 2.47 ✨ Melhorar */
+textarea.melhorando{opacity:.6;border-color:var(--lilas)!important}

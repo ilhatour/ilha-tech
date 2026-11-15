@@ -1,4 +1,4 @@
-// ALFY · Mapa de Rotas · Ilha Tech · v2.46.1 · 15/11/2026 · Painel de Ferro · 🦜 Contramestre ligado de verdade (modo equipe)
+// ALFY · Mapa de Rotas · Ilha Tech · v2.47.0 · 15/11/2026 · Painel de Ferro · ✨ Melhorar o texto antes de comentar ou enviar
 // Tudo passa pelas funções alfy_* do banco, sempre com a chave pessoal de quem está usando.
 // O banco decide o que cada pessoa vê; a tela só desenha o que voltou.
 // A IA e os comandos são pedidos numa fila (alfy.pedido) que o robô do Mac atende.
@@ -263,7 +263,7 @@ function caixaLinha(r, forcar) {
   const resp = s.respLinha?.[r.rt], rod = s.esperando["rota:" + r.rt];
   const fid = "clf-" + r.rt.replace(/\W/g, "");
   return `<div class="caixa-linha"><form class="cl-form ${forcar ? "so-campo" : ""}" id="${fid}" data-clform="${r.rt}"><textarea class="busca" id="cl-${r.rt.replace(/\W/g, "")}" rows="2" placeholder="${comando() ? "Comente o que aconteceu ou o próximo passo (o ALFY atualiza a rota), ou peça: muda o dono para a Karol · P1 até sexta · faz a mensagem cobrando" : "Conte como está ou o próximo passo. O ALFY atualiza a rota."}">${esc(s.rascunhoLinha?.[r.rt] || "")}</textarea>
-    ${forcar ? "" : `<span class="cl-bot"><button class="btn peq" type="submit" data-clmodo="comentar">💬 Comentar</button>${comando() ? '<button class="btn turq peq" type="submit" data-clmodo="alfy">🐙 Pedir ao ALFY</button>' : ""}</span>`}</form>
+    ${forcar ? "" : `<span class="cl-bot"><button class="btn peq" type="submit" data-clmodo="comentar">💬 Comentar</button>${comando() ? '<button class="btn peq" type="submit" data-clmodo="melhorar">✨ Melhorar</button>' : ""}${comando() ? '<button class="btn turq peq" type="submit" data-clmodo="alfy">🐙 Pedir ao ALFY</button>' : ""}</span>`}</form>
     ${rod ? `<div class="ia-saida pensando">${s.rastreando?.[r.rt] ? "📡 rastreando WhatsApp e e-mail desta rota… (até 1 minuto)" : "🐙 o ALFY está lendo e atualizando a rota… (uns 10 segundos)"}</div>` : ""}
     ${resp ? `<div class="ia-saida">${textoAlfy(resp)}<div class="usar">${s.sugLinha?.[r.rt] ? `<button class="mini ia" type="button" data-aplicarsug="${r.rt}">🐙 Aplicar a sugestão</button>` : ""}${/---MENSAGEM---|^\s*🐙 Alfy/.test(resp) ? "" : `<button class="mini" type="button" data-copiartxt="${r.rt}">Copiar</button>`}<button class="mini" type="button" data-rt="${r.rt}">Abrir a rota</button></div></div>` : ""}</div>`;
 }
@@ -627,7 +627,7 @@ function rrItem(r, foco) {
     ${s.rrAg === r.rt ? `<div class="rr-agenda">${quandoCaixa(["ag-dia", "ag-ini", "ag-fim"], r.responsavel_id, r.rt)}<label>Dia<input type="date" id="ag-dia" value="${r.inicio ? dia(r.inicio) : hojeDia()}"></label><label>Das<input type="time" id="ag-ini" value="${r.inicio ? hhmm(r.inicio) : "09:00"}"></label><label>Até<input type="time" id="ag-fim" value="${r.fim ? hhmm(r.fim) : ""}"></label>
       <span class="rr-acoes"><button class="btn turq peq" type="button" data-agpor="${r.rt}">📅 Pôr na agenda</button><button class="btn peq" type="button" data-agprazo="${r.rt}">Só mudar o prazo</button></span></div>` : ""}
     ${foco ? `<div class="acoes4"><div class="grupo4">
-        <button class="ac" type="submit" form="${fid}" data-clmodo="comentar">💬<span>Comentar</span></button>${comando() ? `<button class="ac ia" type="submit" form="${fid}" data-clmodo="alfy">🐙<span>Pedir ao ALFY</span></button>` : ""}${comando() && r.rt.startsWith("RT-") ? `<button class="ac" type="button" data-rastrear="${r.rt}">📡<span>Rastrear</span></button>` : ""}
+        <button class="ac" type="submit" form="${fid}" data-clmodo="comentar">💬<span>Comentar</span></button>${comando() ? `<button class="ac ia" type="submit" form="${fid}" data-clmodo="melhorar" title="O ALFY melhora o seu texto com o que já sabe da rota (você confere antes de mandar)">✨<span>Melhorar</span></button>` : ""}${comando() ? `<button class="ac ia" type="submit" form="${fid}" data-clmodo="alfy">🐙<span>Pedir ao ALFY</span></button>` : ""}${comando() && r.rt.startsWith("RT-") ? `<button class="ac" type="button" data-rastrear="${r.rt}">📡<span>Rastrear</span></button>` : ""}
         <button class="ac ${s.rrAg === r.rt ? "on" : ""}" type="button" data-rragendar="${r.rt}">📅<span>Agendar</span></button><button class="ac" type="button" data-copiarrota="${r.rt}" title="Copiar esta rota para mandar no WhatsApp">📋<span>Copiar</span></button>${podeCobrar(r) ? `<button class="ac" type="button" data-cobrar="${r.rt}" title="Copia um 'e aí?' para a pessoa e conta a cobrança">📣<span>Cobrar</span></button>` : ""}${r.status !== "andamento" ? `<button class="ac" type="button" data-rapido="andamento" data-rrt="${r.rt}">▶<span>Em andamento</span></button>` : ""}<button class="ac ok" type="button" data-rapido="concluida" data-rrt="${r.rt}">✓<span>Concluir</span></button><button class="ac" type="button" data-rt="${r.rt}">↗<span>Abrir</span></button></div>
       ${podeCM(r) ? `<div class="grupo4 cmg" role="group" aria-label="Contramestre"><span class="cmg-r">🦜 CM</span><button class="ac cm" type="button" data-cmpush="${r.rt}" title="Cobra o andamento no tático da pessoa">🔔<span>Push</span></button><button class="ac cm" type="submit" form="${fid}" data-clmodo="cmcom" title="Comenta na rota e manda o mesmo texto no tático">💬<span>Enviar comentário</span></button><button class="ac cm" type="button" data-cm="${r.rt}" title="Mandar a rota ou um recado">⋯<span>Mais</span></button></div>` : ""}
       <div class="grupo4 dir"><button class="ac" type="button" data-rrdepois="${r.rt}" title="Agora não: a rota some até amanhã de manhã">⏭<span>Amanhã</span></button><button class="ac" type="button" data-acao="rr-sortear" title="Sortear a próxima (S)">🎲<span>Sortear</span></button><button class="btn turq" type="button" data-rrfeita="${r.rt}" title="Já vi: a rota vai para o fim da fila (com novidade, volta ao lugar dela)">Próxima →</button></div></div>`
@@ -2436,6 +2436,20 @@ document.addEventListener("submit", async (e) => {
     const rt = f.dataset.clform, ta = f.querySelector("textarea"), t = ta.value.trim(), modo = e.submitter?.dataset.clmodo || "comentar";
     if (!t) return;
     try {
+      if (modo === "melhorar") {   // ✨ o ALFY reescreve no próprio campo; nada vai para a rota até você comentar ou enviar
+        const bt = e.submitter, b0 = bt?.innerHTML; if (bt) { bt.disabled = true; bt.innerHTML = "✨<span>Melhorando…</span>"; } ta.classList.add("melhorando");
+        try {
+          const q = await chamar("alfy_pedir", { p_tipo: "melhorar", p_escopo: "rota:" + rt, p_dados: { texto: t } });
+          for (let k = 0; k < 45; k++) {
+            await new Promise((ok) => setTimeout(ok, 2000));
+            const p = await chamar("alfy_pedido", { p_id: q.id });
+            if (p?.status === "feito") { const novo = p.resultado?.texto || t; ta.value = novo; s.rascunhoLinha = { ...(s.rascunhoLinha || {}), [rt]: novo }; s.melhorAntes = { ...(s.melhorAntes || {}), [rt]: t }; aviso("✨ Texto melhorado. Confira e depois Comente ou Envie."); ta.focus(); break; }
+            if (p?.status === "erro") { aviso("Não consegui melhorar agora: " + (p.erro || "").slice(0, 100), true); break; }
+          }
+        } catch (er) { falhou(er); }
+        if (bt) { bt.disabled = false; bt.innerHTML = b0; } ta.classList.remove("melhorando");
+        return;
+      }
       const rr_ = rotaDe(rt);
       if (modo === "cmcom" && rr_ && podeCM(rr_)) {   // 🦜 o comentário fica na rota e o CM leva o mesmo texto ao tático
         await chamar("alfy_comentar", { p_rt: rt, p_texto: t, p_tipo: "comentario" }); s.rascunhoLinha = { ...(s.rascunhoLinha || {}), [rt]: "" }; ta.value = "";
