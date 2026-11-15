@@ -1,4 +1,4 @@
-// ALFY · Mapa de Rotas · Ilha Tech · v2.43.0 · 15/11/2026 · Painel de Ferro · 🦜 CM no tático: push ou comentário
+// ALFY · Mapa de Rotas · Ilha Tech · v2.43.1 · 15/11/2026 · Painel de Ferro · 🦜 Push = cobrança padrão do andamento
 // Tudo passa pelas funções alfy_* do banco, sempre com a chave pessoal de quem está usando.
 // O banco decide o que cada pessoa vê; a tela só desenha o que voltou.
 // A IA e os comandos são pedidos numa fila (alfy.pedido) que o robô do Mac atende.
@@ -889,7 +889,7 @@ function cmTexto(tipo, r, extra) {
     rota: () => [`${nome}, esta rota é sua:`, "", blocoMapa(r), r.resultado ? `\n*Resultado esperado:* ${r.resultado}` : "", "", resp],
     cobrar: () => [`E aí, ${nome}? Como está a *Rota ${n}*?`, "", blocoMapa(r), "", `O Miguel está aguardando o seu retorno. ${resp}`],
     comentario: () => [`${nome}, o Miguel deixou um recado na *Rota ${n}*:`, "", `“${(extra || "").trim()}”`, "", blocoMapa(r), "", resp],
-    push: () => [extra === "recado" ? `${nome}, tem recado novo do Miguel na *Rota ${n}*. Dá uma olhada no ALFY (ilhatech.io/alfy).` : `${nome}, a *Rota ${n}* está esperando o seu retorno.`, "", resp],
+    push: () => [`${nome}, como está o andamento desta rota?`, "", blocoMapa(r), "", resp],   // o cutucão padrão do CM: cobra o andamento, sem dizer o que mudou
     livre: () => [nome ? `${nome}, ${(extra || "").trim()}` : (extra || "").trim(), "", resp],
   }[tipo]();
   return ["🦜 *Contramestre*", "", ...corpo, "", CM_FECHO].filter((x, k, a) => !(x === "" && a[k - 1] === "")).join("\n").trim();
@@ -913,7 +913,7 @@ function cmCaixa(rt, tipo0) {   // escolher o que mandar, conferir o texto e man
   if (!s.cmDest) chamar("alfy_cm_destinos", {}).then((d) => { s.cmDest = d || {}; if (document.body.contains(c)) desenha($("#cm-livre")?.value); }).catch(() => {});
   const c = document.createElement("div");
   c.className = "qconc cmcx"; c.setAttribute("role", "dialog"); c.setAttribute("aria-label", "Mandar pelo Contramestre");
-  const ops = [["push", "🔔 Push"], ["cobrar", "📣 E aí?"], ["rota", "📋 A rota"], ["livre", "✍️ Recado"]];
+  const ops = [["push", "🔔 Push (andamento)"], ["rota", "📋 A rota"], ["livre", "✍️ Recado"]];
   const desenha = (livre) => { c.innerHTML = `<div class="qc-caixa"><b>🦜 Mandar pelo Contramestre</b><small>para ${esc(nomeDe(r.responsavel_id))} · ${esc(nomeRota(rt))}</small>
       <div class="seg5 cm-tipos" role="group" aria-label="O que mandar">${ops.map(([k, n]) => `<button type="button" data-cmt="${k}" aria-pressed="${tipo === k}">${n}</button>`).join("")}</div>
       <div class="seg5 cm-tipos" role="group" aria-label="Onde">${[["tatico", "🎯 No tático"], ["privado", "👤 No privado"]].map(([k, n]) => `<button type="button" data-cmd="${k}" aria-pressed="${destino === k}">${n}</button>`).join("")}</div>
@@ -2369,7 +2369,7 @@ document.addEventListener("submit", async (e) => {
       const av = s.cmAv || "nao", rr_ = rotaDe(rt);
       if (modo === "comentar" && av !== "nao" && rr_ && podeCM(rr_)) {   // 🦜 push (só avisa) ou manda o próprio comentário, no tático
         await chamar("alfy_comentar", { p_rt: rt, p_texto: t, p_tipo: "comentario" }); s.rascunhoLinha = { ...(s.rascunhoLinha || {}), [rt]: "" }; ta.value = "";
-        await cmMandar(rr_.responsavel_id, av === "push" ? "push" : "comentario", cmTexto(av === "push" ? "push" : "comentario", rr_, av === "push" ? "recado" : t), [rt], "tatico"); esperarEntender(rt); return;
+        await cmMandar(rr_.responsavel_id, av === "push" ? "push" : "comentario", cmTexto(av === "push" ? "push" : "comentario", rr_, t), [rt], "tatico"); esperarEntender(rt); return;
       }
       if (modo === "comentar") { await chamar("alfy_comentar", { p_rt: rt, p_texto: t, p_tipo: "comentario" }); s.rascunhoLinha = { ...(s.rascunhoLinha || {}), [rt]: "" }; aviso("Comentado. O ALFY está lendo para atualizar a rota"); await recarregar(); esperarEntender(rt); render(); }
       else { s.rascunhoLinha = { ...(s.rascunhoLinha || {}), [rt]: "" }; s.respLinha = { ...(s.respLinha || {}), [rt]: "" }; await pedir("ia", "rota:" + rt, { texto: t, agir: true }, "rota:" + rt); s.ultimaPerguntaLinha = rt; render(); }
