@@ -1559,3 +1559,8 @@ button.cobr-l{cursor:pointer}button.cobr-l:hover{color:var(--texto)}
 .cmcx textarea{width:100%;background:var(--ferro-2);border:1px solid var(--linha);border-radius:8px;padding:9px 10px;font-size:16px;color:var(--texto)}
 .cm-prev{margin:0;white-space:pre-wrap;font:inherit;font-size:14.5px;line-height:1.45;background:#0f2a24;border:1px solid #1d4a3f;border-radius:10px;padding:12px 14px;max-height:38vh;overflow:auto;color:var(--texto)}
 .cm-modo{margin:0;font-size:13.5px;color:var(--amber)}
+/* 2.43 🦜 ao comentar + destino */
+.cm-av{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:6px 0 2px}
+.cm-av small{color:var(--aco);font-size:13.5px}
+.cm-av .chip[aria-pressed="true"]{border-color:var(--amber);color:var(--texto)}
+.cm-onde{color:var(--aco);font-size:13.5px;margin-top:-4px}
