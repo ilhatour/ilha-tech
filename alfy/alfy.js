@@ -1,4 +1,4 @@
-// ALFY · Mapa de Rotas · Ilha Tech · v2.55.2 · 15/11/2026 · Painel de Ferro · Andamento, Agendar e Pausar à mostra na Passagem
+// ALFY · Mapa de Rotas · Ilha Tech · v2.55.3 · 16/11/2026 · Painel de Ferro · WhatsApp se atualiza sozinho na tela
 // Tudo passa pelas funções alfy_* do banco, sempre com a chave pessoal de quem está usando.
 // O banco decide o que cada pessoa vê; a tela só desenha o que voltou.
 // A IA e os comandos são pedidos numa fila (alfy.pedido) que o robô do Mac atende.
@@ -2728,7 +2728,7 @@ function vigiar() {
       if (v !== versao || Object.keys(s.esperando).length || s.despejo.pedido) { await recarregar(); renderSeguro(); }
       if (comando() && Date.now() - (s.postsEm || 0) > 30000 && (await carregarPosts())) renderSeguro();   // 📡 feed ao vivo: confere a cada 30 s
       if (rrRodando() && s.aba === "rotas" && s.vista === "rar") { await rrCarregar(); renderSeguro(); }
-      if (((s.aba === "comandos" && s.cmd === "zap") || s.aba === "zap") && zapRodando()) { await carregarZap(); renderSeguro(); }
+      if (((s.aba === "comandos" && s.cmd === "zap") || s.aba === "zap") && (zapRodando() || Date.now() - (s.zapLido || 0) > 60000)) { s.zapLido = Date.now(); const id0 = s.zap?.pedido?.id; await carregarZap(); if (zapRodando() || s.zap?.pedido?.id !== id0) renderSeguro(); }   // a tela do WhatsApp se atualiza sozinha (o robô lê de 15 em 15 min)
     } catch (_) { /* sem rede: tenta de novo */ }
     agenda();
   };
