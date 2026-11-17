@@ -1,4 +1,4 @@
-// ALFY · Mapa de Rotas · Ilha Tech · v2.56.0 · 17/11/2026 · Painel de Ferro · CM só com o 🦜 e Mapa com rodapé enxuto
+// ALFY · Mapa de Rotas · Ilha Tech · v2.56.1 · 17/11/2026 · Painel de Ferro · prioridade com tempo (P1 · 24h) e retorno só com "Rota N"
 // Tudo passa pelas funções alfy_* do banco, sempre com a chave pessoal de quem está usando.
 // O banco decide o que cada pessoa vê; a tela só desenha o que voltou.
 // A IA e os comandos são pedidos numa fila (alfy.pedido) que o robô do Mac atende.
@@ -109,7 +109,9 @@ const ddmm = (iso) => (iso ? new Date(iso).toLocaleDateString("pt-BR", { day: "2
 const hhmm = (iso) => new Date(iso).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: FUSO });
 const dias = (iso) => Math.round((new Date(dia(iso) + "T12:00") - new Date(hojeDia() + "T12:00")) / 864e5);
 const pcod = (p) => (p || "").match(/P[1-5]/)?.[0] || "";
-const prioTxt = (p) => (pcod(p) ? `${PRIO_IC[pcod(p)]} ${pcod(p)}` : "");
+// 17/11 (Miguel): prioridade com o tempo junto: 🚨 P1 · 24h, ⚡ P2 · 3d, ⏳ P3 · 7d, 💤 P4 · 30d, ⏸️ P5 · sem prazo
+const PRIO_TEMPO = { P1: "24h", P2: "3d", P3: "7d", P4: "30d", P5: "sem prazo" };
+const prioTxt = (p) => (pcod(p) ? `${PRIO_IC[pcod(p)]} ${pcod(p)} · ${PRIO_TEMPO[pcod(p)]}` : "");
 const ehNova = (r) => r.rt.startsWith("IDEIA-") && r.status !== "ideia";
 const num = (rt) => String(rt).replace(/^RT-/, "").replace(/^IDEIA-/, "");
 // na tela é sempre "Rota 266", nunca o código RT-266 do banco
@@ -998,12 +1000,12 @@ function pautaDet() {
 // ---------------------------------------------------------------- Mapa de Rotas do WhatsApp (formato oficial de 28/10, com "Rota N")
 // 17/11 (Miguel: "o final sobrecarrega"): legenda só com o que aparece no mapa, numa linha, e a instrução em uma linha
 const LEG_ST = { rota: "🔴 não iniciada", andamento: "🟡 em andamento", pausada: "🟠 parada" };
-const LEG_P = { P1: "🚨 urgente (24h)", P2: "⚡ até 3 dias", P3: "⏳ até 7 dias", P4: "💤 até 30 dias", P5: "⏸️ sem prazo" };
+const LEG_P = {};   // 17/11: a prioridade já diz o tempo no próprio bloco (🚨 P1 · 24h), não precisa de legenda
 const LEGENDA = (ex, rotas) => {
   const rs = rotas || [], st = [...new Set(rs.map((r) => r.status))].map((k) => LEG_ST[k]).filter(Boolean);
   const pr = [...new Set(rs.map((r) => pcod(r.prioridade)))].sort().map((k) => LEG_P[k]).filter(Boolean);
   const leg = [...st, ...pr].join(" · ");
-  return (leg ? `_${leg}_\n` : "") + `↩️ Responda com o *número da rota + como está*. Ex.: _${ex.replace(/^Rota /, "")} já liguei, aguardando retorno_`;
+  return (leg ? `_${leg}_\n` : "") + `↩️ Responda escrevendo *Rota + número* e como está. Ex.: _Rota ${ex.replace(/^Rota /, "")} já liguei, aguardando retorno_`;
 };
 const SITUACAO = { andamento: "em andamento", pausada: "parada" };
 // 📋 uma rota só, pronta para o WhatsApp (mesmo padrão do Mapa), pedindo retorno
@@ -1012,7 +1014,7 @@ function textoRota(r) {
   const onde = (i?.onde || r.como_esta || "").replace(/\s*Próximo passo:.*$/s, "").trim();
   const n = nomeRota(r.rt).replace(/^Rota /, "");
   return assinar([nome && nome !== "—" ? `${nome}, me dá um retorno desta rota?` : "Preciso de um retorno desta rota:", "", blocoMapa(r),
-    onde ? `\n*Onde está:* ${onde.slice(0, 300)}` : "", "", `Responde aqui com *Rota ${n}* (ou *RT-${n}*, *RT${n}*) + como está.`].filter((x, k, a) => !(x === "" && a[k - 1] === "")).join("\n"));
+    onde ? `\n*Onde está:* ${onde.slice(0, 300)}` : "", "", `Responde aqui escrevendo *Rota ${n}* + como está.`].filter((x, k, a) => !(x === "" && a[k - 1] === "")).join("\n"));
 }
 // 📣 Cobrar: o "e aí?" na voz do Miguel; a rota guarda quantas vezes foi cobrada (Copiar, Mapa e Cobrar, uma por dia)
 function textoCobrar(r) {
@@ -1171,7 +1173,8 @@ function blocoMapa(r, quem) {
   const partes = [`${ST[r.status].bola} *${nomeRota(r.rt)}*`];
   if (pcod(r.prioridade)) partes.push(prioTxt(r.prioridade));
   if (SITUACAO[r.status]) partes.push(SITUACAO[r.status]);
-  else if (pcod(r.prioridade) === "P5" || !r.prazo) partes.push("sem prazo");
+  else if (pcod(r.prioridade) === "P5") { /* "⏸️ P5 · sem prazo" já diz */ }
+  else if (!r.prazo) partes.push("sem prazo");
   else partes.push(`${dias(r.prazo) < 0 ? "venceu" : "até"} *${ddmm(r.prazo)}*`);
   if (quem) partes.push(`👤 ${quem}`);
   let t = (r.assist || r.titulo).trim().replace(/\.+$/, "");
