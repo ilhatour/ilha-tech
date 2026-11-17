@@ -1,4 +1,4 @@
-// ALFY · Mapa de Rotas · Ilha Tech · v2.55.3 · 16/11/2026 · Painel de Ferro · WhatsApp se atualiza sozinho na tela
+// ALFY · Mapa de Rotas · Ilha Tech · v2.56.0 · 17/11/2026 · Painel de Ferro · CM só com o 🦜 e Mapa com rodapé enxuto
 // Tudo passa pelas funções alfy_* do banco, sempre com a chave pessoal de quem está usando.
 // O banco decide o que cada pessoa vê; a tela só desenha o que voltou.
 // A IA e os comandos são pedidos numa fila (alfy.pedido) que o robô do Mac atende.
@@ -996,7 +996,15 @@ function pautaDet() {
 }
 
 // ---------------------------------------------------------------- Mapa de Rotas do WhatsApp (formato oficial de 28/10, com "Rota N")
-const LEGENDA = (ex) => `*STATUS:* 🔴 Não iniciada · 🟡 Em andamento · 🟠 Parada · 🟢 Concluída\n*PRIORIDADE:* 🚨 P1 urgente, 24h · ⚡ P2 até 3 dias · ⏳ P3 até 7 dias · 💤 P4 até 30 dias · ⏸️ P5 sem prazo\n\n*COMO RESPONDER:*\nnúmero da rota + comentário\nEx.: ${ex} já liguei, aguardando retorno`;
+// 17/11 (Miguel: "o final sobrecarrega"): legenda só com o que aparece no mapa, numa linha, e a instrução em uma linha
+const LEG_ST = { rota: "🔴 não iniciada", andamento: "🟡 em andamento", pausada: "🟠 parada" };
+const LEG_P = { P1: "🚨 urgente (24h)", P2: "⚡ até 3 dias", P3: "⏳ até 7 dias", P4: "💤 até 30 dias", P5: "⏸️ sem prazo" };
+const LEGENDA = (ex, rotas) => {
+  const rs = rotas || [], st = [...new Set(rs.map((r) => r.status))].map((k) => LEG_ST[k]).filter(Boolean);
+  const pr = [...new Set(rs.map((r) => pcod(r.prioridade)))].sort().map((k) => LEG_P[k]).filter(Boolean);
+  const leg = [...st, ...pr].join(" · ");
+  return (leg ? `_${leg}_\n` : "") + `↩️ Responda com o *número da rota + como está*. Ex.: _${ex.replace(/^Rota /, "")} já liguei, aguardando retorno_`;
+};
 const SITUACAO = { andamento: "em andamento", pausada: "parada" };
 // 📋 uma rota só, pronta para o WhatsApp (mesmo padrão do Mapa), pedindo retorno
 function textoRota(r) {
@@ -1014,7 +1022,7 @@ function textoCobrar(r) {
 }
 // 🦜 Contramestre: o app monta o texto, o Miguel confere e manda; o robô envia pelo WhatsApp do CM (modo teste: chega no WhatsApp do Miguel)
 const CM_FECHO = "Como deve ser. ⚔️";
-const cmExterno = (r, recado) => ["🦜 *Contramestre · Grupo Ilha Tour*", "", `Olá, ${(r.externo?.nome || "").split(" ")[0]}! ${(recado || "").trim().replace(/^./, (c) => c.toUpperCase())}`, "", "Pode responder aqui mesmo."].join("\n");
+const cmExterno = (r, recado) => [`🦜 Olá, ${(r.externo?.nome || "").split(" ")[0]}! ${(recado || "").trim().replace(/^./, (c) => c.toUpperCase())}`, "", "Pode responder aqui mesmo."].join("\n");
 function cmTexto(tipo, r, extra) {
   const nome = curto(nomeDe(r?.responsavel_id) || ""), n = r ? nomeRota(r.rt).replace(/^Rota /, "") : "", resp = r ? `Responde aqui com *Rota ${n}* + como está.` : "";
   const corpo = {
@@ -1024,7 +1032,7 @@ function cmTexto(tipo, r, extra) {
     push: () => [`${nome}, como está o andamento desta rota?`, "", blocoMapa(r), "", resp],   // o cutucão padrão do CM: cobra o andamento, sem dizer o que mudou
     livre: () => [nome ? `${nome}, ${(extra || "").trim()}` : (extra || "").trim(), "", resp],
   }[tipo]();
-  return ["🦜 *Contramestre*", "", ...corpo, "", CM_FECHO].filter((x, k, a) => !(x === "" && a[k - 1] === "")).join("\n").trim();
+  return [...corpo.map((x, k) => (k === 0 ? "🦜 " + x : x)), "", CM_FECHO].filter((x, k, a) => !(x === "" && a[k - 1] === "")).join("\n").trim();
 }
 async function cmMandar(pessoa, tipo, texto, rts, destino) {
   const x = await chamar("alfy_cm_enviar", { p_pessoa: pessoa, p_tipo: tipo, p_texto: texto, p_rts: rts || [], p_destino: destino || "tatico" });
@@ -1194,7 +1202,7 @@ function mapaPessoa(id, soVencidas) {
   const rotinas = rotinasMapa((r) => r.responsavel_id === id).filter((r) => !soVencidas || vencida(r));
   if (rotinas.length) { l.push("*SUAS ROTINAS:*", ""); rotinas.forEach((r) => l.push(blocoRotina(r), "")); }
   if (time.length) { l.push("*DA SUA EQUIPE (para acompanhar e cobrar):*", ""); time.forEach((r) => l.push(blocoMapa(r, curto(nomeDe(r.responsavel_id))), "")); }
-  l.push(LEGENDA(num((minhas[0] || time[0] || { rt: "RT-374" }).rt)));
+  l.push(LEGENDA(num((minhas[0] || time[0] || { rt: "RT-374" }).rt), minhas.concat(time)));
   return { n: minhas.length + time.length, txt: l.join("\n"), rts: minhas.concat(time, rotinas).map((r) => r.rt) };
 }
 function mapaGrupo(ids) {
@@ -1204,7 +1212,7 @@ function mapaGrupo(ids) {
   const l = ["🗺️ *Mapa de Rotas*", "", `👥 *${titulo}*`, `📅 ${dataHoje()} · ${contagem(rotas)}`, ""];
   ids.forEach((id) => { const rs = rotas.filter((r) => r.responsavel_id === id).sort(ordPrio), rn = rotinasMapa((r) => r.responsavel_id === id); if (!rs.length && !rn.length) return; l.push(`👤 *${nomeDe(id)}*`, ""); rs.forEach((r) => l.push(blocoMapa(r), "")); rn.forEach((r) => l.push(blocoRotina(r), "")); });
   if (!rotas.length) l.push("Nenhuma rota aberta com essas pessoas agora.", "");
-  l.push(LEGENDA(num((rotas[0] || { rt: "RT-374" }).rt)));
+  l.push(LEGENDA(num((rotas[0] || { rt: "RT-374" }).rt), rotas));
   return { n: rotas.length, txt: l.join("\n"), rts: rotas.concat(...ids.map((id) => rotinasMapa((r) => r.responsavel_id === id))).map((r) => r.rt) };
 }
 function mapaSetor(frente) {
@@ -1216,7 +1224,7 @@ function mapaSetor(frente) {
   const l = ["🗺️ *Mapa de Rotas*", "", `*${frente}*`, `📅 ${dataHoje()} · ${contagem(rotas)}`, ""];
   ids.forEach((id) => { l.push(ehMiguel(id) ? "*COMIGO (Miguel):*" : `👤 *${nomeDe(id) || "Sem responsável"}*`, ""); rotas.filter((r) => (r.responsavel_id || "") === id).sort(ordPrio).forEach((r) => l.push(blocoMapa(r), "")); });
   if (!rotas.length) l.push("Nenhuma rota aberta nesta frente agora.", "");
-  l.push(LEGENDA(num((rotas[0] || { rt: "RT-374" }).rt)));
+  l.push(LEGENDA(num((rotas[0] || { rt: "RT-374" }).rt), rotas));
   return { n: rotas.length, txt: l.join("\n"), rts: rotas.map((r) => r.rt) };
 }
 const rotaTxt = (t) => String(t || "").replace(/\bRT[-\s]?(\d{2,4})\b/g, "Rota $1");
@@ -2411,7 +2419,7 @@ document.addEventListener("click", async (e) => {
         aviso(`✕ ${nomeRota(rt)} cancelada (não realizada)`); await recarregar(); if (s.aberta === rt) { await recarregarCartao(); refolha(); } render(); } catch (er) { falhou(er); } return; }
     if (d.pausar) { if (s.pil) { s.pil = null; if (s.aberta) refolha(); render(); } pausarCaixa(d.pausar); return; }
     if (d.cmpush) { const r = rotaDe(d.cmpush); if (r) { b.disabled = true; try { await cmMandar(r.responsavel_id, "push", cmTexto("push", r), [r.rt], "tatico"); } catch (er) { falhou(er); } b.disabled = false; } return; }
-    if (d.cmmapa) { const mp = mapaPessoa(d.cmmapa); b.disabled = true; try { await cmMandar(d.cmmapa, "mapa", ["🦜 *Contramestre*", "", mp.txt, "", CM_FECHO].join("\n"), mp.rts, "tatico"); s.mapasCopiados = { ...(s.mapasCopiados || {}), [d.cmmapa]: "🦜 " + new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) }; render(); } catch (er) { b.disabled = false; falhou(er); } return; }
+    if (d.cmmapa) { const mp = mapaPessoa(d.cmmapa); b.disabled = true; try { await cmMandar(d.cmmapa, "mapa", ["🦜 " + mp.txt, "", CM_FECHO].join("\n"), mp.rts, "tatico"); s.mapasCopiados = { ...(s.mapasCopiados || {}), [d.cmmapa]: "🦜 " + new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) }; render(); } catch (er) { b.disabled = false; falhou(er); } return; }
     if (d.cobrar) { const r = rotaDe(d.cobrar); if (r) { copiar(textoCobrar(r)); registrarCobranca([r.rt], "cobrar"); aviso(`📣 Cobrança copiada. Cole no WhatsApp de ${curto(nomeDe(r.responsavel_id))}`); } return; }
     if (d.cobrhist) { const rt = d.cobrhist; s.cobrHist = s.cobrHist || {}; if (s.cobrHist[rt]) delete s.cobrHist[rt]; else { s.cobrHist[rt] = "carregando"; chamar("alfy_cobrancas", { p_rt: rt }).then((h) => { if (s.cobrHist[rt]) { s.cobrHist[rt] = h || []; s.aberta === rt && refolha(); renderSeguro(); } }); } if (s.aberta === rt) refolha(); renderSeguro(); return; }
     if (d.copiarrota) { const r = rotaDe(d.copiarrota); if (r) { copiar(textoRota(r)); registrarCobranca([r.rt], "copiar"); const tx = b.innerHTML; b.innerHTML = b.innerHTML.replace("📋", "✓"); setTimeout(() => { b.innerHTML = tx; }, 1500); } return; }
