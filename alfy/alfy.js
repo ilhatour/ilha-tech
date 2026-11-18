@@ -1025,6 +1025,12 @@ function textoCobrar(r) {
 }
 // 18/11: o que o Miguel escolhe dentro da sugestão sobrevive à atualização automática da tela
 document.addEventListener("change", (e) => { const el = e.target.closest?.("[data-sugf]"); if (!el) return; s.sugEsc = s.sugEsc || {}; (s.sugEsc[el.dataset.sid] = s.sugEsc[el.dataset.sid] || {})[el.dataset.sugf] = el.value; });
+document.addEventListener("toggle", async (e) => {   // 📥 transcrição do despejo: carrega só quando abre
+  const t = e.target, id = +t.dataset?.desptr; if (!id) return;
+  s.despTrAb = t.open ? id : (s.despTrAb === id ? null : s.despTrAb);
+  if (!t.open || s.despTr?.[id]) return;
+  try { const tx = await chamar("alfy_despejo_transcricao", { p_id: id }); s.despTr = { ...(s.despTr || {}), [id]: tx || "(sem transcrição)" }; const box = t.querySelector(".nota"); if (box) box.textContent = s.despTr[id]; } catch (err) { falhou(err); }
+}, true);
 document.addEventListener("click", (e) => { const c = e.target.closest?.(".conv4.curta .c4"); if (c && !e.target.closest("button,a,summary,details")) c.classList.toggle("aberta"); });
 document.addEventListener("keydown", (e) => { if (e.key === "Enter" && e.target.closest?.(".z7tit")) { e.preventDefault(); e.target.blur(); } });
 document.addEventListener("input", (e) => { const el = e.target.closest?.(".z7tit"); if (!el) return; s.sugEsc = s.sugEsc || {}; (s.sugEsc[el.dataset.sid] = s.sugEsc[el.dataset.sid] || {}).tit = el.textContent; });
@@ -1433,7 +1439,35 @@ function diarioHTML(h) {
   const nomes = { bomdia: "☀️ Bom dia", relatorio: "📰 Relatório do dia", escuta: "📡 Grupos hoje" };
   return `<div class="bloco">${h}${d.length ? d.slice(0, 30).map((x) => `<div class="campo" style="margin-bottom:8px"><div class="cab-campo"><b>${nomes[x.tipo] || x.tipo}</b><span>${ddmm(x.em)} ${hhmm(x.em)}</span></div><p class="txt">${esc(rotaTxt(x.texto))}</p></div>`).join("") : '<div class="vazio">As rotinas ainda não escreveram nada aqui. A Escuta grava de hora em hora e a Ronda das 8h grava o Bom dia, com o app do Claude aberto no Mac.</div>'}</div>`;
 }
-const DEST = { rota: "🗺️ Rota", pauta: "🗓️ Pauta", arquivo: "🗂️ Arquivo", lembrete: "⏰ Lembrete", descartar: "🗑️ Descartar" };
+const DEST = { rota: "🗺️ Rota", pauta: "🗓️ Pauta", registro: "📝 Registro", arquivo: "🗂️ Arquivo", lembrete: "⏰ Lembrete", descartar: "🗑️ Descartar" };
+const BOTAO_DEST = { rota: "Criar rota", pauta: "Criar pauta", registro: "Registrar", arquivo: "Ok, guardado", lembrete: "Criar lembrete", descartar: "Descartar" };
+// 📥 histórico de despejos (Plaud por e-mail e Despejo do app): cada item o Miguel decide se vira rota, pauta, registro ou nada
+function despItemHTML(it, chave) {
+  return `<div class="sugestao ${it.feito ? "feita" : ""}"><div class="tx"><b>${esc(it.titulo)}</b>${it.o_que_fazer && it.destino !== "rota" ? `<small style="display:block;color:var(--txt2,inherit);margin:2px 0">${esc(it.o_que_fazer)}</small>` : ""}<small>${DEST[it.destino] || it.destino}${it.responsavel ? " · " + esc(it.responsavel) : ""}${it.prazo ? " · até " + esc(ddmm(it.prazo + "T12:00:00-03:00")) : ""}</small></div>${it.feito ? `<small style="color:var(--aco)">${esc(it.feito)}</small>` : `<button class="btn turq peq" type="button" data-dh="${chave}">${BOTAO_DEST[it.destino] || "Ok"}</button><select class="sel" data-dhdest="${chave}" style="padding:4px 6px;font-size:12px" aria-label="Destino">${Object.entries(DEST).filter(([k]) => k !== "arquivo").map(([k, n]) => `<option value="${k}" ${k === it.destino ? "selected" : ""}>${n}</option>`).join("")}</select>`}</div>`;
+}
+function despejosHTML() {
+  const L = s.despejos; if (!L) return "";
+  if (!L.length) return `<p class="rotulo" style="margin-top:18px">📥 Despejos registrados</p><p class="nota">Ainda nenhum. As gravações do Plaud chegam sozinhas pelo e-mail, e cada despejo feito aqui também fica guardado.</p>`;
+  return `<p class="rotulo" style="margin-top:18px">📥 Despejos registrados</p>${L.map((d) => {
+    const its = d.itens || [], ok = its.filter((x) => x.feito).length, ab = s.despAberto === d.id;
+    const st = d.status === "novo" ? "o ALFY está separando…" : d.status === "erro" ? "não consegui separar" : its.length ? (ok === its.length ? "✓ tudo tratado" : `${ok} de ${its.length} tratados`) : "nada a tratar";
+    return `<div class="desp-h${ab ? " aberto" : ""}"><button type="button" class="desp-cab" data-despab="${d.id}"><span>${d.origem === "plaud" ? "🎙️" : "✍️"}</span><span class="desp-tit"><b>${esc(d.titulo || "Despejo")}${d.sensivel ? " 🔒" : ""}</b><small>${esc(ddmm(d.quando))} · ${d.origem === "plaud" ? "Plaud" : "app"} · ${st}</small></span><span aria-hidden="true">${ab ? "▾" : "▸"}</span></button>
+      ${ab ? `<div class="desp-corpo">${d.resumo ? `<p class="nota" style="margin:4px 0 8px">${esc(d.resumo)}</p>` : ""}${its.map((it, i) => despItemHTML(it, d.id + ":" + i)).join("")}
+      ${d.tem_transcricao ? `<details class="desp-tr" data-desptr="${d.id}" ${s.despTrAb === d.id ? "open" : ""}><summary>Ver a transcrição</summary><div class="nota" style="white-space:pre-wrap;margin-top:6px">${s.despTr?.[d.id] ? esc(s.despTr[d.id]) : "Carregando…"}</div></details>` : ""}</div>` : ""}</div>`;
+  }).join("")}`;
+}
+async function usarItemHist(chave) {
+  const [id, i] = chave.split(":").map(Number), d = (s.despejos || []).find((x) => x.id === id), it = d?.itens?.[i]; if (!it) return;
+  const marcar = async (feito) => { try { const r = await chamar("alfy_despejo_item", { p_id: id, p_i: i, p_feito: feito, p_destino: it.destino }); if (r) Object.assign(d, { itens: r.itens, status: r.status }); render(); } catch (e) { falhou(e); } };
+  const prazo = it.prazo && /^\d{4}-\d{2}-\d{2}$/.test(it.prazo) ? it.prazo : "";
+  if (it.destino === "rota") { novaRota({ titulo: it.titulo, assist: it.o_que_fazer, responsavel_id: pessoaPorNome(it.responsavel) || eu().id, prazo, depois: async (rt) => { await marcar("virou " + nomeRota(rt)); } }); return; }
+  try {
+    if (it.destino === "pauta") { await chamar("alfy_pauta_salvar", { p_id: null, p_campos: { titulo: it.titulo, tipo: "conversar" } }); await marcar("virou pauta"); }
+    else if (it.destino === "lembrete") { await chamar("alfy_nova_rota", { p_campos: { titulo: it.titulo, frente: "🧍 Pessoal", responsavel_id: eu().id, prazo: prazo ? prazo + "T12:00:00-03:00" : "", prioridade: "⚡ P2 · 72h", status: "rota" } }); await marcar("virou rota sua na frente Pessoal"); }
+    else await marcar(it.destino === "registro" ? "📝 registrado" : "descartado");
+    await recarregar(); render();
+  } catch (e) { falhou(e); }
+}
 function detCmd(c) {
   const h = `<h3>${c.n}</h3>`;
   if (c.k === "despejo") {
@@ -1442,8 +1476,9 @@ function detCmd(c) {
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><button class="btn" type="button" data-acao="gravar">${s.gravando ? "⏹ Parar gravação" : "🎙️ Gravar áudio"}</button><label class="btn" style="cursor:pointer">📎 Anexar<input type="file" id="desp-arq" multiple hidden></label><button class="btn turq" type="button" data-acao="despejar" ${rod ? "disabled" : ""}>🐙 Mandar para o ALFY</button></div>
       ${d.anexos.length ? `<div class="alvos" style="margin-top:10px">${d.anexos.map((a, i) => `<span class="chip">${a.audio ? "🎙️" : "📎"} ${esc(a.nome)}${a.id ? "" : " · subindo…"}<span class="opcao-x" data-tiraanexo="${i}" role="button" aria-label="Tirar">✕</span></span>`).join("")}</div>` : ""}
       ${rod ? `<div class="ia-saida pensando" style="margin-top:10px">🐙 O ALFY está ${d.anexos.some((a) => a.audio) ? "ouvindo o áudio e " : ""}separando o despejo…</div>` : ""}
-      ${d.itens ? `<p class="rotulo" style="margin-top:14px">O ALFY separou assim</p>${d.transcricao ? `<p class="nota" style="margin:0 0 6px">Transcrição: ${esc(d.transcricao)}</p>` : ""}${d.itens.map((it, i) => `<div class="sugestao ${d.feitos[i] ? "feita" : ""}"><div class="tx"><b>${esc(it.titulo)}</b><small>${DEST[it.destino] || it.destino}${it.responsavel ? " · " + esc(it.responsavel) : ""}${it.prazo ? " · até " + esc(ddmm(it.prazo + "T12:00:00-03:00")) : ""}</small></div>${d.feitos[i] ? `<small style="color:var(--aco)">${esc(d.feitos[i])}</small>` : `<button class="btn turq peq" type="button" data-desp="${i}">${{ rota: "Criar rota", pauta: "Criar pauta", arquivo: "Ok, guardado", lembrete: "Criar lembrete", descartar: "Descartar" }[it.destino] || "Ok"}</button><select class="sel" data-despdest="${i}" style="padding:4px 6px;font-size:12px" aria-label="Destino">${Object.entries(DEST).map(([k, n]) => `<option value="${k}" ${k === it.destino ? "selected" : ""}>${n}</option>`).join("")}</select>`}</div>`).join("")}` : ""}
-      <p class="nota">O grupo ALFY do WhatsApp continua valendo como despejo. Arquivo anexado vai para o Drive 🗂️ ALFY · Arquivos › 00 Entrada. Lembrete vira rota sua na frente Pessoal, com o prazo.</p></div>`;
+      ${d.itens ? `<p class="rotulo" style="margin-top:14px">O ALFY separou assim</p>${d.transcricao ? `<p class="nota" style="margin:0 0 6px">Transcrição: ${esc(d.transcricao)}</p>` : ""}${d.itens.map((it, i) => `<div class="sugestao ${d.feitos[i] ? "feita" : ""}"><div class="tx"><b>${esc(it.titulo)}</b><small>${DEST[it.destino] || it.destino}${it.responsavel ? " · " + esc(it.responsavel) : ""}${it.prazo ? " · até " + esc(ddmm(it.prazo + "T12:00:00-03:00")) : ""}</small></div>${d.feitos[i] ? `<small style="color:var(--aco)">${esc(d.feitos[i])}</small>` : `<button class="btn turq peq" type="button" data-desp="${i}">${BOTAO_DEST[it.destino] || "Ok"}</button><select class="sel" data-despdest="${i}" style="padding:4px 6px;font-size:12px" aria-label="Destino">${Object.entries(DEST).map(([k, n]) => `<option value="${k}" ${k === it.destino ? "selected" : ""}>${n}</option>`).join("")}</select>`}</div>`).join("")}` : ""}
+      ${despejosHTML()}
+      <p class="nota">As gravações do Plaud chegam sozinhas (e-mail do Plaud no Mail do Mac) e entram em Despejos registrados. O grupo ALFY do WhatsApp continua valendo como despejo. Arquivo anexado vai para o Drive 🗂️ ALFY · Arquivos › 00 Entrada. Lembrete vira rota sua na frente Pessoal, com o prazo.</p></div>`;
   }
   if (c.k === "whatsapp" || c.k === "grupos") {
     const rod = filaRodando("whatsapp"), sug = M.sugestoes || [];
@@ -2193,7 +2228,7 @@ async function recarregar() {
       const p = await chamar("alfy_pedido", { p_id: d.pedido });
       d.pedido = null;
       if (p.status === "erro") aviso("O despejo deu erro: " + (p.erro || "").slice(0, 120), true);
-      else { d.itens = p.resultado?.itens || []; d.feitos = {}; d.transcricao = (p.resultado?.transcricao || []).map((t) => t.texto).join(" "); d.anexos = []; d.texto = ""; const rs = p.resultado?.resumo || ""; aviso(rs.startsWith("sem separar") ? rs.replace("sem separar: ", "Não separei: ") : "O ALFY separou o despejo", rs.startsWith("sem separar")); }
+      else { d.itens = p.resultado?.itens || []; d.feitos = {}; d.despejoId = p.resultado?.despejo_id || null; d.transcricao = (p.resultado?.transcricao || []).map((t) => t.texto).join(" "); d.anexos = []; d.texto = ""; const rs = p.resultado?.resumo || ""; aviso(rs.startsWith("sem separar") ? rs.replace("sem separar: ", "Não separei: ") : "O ALFY separou o despejo", rs.startsWith("sem separar")); }
     }
   }
   // o resto não depende um do outro: vai tudo junto, em vez de um esperando o outro
@@ -2203,6 +2238,7 @@ async function recarregar() {
     s.aba === "agenda" && carregarAgenda(),
     cuidaPessoas() && chamar("alfy_fichas").then((x) => { s.fichas = x; }, () => {}),
     s.reuniao && carregarReuniao(),
+    s.aba === "comandos" && s.cmd === "despejo" && comando() && chamar("alfy_despejos", { p_limite: 40 }).then((x) => { s.despejos = x; }, () => {}),
     s.aberta && recarregarCartao().then(() => { if (!ativoNaFolha()) refolha(); }),
     s.pauta && chamar("alfy_pauta", { p_id: s.pauta }).then((x) => { s.pautaDet = x; }, () => {}),
   ]);
@@ -2296,11 +2332,13 @@ async function despejar() {
 async function usarItemDespejo(i) {
   const d = s.despejo, it = d.itens[i];
   const prazo = it.prazo && /^\d{4}-\d{2}-\d{2}$/.test(it.prazo) ? it.prazo : "";
-  if (it.destino === "rota") { novaRota({ titulo: it.titulo, assist: it.o_que_fazer, responsavel_id: pessoaPorNome(it.responsavel) || eu().id, prazo, depois: async (rt) => { d.feitos[i] = "virou rota"; } }); return; }
+  const hist = (f) => d.despejoId && chamar("alfy_despejo_item", { p_id: d.despejoId, p_i: i, p_feito: f, p_destino: it.destino }).catch(() => {});
+  if (it.destino === "rota") { novaRota({ titulo: it.titulo, assist: it.o_que_fazer, responsavel_id: pessoaPorNome(it.responsavel) || eu().id, prazo, depois: async (rt) => { d.feitos[i] = "virou " + nomeRota(rt); await hist(d.feitos[i]); } }); return; }
   try {
     if (it.destino === "pauta") { await chamar("alfy_pauta_salvar", { p_id: null, p_campos: { titulo: it.titulo, tipo: "conversar" } }); d.feitos[i] = "virou pauta"; }
     else if (it.destino === "lembrete") { await chamar("alfy_nova_rota", { p_campos: { titulo: it.titulo, frente: "🧍 Pessoal", responsavel_id: eu().id, prazo: prazo ? prazo + "T12:00:00-03:00" : "", prioridade: "⚡ P2 · 72h", status: "rota" } }); d.feitos[i] = "virou rota sua na frente Pessoal"; }
-    else d.feitos[i] = it.destino === "arquivo" ? "guardado" : "descartado";
+    else d.feitos[i] = it.destino === "arquivo" ? "guardado" : it.destino === "registro" ? "📝 registrado" : "descartado";
+    await hist(d.feitos[i]);
     await recarregar(); render();
   } catch (e) { falhou(e); }
 }
@@ -2526,6 +2564,8 @@ document.addEventListener("click", async (e) => {
       await chamar("alfy_sugestao", { p_id: sg.id, p_acao: d.sugacao }); await recarregar(); render(); aviso(d.sugacao === "comentar" ? "Foi para a conversa da " + nomeRota(sg.rt) : d.sugacao === "resolvido" ? "✓ Marcado como resolvido. Não volta mais." : d.sugacao === "naovira" ? "✕ Não vira rota. O ALFY aprende com isso." : "Descartado"); return;
     }
     if (d.desp) { usarItemDespejo(+d.desp); return; }
+    if (d.dh) { usarItemHist(d.dh); return; }
+    if (d.despab) { const id = +d.despab; s.despAberto = s.despAberto === id ? null : id; render(); return; }
     if (d.pvista) { s.pvista = d.pvista; render(); return; }
     if (d.pauta) { s.reuniaoVolta = s.reuniao; s.reuniao = null; abrirPauta(+d.pauta); return; }
     if (d.reuniao) { s.pauta = null; s.reuniao = +d.reuniao; render(); scrollTo(0, 0); return; }
@@ -2650,6 +2690,7 @@ document.addEventListener("change", async (e) => {
     if (t.id === "n-rep") { $("#n-dias").hidden = t.value !== "semanal"; }
     if (t.id === "desp-arq") { for (const f of [...t.files]) subirAnexo(f, f.name, f.type.startsWith("audio")); }
     if (t.dataset.despdest) { s.despejo.itens[+t.dataset.despdest].destino = t.value; render(); }
+    if (t.dataset.dhdest) { const [id, i] = t.dataset.dhdest.split(":").map(Number), it = (s.despejos || []).find((x) => x.id === id)?.itens?.[i]; if (it) { it.destino = t.value; render(); } }
     if (t.dataset.prop && s.aberta) { const k = t.dataset.prop; editar({ [k]: k === "prazo" ? (t.value ? t.value + "T12:00:00-03:00" : "") : t.value }); }
     if (t.dataset.quando && s.aberta) { const dd = $("#q-dia").value, hi = $("#q-ini").value, hf = $("#q-fim").value; editar({ inicio: dd ? `${dd}T${hi || "09:00"}:00-03:00` : "", fim: dd && hf ? `${dd}T${hf}:00-03:00` : "", tipo: dd ? "📅 Compromisso" : s.cartao.tipo || "" }); }
     if (t.dataset.bud && s.aberta) { s.cartao = await chamar("alfy_budget", { p_rt: s.aberta, p_valor: t.value, p_status: s.cartao.budget_status === "aprovado" || s.cartao.budget_status === "recusado" ? "aguardando aprovação" : s.cartao.budget_status === "sem custo" ? "a orçar" : s.cartao.budget_status }); refolha(); await recarregar(); render(); }

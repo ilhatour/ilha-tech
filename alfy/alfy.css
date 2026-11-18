@@ -1643,3 +1643,14 @@ textarea.melhorando{opacity:.6;border-color:var(--lilas)!important}
 .conv4.curta .c4:not(.aberta) .c4b > p{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
 .conv4.curta .c4{cursor:pointer}
 .tempo5{display:block;margin:8px auto 0}
+/* 📥 despejos registrados (Plaud e app) */
+.desp-h{border-top:1px solid var(--linha)}
+.desp-h:first-of-type{border-top:0}
+.desp-cab{display:flex;gap:10px;align-items:center;width:100%;padding:11px 0;background:none;border:0;color:inherit;text-align:left;cursor:pointer;font:inherit}
+.desp-tit{flex:1;min-width:0}
+.desp-tit b{display:block;font-weight:600;font-size:15px;line-height:1.3}
+.desp-tit small{color:var(--aco);font-size:12px}
+.desp-corpo{padding:0 0 12px 28px}
+.desp-tr summary{cursor:pointer;color:var(--aco);font-size:13px;margin-top:8px}
+@media (max-width:600px){.desp-corpo{padding-left:0}}
+@media (max-width:600px){.desp-corpo .sugestao{flex-wrap:wrap}.desp-corpo .sugestao .tx{flex-basis:100%}}
