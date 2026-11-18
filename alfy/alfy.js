@@ -1,4 +1,4 @@
-// ALFY · Mapa de Rotas · Ilha Tech · v2.56.1 · 17/11/2026 · Painel de Ferro · prioridade com tempo (P1 · 24h) e retorno só com "Rota N"
+// ALFY · Mapa de Rotas · Ilha Tech · v2.57.0 · 18/11/2026 · Painel de Ferro · sugestão vira rota com 1 clique (campos na própria sugestão)
 // Tudo passa pelas funções alfy_* do banco, sempre com a chave pessoal de quem está usando.
 // O banco decide o que cada pessoa vê; a tela só desenha o que voltou.
 // A IA e os comandos são pedidos numa fila (alfy.pedido) que o robô do Mac atende.
@@ -823,10 +823,11 @@ function zapHTML(h) {
   const negrito = (x) => { const i = x.indexOf(": "); return i > 0 && i < 60 ? `<b>${esc(x.slice(0, i))}</b>${esc(x.slice(i))}` : esc(x); };
   const impl = imp.flatMap(([tt, l]) => (l || []).map((x) => [tt, x])), impVis = s.zapImpTudo ? impl : impl.slice(0, 3);
   const sugHTML = (x) => { const mm = ehMM(x), [tit, ...resto_] = rotaTxt(String(x.texto).replace(/^\+\+ /, "")).split("\n"), cit = resto_.join(" ").replace(/^[“"]|[”"]$/g, "").trim(), nm = nomeZap(x.conversa || "");
-    return `<div class="z7s ${mm ? "mm" : ""}"><div class="z7st">${mm ? '<span class="mm-selo">++ pedido da equipe</span>' : ""}<b>${esc(tit)}</b>${cit ? `<q>${esc(cit)}</q>` : ""}<small>${x.frente ? `${esc(frenteCurta(x.frente))} · ` : ""}${x.dono_id ? `👤 ${esc(curto(nomeDe(x.dono_id)))} · ` : ""}${esc(x.quem || "")}${nm.nome && nm.nome !== x.quem ? " · " + esc(nm.nome) : ""}${x.quando ? " · " + esc(x.quando) : ""}</small>
+    return `<div class="z7s ${mm ? "mm" : ""}" data-sugcard="${x.id}"><div class="z7st">${mm ? '<span class="mm-selo">++ pedido da equipe</span>' : ""}<b contenteditable="true" spellcheck="false" class="z7tit" data-sid="${x.id}" title="Clique para ajustar o título antes de criar">${esc(((s.sugEsc || {})[x.id] || {}).tit || tit)}</b>${cit ? `<q>${esc(cit)}</q>` : ""}<small>${x.frente ? `${esc(frenteCurta(x.frente))} · ` : ""}${x.dono_id ? `👤 ${esc(curto(nomeDe(x.dono_id)))} · ` : ""}${esc(x.quem || "")}${nm.nome && nm.nome !== x.quem ? " · " + esc(nm.nome) : ""}${x.quando ? " · " + esc(x.quando) : ""}</small>
       ${(x.vezes || 1) > 1 ? `<small class="z7vezes">💬 Apareceu ${x.vezes} vezes: ${esc([...new Set((x.fontes || []).map((f) => nomeZap(f.conversa || "").nome).filter(Boolean))].slice(0, 4).join(", "))}</small>` : ""}
-      ${x.voltou ? `<small class="z7volta">↺ Você já descartou este assunto${x.pos_descarte > 1 ? ` ${x.pos_descarte} vezes` : ""}, e ele voltou a aparecer</small>` : ""}</div>
-      <div class="z7sa"><button class="btn turq peq" type="button" data-sug="${x.id}" data-sugacao="rota">＋ Virar rota</button><button class="btn peq" type="button" data-sug="${x.id}" data-sugacao="resolvido" title="Já foi feito: some e não volta">✓ Já resolvido</button><button class="lk" type="button" data-sug="${x.id}" data-sugacao="naovira" title="Não é tarefa para rota: some e só volta se vier com ++">✕ Não vira rota</button></div></div>`; };
+      ${x.voltou ? `<small class="z7volta">↺ Você já descartou este assunto${x.pos_descarte > 1 ? ` ${x.pos_descarte} vezes` : ""}, e ele voltou a aparecer</small>` : ""}
+      <div class="z7sf">${(() => { const e = (s.sugEsc || {})[x.id] || {}; return `<select data-sugf="resp" data-sid="${x.id}" aria-label="Quem faz">${genteOpc(e.resp ?? (x.dono_id || ""), "👤 Quem faz?")}</select><select data-sugf="frente" data-sid="${x.id}" aria-label="Frente">${opc(FRENTES.map((f) => [f, frenteCurta(f)]), e.frente ?? (x.frente || ""), "🗺️ Frente?")}</select><select data-sugf="prio" data-sid="${x.id}" aria-label="Prioridade">${opc(PRIORIDADES, e.prio || (mm ? "⚡ P2 · 72h" : "⏳ P3 · 7 dias"))}</select>`; })()}</div></div>
+      <div class="z7sa"><button class="btn turq peq" type="button" data-sug="${x.id}" data-sugacao="rapida" title="Cria a rota na hora com o que está na sugestão; o ALFY organiza o texto">⚡ Criar rota</button><button class="btn peq" type="button" data-sug="${x.id}" data-sugacao="rota" title="Abre o formulário completo para preencher">✎ Abrir e preencher</button><button class="btn peq" type="button" data-sug="${x.id}" data-sugacao="resolvido" title="Já foi feito: some e não volta">✓ Já resolvido</button><button class="lk" type="button" data-sug="${x.id}" data-sugacao="naovira" title="Não é tarefa para rota: some e só volta se vier com ++">✕ Não vira rota</button></div></div>`; };
   // três navegadores: Resumo (o que importa e quem espera) · Conversas (grupos e pessoas) · Possíveis rotas
   const nav = s.zapNav || "resumo", grupos = resto.filter((z) => z.grupo), pessoas = resto.filter((z) => !z.grupo);
   const q = (s.zapBusca || "").toLowerCase(), acha = (z) => !q || [z.conversa, z.resumo, z.ultima?.txt].join(" ").toLowerCase().includes(q);
@@ -848,7 +849,7 @@ function zapHTML(h) {
     corpo = `<input class="busca z8busca" id="zap-busca" placeholder="Buscar conversa, pessoa ou assunto" value="${esc(s.zapBusca || "")}" autocomplete="off">
       ${lista(grupos, "g", "👥 Grupos")}${lista(pessoas, "p", "👤 Conversas com pessoas")}`;
   }
-  if (nav === "rotas") corpo = `<p class="nota" style="margin:0">O que o ALFY achou nas conversas que pode virar rota. Os pedidos com <b>++</b> vêm primeiro. ＋ Virar rota abre a rota preenchida para você revisar; Descartar tira da lista.</p>
+  if (nav === "rotas") corpo = `<p class="nota" style="margin:0">O que o ALFY achou nas conversas que pode virar rota. Os pedidos com <b>++</b> vêm primeiro. Ajuste ali mesmo o título, quem faz, a frente e a prioridade e clique em <b>⚡ Criar rota</b>; o ALFY organiza o texto. Para preencher tudo, use ✎ Abrir e preencher.</p>
       <section class="z6sec z7sug">${sugVis.map(sugHTML).join("") || '<p class="nota" style="margin:0">Nada novo para virar rota.</p>'}${sugs.length > sugVis.length ? `<button class="lk" type="button" data-acao="zap-sug-todas">Ver mais ${sugs.length - sugVis.length}</button>` : ""}</section>`;
   return `<div class="z6tela">${h}${topo}${corpo}</div>`;
 }
@@ -1022,6 +1023,10 @@ function textoCobrar(r) {
   return assinar([nome && nome !== "—" ? `E aí, ${nome}? Como está esta rota?` : "E aí? Como está esta rota?", "", blocoMapa(r), "",
     `Estou aguardando seu retorno. Responde aqui com *Rota ${n}* + como está.`].join("\n"));
 }
+// 18/11: o que o Miguel escolhe dentro da sugestão sobrevive à atualização automática da tela
+document.addEventListener("change", (e) => { const el = e.target.closest?.("[data-sugf]"); if (!el) return; s.sugEsc = s.sugEsc || {}; (s.sugEsc[el.dataset.sid] = s.sugEsc[el.dataset.sid] || {})[el.dataset.sugf] = el.value; });
+document.addEventListener("keydown", (e) => { if (e.key === "Enter" && e.target.closest?.(".z7tit")) { e.preventDefault(); e.target.blur(); } });
+document.addEventListener("input", (e) => { const el = e.target.closest?.(".z7tit"); if (!el) return; s.sugEsc = s.sugEsc || {}; (s.sugEsc[el.dataset.sid] = s.sugEsc[el.dataset.sid] || {}).tit = el.textContent; });
 // 🦜 Contramestre: o app monta o texto, o Miguel confere e manda; o robô envia pelo WhatsApp do CM (modo teste: chega no WhatsApp do Miguel)
 const CM_FECHO = "Como deve ser. ⚔️";
 const cmExterno = (r, recado) => [`🦜 Olá, ${(r.externo?.nome || "").split(" ")[0]}! ${(recado || "").trim().replace(/^./, (c) => c.toUpperCase())}`, "", "Pode responder aqui mesmo."].join("\n");
@@ -2499,6 +2504,20 @@ document.addEventListener("click", async (e) => {
     if (d.col) { const k = $("#kanban"), w = k.querySelector(".coluna").offsetWidth + 10; k.scrollTo({ left: +d.col * w, behavior: "smooth" }); return; }
     if (d.sug) {
       const sg = (M.sugestoes || []).find((y) => String(y.id) === d.sug);
+      if (d.sugacao === "rapida") {   // 18/11 (Miguel): 1 clique gera a rota com o que está na própria sugestão
+        const card = b.closest("[data-sugcard]"), q = (k) => card?.querySelector(`[data-sugf="${k}"]`)?.value || "";
+        const [tit0, ...cit] = String(sg.texto || "").replace(/^\+\+ /, "").split("\n"), tit = (card?.querySelector(".z7tit")?.textContent || tit0).trim();
+        const prio = q("prio") || "⏳ P3 · 7 dias", txt = cit.join(" ").replace(/^“|”$/g, "") + (sg.conversa ? ` (${nomeZap(sg.conversa).nome}, ${sg.quando || ""})` : "");
+        b.disabled = true; b.textContent = "Criando…";
+        try {
+          const c = await chamar("alfy_nova_rota", { p_campos: { titulo: tit, assist: txt, responsavel_id: q("resp"), frente: q("frente"), prioridade: prio, prazo: prazoDaPrio(pcod(prio)), status: "rota" } });
+          await chamar("alfy_sugestao", { p_id: sg.id, p_acao: "rota", p_rt: c.rt });
+          const pq = await chamar("alfy_pedir", { p_tipo: "ia", p_escopo: "rota:" + c.rt, p_dados: { agir: true, texto: `Organize esta rota nova a partir do que eu escrevi. Título: «${tit}». Texto: «${txt}». Reescreva o título no formato "Pessoa: verbo + o quê", o O que fazer na minha voz falando com quem faz (1 ou 2 frases), e preencha Instruções e Resultado esperado só com o que o texto diz. Mantenha o responsável, a frente e a prioridade que eu escolhi. Não invente nada.` } });
+          s.esperando["rota:" + c.rt] = pq.id;
+          aviso(`✓ ${nomeRota(c.rt)} criada. O ALFY está organizando…`); await recarregar(); render();
+        } catch (e) { falhou(e); b.disabled = false; b.textContent = "⚡ Criar rota"; }
+        return;
+      }
       if (d.sugacao === "rota") { const [tit, ...cit] = String(sg.texto || "").replace(/^\+\+ /, "").split("\n"); novaRota({ titulo: tit, assist: cit.join(" ").replace(/^“|”$/g, "") + (sg.conversa ? ` (${nomeZap(sg.conversa).nome}, ${sg.quando || ""})` : ""), responsavel_id: sg.dono_id || "", frente: sg.frente || "", depois: async (rt) => { await chamar("alfy_sugestao", { p_id: sg.id, p_acao: "rota", p_rt: rt }); } }); return; }
       await chamar("alfy_sugestao", { p_id: sg.id, p_acao: d.sugacao }); await recarregar(); render(); aviso(d.sugacao === "comentar" ? "Foi para a conversa da " + nomeRota(sg.rt) : d.sugacao === "resolvido" ? "✓ Marcado como resolvido. Não volta mais." : d.sugacao === "naovira" ? "✕ Não vira rota. O ALFY aprende com isso." : "Descartado"); return;
     }
