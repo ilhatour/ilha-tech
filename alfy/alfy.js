@@ -1,4 +1,4 @@
-// ALFY · Mapa de Rotas · Ilha Tech · v2.57.0 · 18/11/2026 · Painel de Ferro · sugestão vira rota com 1 clique (campos na própria sugestão)
+// ALFY · Mapa de Rotas · Ilha Tech · v2.58.0 · 18/11/2026 · Painel de Ferro · Conversa enxuta: Agora no topo, mais novo em cima, linha do tempo num botão
 // Tudo passa pelas funções alfy_* do banco, sempre com a chave pessoal de quem está usando.
 // O banco decide o que cada pessoa vê; a tela só desenha o que voltou.
 // A IA e os comandos são pedidos numa fila (alfy.pedido) que o robô do Mac atende.
@@ -1025,6 +1025,7 @@ function textoCobrar(r) {
 }
 // 18/11: o que o Miguel escolhe dentro da sugestão sobrevive à atualização automática da tela
 document.addEventListener("change", (e) => { const el = e.target.closest?.("[data-sugf]"); if (!el) return; s.sugEsc = s.sugEsc || {}; (s.sugEsc[el.dataset.sid] = s.sugEsc[el.dataset.sid] || {})[el.dataset.sugf] = el.value; });
+document.addEventListener("click", (e) => { const c = e.target.closest?.(".conv4.curta .c4"); if (c && !e.target.closest("button,a,summary,details")) c.classList.toggle("aberta"); });
 document.addEventListener("keydown", (e) => { if (e.key === "Enter" && e.target.closest?.(".z7tit")) { e.preventDefault(); e.target.blur(); } });
 document.addEventListener("input", (e) => { const el = e.target.closest?.(".z7tit"); if (!el) return; s.sugEsc = s.sugEsc || {}; (s.sugEsc[el.dataset.sid] = s.sugEsc[el.dataset.sid] || {}).tit = el.textContent; });
 // 🦜 Contramestre: o app monta o texto, o Miguel confere e manda; o robô envia pelo WhatsApp do CM (modo teste: chega no WhatsApp do Miguel)
@@ -1584,8 +1585,10 @@ function folha() {
   const reus = (M.reunioes || []).filter((x) => x.status !== "encerrada");
   const desde = s.vistoAntes || "9999", ehNova = (c) => c.em > desde && c.quem !== eu().nome && c.origem !== "alfy";
   const novas = (r.lista_comentarios || []).filter(ehNova).length;
-  const tempo = [...(r.lista_comentarios || []).map((c) => ({ em: c.em, h: comentHTML(c, ehNova(c)) })), ...(comando() ? (r.ia || []).map((m) => ({ em: m.em, h: iaHTML(m) })) : [])].sort((a, b) => String(a.em).localeCompare(String(b.em)));
-  const conv = s.convTudo ? tempo : tempo.slice(-8), hist = [...(r.historico || [])].reverse(), histV = s.histTudo ? hist : hist.slice(0, 6);
+  // 18/11 (Miguel): o mais novo em cima; à vista só o que as pessoas disseram (o eco "🐙 Li o comentário…" do ALFY fica na linha do tempo completa)
+  const tempo = [...(r.lista_comentarios || []).map((c) => ({ em: c.em, eco: c.origem === "alfy" && /^🐙 Li o coment/.test(c.texto || ""), h: comentHTML(c, ehNova(c)) })),
+    ...(comando() ? (r.ia || []).map((m) => ({ em: m.em, eco: m.papel !== "user" && /^🐙 Li o coment/.test(m.texto || ""), h: iaHTML(m) })) : [])].sort((a, b) => String(b.em).localeCompare(String(a.em)));
+  const conv = s.convTudo ? tempo : tempo.filter((x) => !x.eco).slice(0, 5), hist = [...(r.historico || [])].reverse(), histV = s.histTudo ? hist : hist.slice(0, 6);
   const ld = s.lemDia || "amanha", lh = s.lemHora ?? 9;
   const comp = !!r.inicio;
   const html = `<div class="veu" id="veu"><section class="folha v3 v4" role="dialog" aria-modal="true" aria-label="${esc(nomeRota(r.rt))}">
@@ -1600,8 +1603,9 @@ function folha() {
         ${campo4(r, "como_esta", "agora4")}
       </section>
       <section class="secao3 conv-sec" id="f-interagir"><div class="f4h"><h3>Conversa</h3>${comando() && r.rt.startsWith("RT-") ? `<button class="lk" type="button" data-acao="rastrear-cartao" title="Procura no WhatsApp, no e-mail e no Drive o que foi dito sobre esta rota">📡 Buscar novidades</button>` : ""}</div>
-        ${tempo.length > conv.length ? `<button class="lk" type="button" data-acao="conv-tudo">Ver ${tempo.length - conv.length} anteriores</button>` : ""}
-        <div class="conv4">${conv.map((x) => x.h).join("") || '<p class="nota" style="margin:0">Ninguém escreveu ainda.</p>'}${rod ? '<div class="c4 alfy"><span class="av4">🐙</span><div class="c4b"><p class="pensa4">lendo e atualizando a rota…</p></div></div>' : ""}</div>
+        ${r.como_esta ? `<div class="agora5"><small>📍 Agora</small><p>${esc(rotaTxt(r.como_esta))}</p></div>` : ""}
+        <div class="conv4 ${s.convTudo ? "" : "curta"}">${rod ? '<div class="c4 alfy"><span class="av4">🐙</span><div class="c4b"><p class="pensa4">lendo e atualizando a rota…</p></div></div>' : ""}${conv.map((x) => x.h).join("") || '<p class="nota" style="margin:0">Ninguém escreveu ainda.</p>'}</div>
+        ${tempo.length > conv.length || s.convTudo ? `<button class="lk tempo5" type="button" data-acao="conv-tudo">${s.convTudo ? "▴ Mostrar só o recente" : `🕓 Ver linha do tempo completa · ${tempo.length}`}</button>` : ""}
         ${comando() ? (() => { const sug = s.rr?.itens?.[r.rt]?.sugestao, resp = curto(nomeDe(r.responsavel_id));
           const op = [sug ? ["👉 " + sug, sug] : null, r.responsavel_id && pessoa(r.responsavel_id)?.papel !== "comando" ? [`✍️ Escrever cobrança para ${resp}`, `Escreva uma mensagem curta de WhatsApp cobrando ${resp} sobre esta rota, sem pressionar`] : null, tempo.length > 3 ? ["🧾 Resumir a conversa", "Resuma a conversa desta rota em 3 linhas e atualize o Como está agora"] : null, ["📍 Atualizar o status", "Atualize o Como está agora com o que já se sabe da rota"]].filter(Boolean);
           return `<div class="alfy4"><span class="alfy4t">🐙 O ALFY pode</span><div class="alfy4o">${op.map(([n, t]) => `<button class="chip" type="button" data-rap="${esc(t)}">${esc(n)}</button>`).join("")}</div></div>`; })() : ""}
@@ -2574,7 +2578,7 @@ document.addEventListener("click", async (e) => {
     if (a === "comp-cancelar") { s.compEditando = false; refolha(); return; }
     if (a === "comp-salvar") { const dd = $("#cp-dia").value, hi = $("#cp-ini").value || "09:00", hf = $("#cp-fim").value; if (!dd) { aviso("Escolha o dia"); return; } s.compEditando = false; await editar({ inicio: `${dd}T${hi}:00-03:00`, fim: hf ? `${dd}T${hf}:00-03:00` : "", onde: $("#cp-onde").value, tipo: "📅 Compromisso" }, "📅 Na agenda"); return; }
     if (a === "comp-tirar") { await editar({ inicio: "", fim: "", tipo: "" }, "Saiu da agenda"); return; }
-    if (a === "conv-tudo") { s.convTudo = true; refolha(); return; }
+    if (a === "conv-tudo") { s.convTudo = !s.convTudo; refolha(); return; }
     if (a === "hist-tudo") { s.histTudo = true; refolha(); return; }
     if (a === "det-alfy") { await pedir("ia", "rota:" + s.aberta, { agir: true, texto: "Preencha os detalhes desta rota com o que você entende dela: frente, responsável, prioridade, prazo, tipo, natureza, impacto e esforço. Só mude o que estiver vazio ou claramente errado, sem inventar, e diga em uma linha o que mudou." }, "rota:" + s.aberta); refolha(); aviso("🐙 O ALFY está preenchendo os detalhes…"); return; }
     if (a === "lem-escolhido") { const dd = $("#lem-dia").value, hh = $("#lem-hora").value || "09:00"; if (!dd) { aviso("Escolha o dia"); return; } await lembrar(new Date(`${dd}T${hh}:00-03:00`)); return; }

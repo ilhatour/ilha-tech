@@ -1635,3 +1635,11 @@ textarea.melhorando{opacity:.6;border-color:var(--lilas)!important}
 /* 2.55.1 cancelar à mostra */
 .ac.nao span{color:#FF9A9C}
 .b3.nao span:first-child{color:#FF9A9C}
+
+/* 18/11: Conversa enxuta: "Agora" no topo, recado em 3 linhas (toque abre), linha do tempo completa num botão */
+.agora5{border-left:3px solid var(--turq,#2bb3a3);padding:6px 10px;margin:0 0 10px;background:rgba(43,179,163,.06);border-radius:6px}
+.agora5 small{font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--aco)}
+.agora5 p{margin:2px 0 0;font-size:14.5px;line-height:1.45}
+.conv4.curta .c4:not(.aberta) .c4b > p{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.conv4.curta .c4{cursor:pointer}
+.tempo5{display:block;margin:8px auto 0}
