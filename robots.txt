@@ -1,4 +1,5 @@
 User-agent: *
 Allow: /
 Disallow: /privado/
+Disallow: /fechamento/
 Sitemap: https://ilhatech.io/sitemap.xml
