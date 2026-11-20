@@ -1,4 +1,4 @@
-// ALFY · Mapa de Rotas · Ilha Tech · v2.58.0 · 18/11/2026 · Painel de Ferro · Conversa enxuta: Agora no topo, mais novo em cima, linha do tempo num botão
+// ALFY · Mapa de Rotas · Ilha Tech · v2.59.0 · 20/11/2026 · Painel de Ferro · Mapa com título curto + contexto e Mapa de Atualização
 // Tudo passa pelas funções alfy_* do banco, sempre com a chave pessoal de quem está usando.
 // O banco decide o que cada pessoa vê; a tela só desenha o que voltou.
 // A IA e os comandos são pedidos numa fila (alfy.pedido) que o robô do Mac atende.
@@ -1189,9 +1189,24 @@ function blocoMapa(r, quem) {
   else if (!r.prazo) partes.push("sem prazo");
   else partes.push(`${dias(r.prazo) < 0 ? "venceu" : "até"} *${ddmm(r.prazo)}*`);
   if (quem) partes.push(`👤 ${quem}`);
-  let t = (r.assist || r.titulo).trim().replace(/\.+$/, "");
-  if (!/[?!]$/.test(t)) t += ".";
-  return partes.join(" · ") + "\n" + t;
+  // 20/11 (Miguel): título objetivo em negrito + uma linha de contexto (como está, ou o que fazer)
+  return partes.join(" · ") + "\n*" + tituloCurto(r) + "*\n_" + contextoRota(r) + "_";
+}
+// "Samuel: documento da VDB 04 com despachante (ver com o Rafa)" -> "Documento da VDB 04 com despachante"
+const tituloCurto = (r) => { const t = String(r.titulo || "").replace(/^[^:]{2,30}:\s*/, "").replace(/\s*\([^)]*\)\s*$/, "").trim(); return t.charAt(0).toUpperCase() + t.slice(1); };
+const umaFrase = (t, max = 140, inteira) => { let x = String(t || "").replace(/\s+/g, " ").trim(); const m = x.match(/^.+?[.!?](\s|$)/); if (!inteira && m && m[0].length >= 25) x = m[0].trim(); if (x.length > max) x = x.slice(0, max - 1).replace(/\s+\S*$/, "") + "…"; x = x.replace(/\.$/, ""); return x.charAt(0).toUpperCase() + x.slice(1); };
+// contexto = como está (o ALFY escreve curto desde 18/11), senão o O que fazer sem o vocativo "Samuel,"
+const contextoRota = (r) => r.como_esta ? umaFrase(rotaTxt(r.como_esta), 170, true) : umaFrase(rotaTxt(String(r.assist || "").replace(/^[A-ZÀ-Ú][a-zà-ú]+,\s*/, "")));
+// 🔄 Mapa de Atualização (20/11): o que sabemos de cada rota para a pessoa confirmar ou corrigir
+function mapaAtualizacao(id) {
+  const p = pessoa(id), rs = (M.rotas || []).filter((r) => mapeavel(r) && r.responsavel_id === id).sort(ordPrio);
+  const sem = rs.filter((r) => !r.como_esta), com = rs.filter((r) => r.como_esta);
+  const l = ["🔄 *Atualização das suas rotas*", "", `👤 *${p?.nome || ""}*`, `📅 ${dataHoje()} · confere se o que temos está certo`, ""];
+  if (sem.length) { l.push("❔ *SEM NOTÍCIA: me conta como está*"); sem.forEach((r) => l.push(`• *${nomeRota(r.rt)}* ${tituloCurto(r)}`)); l.push(""); }
+  if (com.length) { l.push("📍 *O QUE SABEMOS: está certo?*"); com.forEach((r) => l.push(`• *${nomeRota(r.rt)}* ${tituloCurto(r)}\n   _${umaFrase(rotaTxt(r.como_esta), 150, true)}_`)); l.push(""); }
+  if (!rs.length) l.push("Nenhuma rota aberta com você agora.", "");
+  l.push("↩️ Responda *Rota + número* com ✅ se está certo, ou corrija.", `Ex.: _${nomeRota((com[0] || rs[0] || { rt: "RT-374" }).rt)} ✅_`);
+  return { n: rs.length, txt: l.join("\n"), rts: rs.map((r) => r.rt) };
 }
 const contagem = (l) => { const v = l.filter(vencida).length, n = l.length; return `${n} rota${n !== 1 ? "s" : ""} aberta${n !== 1 ? "s" : ""}` + (v ? `, ${v} vencida${v !== 1 ? "s" : ""}` : ""); };
 const mapeavel = (r) => ABERTOS.includes(r.status) && !ehNova(r) && !r.rt.startsWith("IDEIA-") && r.frente !== "🧍 Pessoal" && r.tipo !== "📅 Compromisso" && !r.inicio && !ehRotina(r) && !/\b[Rr]otina\b/.test(r.titulo);
@@ -1513,16 +1528,17 @@ function detCmd(c) {
         <p class="nota" style="margin:0 0 8px">Cada botão copia o Mapa de Rotas da pessoa, só com as rotas dela, no formato oficial. Cole no privado dela no WhatsApp.</p>
         ${lista.map(({ p, n, v }) => `<div class="sugestao ${env[p.id] ? "feita" : ""}"><span class="avatar" style="width:30px;height:30px;font-size:12px">${ini(p.nome)}</span><div class="tx"><b>${esc(p.nome)}</b><small>${n} ${n === 1 ? "rota aberta" : "rotas abertas"}${v ? ` · <span style="color:#FF9A9C">${v} ${v === 1 ? "vencida" : "vencidas"}</span>` : ""}${env[p.id] ? " · copiado " + env[p.id] : ""}</small></div><button class="btn ${env[p.id] ? "" : "turq"} peq" type="button" data-copiarmapa="${p.id}">${env[p.id] ? "Copiar de novo" : "Copiar mapa"}</button>${comando() ? `<button class="btn peq" type="button" data-cmmapa="${p.id}" title="O Contramestre manda o mapa pelo WhatsApp">🦜 Mandar</button>` : ""}</div>`).join("") || '<div class="vazio">Ninguém com rota aberta.</div>'}</div>`;
     }
-    const m = modo === "grupo" ? (s.grupo.length ? mapaGrupo(s.grupo) : { n: 0, txt: "Escolha as pessoas do grupo." }) : !s.alvo ? { n: 0, txt: "" } : modo === "setor" ? mapaSetor(s.alvo) : mapaPessoa(s.alvo, cobrando);
+    const m = modo === "grupo" ? (s.grupo.length ? mapaGrupo(s.grupo) : { n: 0, txt: "Escolha as pessoas do grupo." }) : !s.alvo ? { n: 0, txt: "" } : modo === "setor" ? mapaSetor(s.alvo) : (!cobrando && s.mapaTipo === "atual" ? mapaAtualizacao(s.alvo) : mapaPessoa(s.alvo, cobrando));
     const chipsPessoa = (sel, attr) => pessoasAlvo.map((p) => `<button class="chip" type="button" ${attr}="${p.id}" aria-pressed="${sel(p.id)}">${esc(curto(p.nome))}${cobrando ? ` · ${(M.rotas || []).filter((r) => mapeavel(r) && r.responsavel_id === p.id && vencida(r)).length}` : ""}</button>`).join("");
     return `<div class="bloco">${h}${c.k === "mapa" ? `<div class="alterna" role="group" style="margin-bottom:12px"><button type="button" data-mapamodo="rapido" aria-pressed="${modo === "rapido"}">Todos</button><button type="button" data-mapamodo="pessoa" aria-pressed="${modo === "pessoa"}">Pessoa</button><button type="button" data-mapamodo="grupo" aria-pressed="${modo === "grupo"}">Grupo</button><button type="button" data-mapamodo="setor" aria-pressed="${modo === "setor"}">Setor</button><button type="button" data-mapamodo="cobrar" aria-pressed="${cobrando}">Vencidas</button></div>` : ""}
-      ${modo === "pessoa" ? `<p class="rotulo">Só as rotas da pessoa</p><div class="alvos">${chipsPessoa((id) => s.alvo === id, "data-alvo")}</div>` : ""}
+      ${modo === "pessoa" ? `<p class="rotulo">Só as rotas da pessoa</p><div class="alvos">${chipsPessoa((id) => s.alvo === id, "data-alvo")}</div>
+        ${cobrando ? "" : `<div class="alterna" role="group" style="margin:4px 0 10px"><button type="button" data-mapatipo="rotas" aria-pressed="${s.mapaTipo !== "atual"}">🗺️ Mapa de Rotas</button><button type="button" data-mapatipo="atual" aria-pressed="${s.mapaTipo === "atual"}">🔄 Atualização</button></div>`}` : ""}
       ${modo === "grupo" ? `<p class="rotulo">Escolha quem entra (cada um com as rotas dele)</p><div class="alvos">${chipsPessoa((id) => s.grupo.includes(id), "data-grupo")}</div>` : ""}
       ${modo === "setor" ? `<p class="rotulo">Todas as rotas abertas da frente, por pessoa</p><div class="alvos">${setores.map((f) => `<button class="chip" type="button" data-alvo="${esc(f)}" aria-pressed="${s.alvo === f}">${esc(frenteCurta(f))}</button>`).join("")}</div>` : ""}
       <div style="display:flex;gap:8px;margin:4px 0 12px;flex-wrap:wrap"><button class="btn turq" type="button" data-acao="copiar-mapa">Copiar para o WhatsApp</button><span class="nota" style="align-self:center;margin:0">${m.n} rotas</span></div>
       <div class="zap"><div class="msg" style="max-width:none">${zap(m.txt)}<small>prévia · ${m.n} rotas</small></div></div>
       <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap"><button class="btn turq" type="button" data-acao="copiar-mapa">Copiar para o WhatsApp</button></div>
-      <p class="nota">Formato oficial do Mapa de Rotas. O texto de cada rota é o 🎯 O que fazer do cartão. Rota da frente Pessoal e rota concluída nunca entram.</p></div>`;
+      <p class="nota">Formato oficial do Mapa de Rotas: cada rota com o título curto e uma linha de contexto (como está ou o que fazer). 🔄 Atualização mostra o que sabemos para a pessoa confirmar ou corrigir. Rota da frente Pessoal e rota concluída nunca entram.</p></div>`;
   }
   if (c.k === "bomdia") {
     const hoje = (M.rotas || []).filter((r) => ABERTOS.includes(r.status) && r.prazo && dias(r.prazo) === 0 && (r.responsavel_id === eu().id || r.co_responsavel_id === eu().id));
@@ -2542,6 +2558,7 @@ document.addEventListener("click", async (e) => {
     if (d.alvo) { s.alvo = d.alvo; render(); return; }
     if (d.wahoras) { s.waHoras = +d.wahoras; render(); return; }
     if (d.mapamodo) { s.mapaModo = d.mapamodo; render(); return; }
+    if (d.mapatipo) { s.mapaTipo = d.mapatipo; render(); return; }
     if (d.grupo) { s.grupo = s.grupo || []; s.grupo = s.grupo.includes(d.grupo) ? s.grupo.filter((x) => x !== d.grupo) : [...s.grupo, d.grupo]; render(); return; }
     if (d.col) { const k = $("#kanban"), w = k.querySelector(".coluna").offsetWidth + 10; k.scrollTo({ left: +d.col * w, behavior: "smooth" }); return; }
     if (d.sug) {
@@ -2598,7 +2615,7 @@ document.addEventListener("click", async (e) => {
     if (a === "gravar") { gravar(); return; }
     if (a === "whatsapp" || a === "grupos") { await pedir("whatsapp", null, { horas: a === "grupos" ? 168 : s.waHoras || 24 }); render(); aviso("Lendo o WhatsApp… leva de 1 a 3 minutos"); return; }
     if (a === "ronda") { await pedir(a, null, {}); render(); aviso("Pedido na fila do robô"); return; }
-    if (a === "copiar-mapa") { const cob = s.cmd === "cobrar" || s.mapaModo === "cobrar", modo = cob ? "pessoa" : s.mapaModo || "pessoa"; const mp = modo === "grupo" ? mapaGrupo(s.grupo || []) : modo === "setor" ? mapaSetor(s.alvo) : mapaPessoa(s.alvo, cob); copiar(assinar(mp.txt)); registrarCobranca(mp.rts, "mapa"); return; }
+    if (a === "copiar-mapa") { const cob = s.cmd === "cobrar" || s.mapaModo === "cobrar", modo = cob ? "pessoa" : s.mapaModo || "pessoa"; const mp = modo === "grupo" ? mapaGrupo(s.grupo || []) : modo === "setor" ? mapaSetor(s.alvo) : (!cob && s.mapaTipo === "atual" ? mapaAtualizacao(s.alvo) : mapaPessoa(s.alvo, cob)); copiar(assinar(mp.txt)); registrarCobranca(mp.rts, "mapa"); return; }
     if (a === "sair") { sair(); return; }
     if (a === "lembrar") { $("[data-irf=lembrete]")?.click(); return; }
     if (a === "lem-confirmar") {
