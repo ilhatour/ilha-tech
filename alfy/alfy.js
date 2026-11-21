@@ -1,4 +1,4 @@
-// ALFY · Mapa de Rotas · Ilha Tech · v2.59.0 · 20/11/2026 · Painel de Ferro · Mapa com título curto + contexto e Mapa de Atualização
+// ALFY · Mapa de Rotas · Ilha Tech · v2.60.0 · 21/11/2026 · Painel de Ferro · 3 mapas do CM (completo, objetivo, status) com vezes enviada e 🪎 tesouros
 // Tudo passa pelas funções alfy_* do banco, sempre com a chave pessoal de quem está usando.
 // O banco decide o que cada pessoa vê; a tela só desenha o que voltou.
 // A IA e os comandos são pedidos numa fila (alfy.pedido) que o robô do Mac atende.
@@ -1220,21 +1220,73 @@ function blocoRotina(r, quem) {
   return partes.join(" · ") + "\n" + t;
 }
 const dataHoje = () => new Date().toLocaleDateString("pt-BR", { timeZone: FUSO });
-function mapaPessoa(id, soVencidas) {
+// 21/11 (Miguel): 3 mapas da pessoa, na voz do CM. 🦜 sozinho na 1ª linha, frase fixa por tipo, blocos por prioridade,
+// linha da rota = bolinha · Rota N (⚠️ se venceu) · título · (vezes enviada) · emoji + P; 🪎 tesouros = pontos do Placar
+const MAPA_TIPO = { completo: "Mapa completo", objetivo: "Objetivo", status: "Status" };
+const PRIO_BLOCO = { P1: "🚨 *P1 · Atualizar em até 24 horas*", P2: "⚡ *P2 · Atualizar em até 3 dias*", P3: "⏳ *P3 · Atualizar em até 7 dias*", P4: "💤 *P4 · Atualizar em até 30 dias*", P5: "⏸️ *P5 · Sem prazo*", "": "▫️ *Sem prioridade*" };
+const saudacao = () => { const h = +new Date().toLocaleString("en-US", { timeZone: FUSO, hour: "numeric", hour12: false }) % 24; return h < 12 ? "Bom dia" : h < 18 ? "Boa tarde" : "Boa noite"; };
+const FRASE_MAPA = {
+  objetivo: "Bora navegar nessas rotas! Separe um tempo e me atualize todas, escrevendo *Rota + número* e como está. *Vai lá e faz.*",
+  completo: "Este é o seu mapa de rotas, com o contexto e a última atualização que eu tenho. Vamos navegar juntos? Bora executar essas rotas e me atualizar sobre elas.",
+  status: "Hora de conferir a navegação. Veja em que pé está cada rota e, se alguma estiver diferente, me corrija escrevendo *Rota + número* e como está de verdade.",
+};
+const diaCurto = () => new Date().toLocaleDateString("pt-BR", { timeZone: FUSO, weekday: "short" }).replace(/\.$/, "") + " " + new Date().toLocaleDateString("pt-BR", { timeZone: FUSO, day: "2-digit", month: "2-digit" });
+const tesouro = (r) => { const v = valorRota(r); return v ? +v.pts : null; };
+const tesTxt = (n) => String(Math.round(n * 10) / 10).replace(".", ",");
+const semVocativo = (t) => String(t || "").replace(/^[A-ZÀ-Ú][a-zà-ú]+,\s*/, "");
+function explicaRota(r) {   // o que é a rota e o que se espera dela (O que fazer + resultado), sem inventar
+  let t = semVocativo(rotaTxt(r.assist || "")).trim();
+  if (!t || t.toLowerCase() === String(r.titulo || "").toLowerCase() || t.toLowerCase() === tituloCurto(r).toLowerCase()) t = rotaTxt(r.detalhamento || r.como_fazer || "").trim() || t;
+  if (t && t === t.toUpperCase()) { const alt = rotaTxt(r.detalhamento || r.como_fazer || "").trim(); t = alt && alt !== alt.toUpperCase() ? alt : t.toLowerCase().replace(/\b(vdb|ibt|bn|pou|ct|agi|op|rh)\b/g, (x) => x.toUpperCase()); }
+  t = umaFrase(t, 220, true);
+  if (r.resultado && !t.includes(r.resultado)) t += ". Espera-se: " + umaFrase(r.resultado, 120, true);
+  return t;
+}
+function atualRota(r) {   // 💬 a última atualização com a data na frente
+  const em = r.ult?.em || r.atualizado_em;
+  if (!r.como_esta) return em && dia(em) !== dia(r.criado_em || "") ? `💬 _Sem atualização desde ${ddmm(em)}_` : "💬 _Sem atualização desde que foi lançada_";
+  const quando = em ? (dias(em) === 0 ? "Hoje" : "Em " + ddmm(em)) : "Última";
+  const t = umaFrase(rotaTxt(r.como_esta).replace(/^Em \d{1,2}\/\d{1,2},?\s*/, ""), 220, true);
+  return `💬 *${quando}:* ${t}`;
+}
+function linhaRota(r, tipo) {
+  const p = pcod(r.prioridade), n = +(r.cobr?.n || 0), ts = tesouro(r);
+  const tit = tipo === "completo" ? `*${tituloCurto(r)}*` : tituloCurto(r);
+  return `${ST[r.status]?.bola || "▫️"} *${nomeRota(r.rt)}*${vencida(r) ? " ⚠️" : ""} · ${tit} (${n})${p ? ` · ${PRIO_IC[p]} ${p}` : ""}${tipo !== "completo" && ts != null ? ` · 🪎 ${tesTxt(ts)}` : ""}`;
+}
+function blocoRota(r, tipo) {
+  if (tipo === "objetivo") return [linhaRota(r, tipo)];
+  if (tipo === "status") return ["", linhaRota(r, tipo), "> " + atualRota(r)];
+  const ts = tesouro(r), prazo = pcod(r.prioridade) === "P5" || !r.prazo ? "Sem prazo" : `Prazo ${ddmm(r.prazo)}${vencida(r) ? " (venceu)" : ""}`;
+  return ["", linhaRota(r, tipo), "> " + explicaRota(r), "> " + atualRota(r), `> 📅 Lançada ${ddmm(r.criado_em)} · ${prazo}${ts != null ? ` · 🪎 ${tesTxt(ts)}` : ""}`];
+}
+function mapaPessoa(id, soVencidas, tipo) {
+  tipo = MAPA_TIPO[tipo] ? tipo : "completo";
   const p = pessoa(id);
   let minhas = (M.rotas || []).filter((r) => mapeavel(r) && r.responsavel_id === id).sort(ordPrio);
   if (soVencidas) minhas = minhas.filter(vencida);
-  // 04/11 (Miguel): o mapa da pessoa traz só as rotas dela; o que é da equipe vai pelo mapa do grupo ou do setor
-  const time = [];
-  const l = ["🗺️ *Mapa de Rotas*", "", `👤 *${p?.nome || ""}*`, `📅 ${dataHoje()} · ${contagem(minhas)}`, "", soVencidas ? "*SUAS ROTAS VENCIDAS:*" : "*SUAS ROTAS:*", ""];
-  minhas.forEach((r) => l.push(blocoMapa(r), ""));
-  if (!minhas.length) l.push(soVencidas ? "Nenhuma rota vencida com você agora." : "Nenhuma rota aberta com você agora.", "");
   const rotinas = rotinasMapa((r) => r.responsavel_id === id).filter((r) => !soVencidas || vencida(r));
-  if (rotinas.length) { l.push("*SUAS ROTINAS:*", ""); rotinas.forEach((r) => l.push(blocoRotina(r), "")); }
-  if (time.length) { l.push("*DA SUA EQUIPE (para acompanhar e cobrar):*", ""); time.forEach((r) => l.push(blocoMapa(r, curto(nomeDe(r.responsavel_id))), "")); }
-  l.push(LEGENDA(num((minhas[0] || time[0] || { rt: "RT-374" }).rt), minhas.concat(time)));
-  return { n: minhas.length + time.length, txt: l.join("\n"), rts: minhas.concat(time, rotinas).map((r) => r.rt) };
+  const tot = minhas.reduce((a, r) => a + (tesouro(r) || 0), 0), nv = minhas.filter(vencida).length;
+  const sub = [diaCurto(), `${minhas.length} rota${minhas.length !== 1 ? "s" : ""}${soVencidas ? " vencidas" : ""}`, tipo === "status" && nv && !soVencidas ? `${nv} com prazo vencido` : "", tot ? `🪎 ${tesTxt(tot)} tesouros no mapa` : ""].filter(Boolean).join(" · ");
+  const l = ["🦜", `🗺️ *Mapa de Rotas${tipo === "status" ? " · Status" : ""} · ${curto(p?.nome || "")}*`, `_${sub}_`, "", `${saudacao()}, Guardião 🛡️ ${FRASE_MAPA[tipo]}`];
+  const grupos = [...new Set(minhas.map((r) => pcod(r.prioridade)))].sort((a, b) => (a || "P9").localeCompare(b || "P9"));
+  grupos.forEach((g) => { l.push("", PRIO_BLOCO[g]); minhas.filter((r) => pcod(r.prioridade) === g).forEach((r) => l.push(...blocoRota(r, tipo))); });
+  if (!minhas.length) l.push("", soVencidas ? "Nenhuma rota vencida com você agora." : "Nenhuma rota aberta com você agora.");
+  if (rotinas.length) { l.push("", "🔁 *Suas rotinas*", ""); rotinas.forEach((r) => l.push(blocoRotina(r), "")); if (l[l.length - 1] === "") l.pop(); }
+  const st = [...new Set(minhas.map((r) => r.status))].map((k) => LEG_ST[k]).filter(Boolean).join(" · ");
+  l.push("", (st ? st + "\n" : "") + "(5) = vezes que a rota foi enviada");
+  l.push(tipo === "status" ? "↩️ Está diferente? Responda *Rota + número* e como está" : tipo === "objetivo" ? "↩️ Uma resposta por rota: *Rota + número* e como está" : "↩️ Responda escrevendo *Rota + número*");
+  l.push("", `*${CM_FECHO}*`);
+  return { n: minhas.length, txt: l.join("\n"), rts: minhas.concat(rotinas).map((r) => r.rt), cm: true };
 }
+const tipoMapa = () => (MAPA_TIPO[s.mapaTipo] ? s.mapaTipo : "completo");
+// 21/11 (Miguel): dois botões. 🗺️ Mapa completo (o clássico) e ⚡ Mapa rápido, que abre a escolha Objetivo ou Status
+function seletorMapa() {
+  const t = tipoMapa(), rap = t !== "completo";
+  return `<div class="alterna" role="group" style="margin:4px 0 8px"><button type="button" data-mapatipo="completo" aria-pressed="${!rap}">🗺️ Mapa completo</button><button type="button" data-mapatipo="rapido" aria-pressed="${rap}">⚡ Mapa rápido</button></div>${rap ? `<div class="alvos" style="margin:0 0 10px"><button class="chip" type="button" data-mapatipo="objetivo" aria-pressed="${t === "objetivo"}">🎯 Objetivo</button><button class="chip" type="button" data-mapatipo="status" aria-pressed="${t === "status"}">📡 Status</button></div>` : ""}`;
+}
+// prévia do mapa no app: negrito, itálico e a barrinha de citação ("> ") como no WhatsApp
+const zapMapa = (t) => esc(t).split("\n").map((x) => { const q = /^(&gt;|>) /.test(x); x = x.replace(/^(&gt;|>) /, "").replace(/\*([^*\n]+)\*/g, "<b>$1</b>").replace(/(^|\s)_([^_\n]+)_/g, "$1<i>$2</i>"); return q ? `<span class="zq">${x}</span>` : x + "\n"; }).join("");
 function mapaGrupo(ids) {
   const rotas = (M.rotas || []).filter((r) => mapeavel(r) && ids.includes(r.responsavel_id));
   const nomes = ids.map((id) => curto(nomeDe(id)));
@@ -1525,20 +1577,20 @@ function detCmd(c) {
       const lista = pessoasAlvo.map((p) => { const rs = (M.rotas || []).filter((r) => mapeavel(r) && r.responsavel_id === p.id); return { p, n: rs.length, v: rs.filter(vencida).length }; }).sort((x, y) => y.v - x.v || y.n - x.n);
       const env = s.mapasCopiados || {};
       return `<div class="bloco">${h}<div class="alterna" role="group" style="margin-bottom:12px"><button type="button" data-mapamodo="rapido" aria-pressed="true">Todos</button><button type="button" data-mapamodo="pessoa" aria-pressed="false">Pessoa</button><button type="button" data-mapamodo="grupo" aria-pressed="false">Grupo</button><button type="button" data-mapamodo="setor" aria-pressed="false">Setor</button><button type="button" data-mapamodo="cobrar" aria-pressed="false">Vencidas</button></div>
-        <p class="nota" style="margin:0 0 8px">Cada botão copia o Mapa de Rotas da pessoa, só com as rotas dela, no formato oficial. Cole no privado dela no WhatsApp.</p>
+        ${seletorMapa()}<p class="nota" style="margin:0 0 8px">Cada botão copia o mapa escolhido acima, só com as rotas da pessoa. 🦜 Mandar: o Contramestre manda no tático dela.</p>
         ${lista.map(({ p, n, v }) => `<div class="sugestao ${env[p.id] ? "feita" : ""}"><span class="avatar" style="width:30px;height:30px;font-size:12px">${ini(p.nome)}</span><div class="tx"><b>${esc(p.nome)}</b><small>${n} ${n === 1 ? "rota aberta" : "rotas abertas"}${v ? ` · <span style="color:#FF9A9C">${v} ${v === 1 ? "vencida" : "vencidas"}</span>` : ""}${env[p.id] ? " · copiado " + env[p.id] : ""}</small></div><button class="btn ${env[p.id] ? "" : "turq"} peq" type="button" data-copiarmapa="${p.id}">${env[p.id] ? "Copiar de novo" : "Copiar mapa"}</button>${comando() ? `<button class="btn peq" type="button" data-cmmapa="${p.id}" title="O Contramestre manda o mapa pelo WhatsApp">🦜 Mandar</button>` : ""}</div>`).join("") || '<div class="vazio">Ninguém com rota aberta.</div>'}</div>`;
     }
-    const m = modo === "grupo" ? (s.grupo.length ? mapaGrupo(s.grupo) : { n: 0, txt: "Escolha as pessoas do grupo." }) : !s.alvo ? { n: 0, txt: "" } : modo === "setor" ? mapaSetor(s.alvo) : (!cobrando && s.mapaTipo === "atual" ? mapaAtualizacao(s.alvo) : mapaPessoa(s.alvo, cobrando));
+    const m = modo === "grupo" ? (s.grupo.length ? mapaGrupo(s.grupo) : { n: 0, txt: "Escolha as pessoas do grupo." }) : !s.alvo ? { n: 0, txt: "" } : modo === "setor" ? mapaSetor(s.alvo) : mapaPessoa(s.alvo, cobrando, tipoMapa());
     const chipsPessoa = (sel, attr) => pessoasAlvo.map((p) => `<button class="chip" type="button" ${attr}="${p.id}" aria-pressed="${sel(p.id)}">${esc(curto(p.nome))}${cobrando ? ` · ${(M.rotas || []).filter((r) => mapeavel(r) && r.responsavel_id === p.id && vencida(r)).length}` : ""}</button>`).join("");
     return `<div class="bloco">${h}${c.k === "mapa" ? `<div class="alterna" role="group" style="margin-bottom:12px"><button type="button" data-mapamodo="rapido" aria-pressed="${modo === "rapido"}">Todos</button><button type="button" data-mapamodo="pessoa" aria-pressed="${modo === "pessoa"}">Pessoa</button><button type="button" data-mapamodo="grupo" aria-pressed="${modo === "grupo"}">Grupo</button><button type="button" data-mapamodo="setor" aria-pressed="${modo === "setor"}">Setor</button><button type="button" data-mapamodo="cobrar" aria-pressed="${cobrando}">Vencidas</button></div>` : ""}
       ${modo === "pessoa" ? `<p class="rotulo">Só as rotas da pessoa</p><div class="alvos">${chipsPessoa((id) => s.alvo === id, "data-alvo")}</div>
-        ${cobrando ? "" : `<div class="alterna" role="group" style="margin:4px 0 10px"><button type="button" data-mapatipo="rotas" aria-pressed="${s.mapaTipo !== "atual"}">🗺️ Mapa de Rotas</button><button type="button" data-mapatipo="atual" aria-pressed="${s.mapaTipo === "atual"}">🔄 Atualização</button></div>`}` : ""}
+        ${seletorMapa()}` : ""}
       ${modo === "grupo" ? `<p class="rotulo">Escolha quem entra (cada um com as rotas dele)</p><div class="alvos">${chipsPessoa((id) => s.grupo.includes(id), "data-grupo")}</div>` : ""}
       ${modo === "setor" ? `<p class="rotulo">Todas as rotas abertas da frente, por pessoa</p><div class="alvos">${setores.map((f) => `<button class="chip" type="button" data-alvo="${esc(f)}" aria-pressed="${s.alvo === f}">${esc(frenteCurta(f))}</button>`).join("")}</div>` : ""}
-      <div style="display:flex;gap:8px;margin:4px 0 12px;flex-wrap:wrap"><button class="btn turq" type="button" data-acao="copiar-mapa">Copiar para o WhatsApp</button><span class="nota" style="align-self:center;margin:0">${m.n} rotas</span></div>
-      <div class="zap"><div class="msg" style="max-width:none">${zap(m.txt)}<small>prévia · ${m.n} rotas</small></div></div>
+      <div style="display:flex;gap:8px;margin:4px 0 12px;flex-wrap:wrap"><button class="btn turq" type="button" data-acao="copiar-mapa">Copiar para o WhatsApp</button>${m.cm && comando() && s.alvo ? `<button class="btn" type="button" data-cmmapa="${s.alvo}" title="O Contramestre manda no tático da pessoa">🦜 Mandar pelo CM</button>` : ""}<span class="nota" style="align-self:center;margin:0">${m.n} rotas</span></div>
+      <div class="zap"><div class="msg" style="max-width:none">${m.cm ? zapMapa(m.txt) : zap(m.txt)}<small>prévia · ${m.n} rotas</small></div></div>
       <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap"><button class="btn turq" type="button" data-acao="copiar-mapa">Copiar para o WhatsApp</button></div>
-      <p class="nota">Formato oficial do Mapa de Rotas: cada rota com o título curto e uma linha de contexto (como está ou o que fazer). 🔄 Atualização mostra o que sabemos para a pessoa confirmar ou corrigir. Rota da frente Pessoal e rota concluída nunca entram.</p></div>`;
+      <p class="nota">🗺️ Mapa completo: cada rota com o que é, a última atualização e as datas. ⚡ Mapa rápido: Objetivo (uma linha por rota, pede para atualizar todas) ou Status (a última atualização de cada rota, para a pessoa corrigir). (n) = vezes que a rota já foi enviada; 🪎 = tesouros que a rota vale. Rota Pessoal e concluída nunca entram.</p></div>`;
   }
   if (c.k === "bomdia") {
     const hoje = (M.rotas || []).filter((r) => ABERTOS.includes(r.status) && r.prazo && dias(r.prazo) === 0 && (r.responsavel_id === eu().id || r.co_responsavel_id === eu().id));
@@ -2485,7 +2537,7 @@ document.addEventListener("click", async (e) => {
         aviso(`✕ ${nomeRota(rt)} cancelada (não realizada)`); await recarregar(); if (s.aberta === rt) { await recarregarCartao(); refolha(); } render(); } catch (er) { falhou(er); } return; }
     if (d.pausar) { if (s.pil) { s.pil = null; if (s.aberta) refolha(); render(); } pausarCaixa(d.pausar); return; }
     if (d.cmpush) { const r = rotaDe(d.cmpush); if (r) { b.disabled = true; try { await cmMandar(r.responsavel_id, "push", cmTexto("push", r), [r.rt], "tatico"); } catch (er) { falhou(er); } b.disabled = false; } return; }
-    if (d.cmmapa) { const mp = mapaPessoa(d.cmmapa); b.disabled = true; try { await cmMandar(d.cmmapa, "mapa", ["🦜 " + mp.txt, "", CM_FECHO].join("\n"), mp.rts, "tatico"); s.mapasCopiados = { ...(s.mapasCopiados || {}), [d.cmmapa]: "🦜 " + new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) }; render(); } catch (er) { b.disabled = false; falhou(er); } return; }
+    if (d.cmmapa) { const mp = mapaPessoa(d.cmmapa, false, tipoMapa()); b.disabled = true; try { await cmMandar(d.cmmapa, "mapa", mp.txt, mp.rts, "tatico"); s.mapasCopiados = { ...(s.mapasCopiados || {}), [d.cmmapa]: "🦜 " + new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) }; render(); } catch (er) { b.disabled = false; falhou(er); } return; }
     if (d.cobrar) { const r = rotaDe(d.cobrar); if (r) { copiar(textoCobrar(r)); registrarCobranca([r.rt], "cobrar"); aviso(`📣 Cobrança copiada. Cole no WhatsApp de ${curto(nomeDe(r.responsavel_id))}`); } return; }
     if (d.cobrhist) { const rt = d.cobrhist; s.cobrHist = s.cobrHist || {}; if (s.cobrHist[rt]) delete s.cobrHist[rt]; else { s.cobrHist[rt] = "carregando"; chamar("alfy_cobrancas", { p_rt: rt }).then((h) => { if (s.cobrHist[rt]) { s.cobrHist[rt] = h || []; s.aberta === rt && refolha(); renderSeguro(); } }); } if (s.aberta === rt) refolha(); renderSeguro(); return; }
     if (d.copiarrota) { const r = rotaDe(d.copiarrota); if (r) { copiar(textoRota(r)); registrarCobranca([r.rt], "copiar"); const tx = b.innerHTML; b.innerHTML = b.innerHTML.replace("📋", "✓"); setTimeout(() => { b.innerHTML = tx; }, 1500); } return; }
@@ -2541,7 +2593,7 @@ document.addEventListener("click", async (e) => {
     if (d.naveabrir) { s.naveAbrir = d.naveabrir; render(); return; }
     if (d.navetrazer) { const fr = $("#nv-frente")?.value; const r = await chamar("alfy_nave_trazer", { p_colaborador: d.navetrazer, p_alfy: s.naveLigar || null, p_apelido: $("#nv-apelido")?.value || "", p_papel: $("#nv-papel")?.value || "colaborador", p_frentes: fr ? [fr] : null }); await naveDepois(s.naveLigar ? {} : r, s.naveLigar ? "Ligado à Nave ID" : `${r.nome} entrou no ALFY`); return; }
     if (d.aprovar || d.recusar) { const id = +(d.aprovar || d.recusar), fr = $("#fa-frente-" + id)?.value; const r = await chamar("alfy_ficha_aprovar", { p_id: id, p_papel: $("#fa-papel-" + id)?.value || "colaborador", p_frentes: fr ? [fr] : [], p_nivel: $("#fa-nivel-" + id)?.value || "operacional", p_aprovar: !!d.aprovar }); s.aprovado = d.aprovar ? r : null; s.fichas = await chamar("alfy_fichas"); if (comando()) s.equipe = await chamar("alfy_equipe"); await recarregar(); render(); aviso(d.aprovar ? "Cadastrado na Nave ID e no ALFY" : "Ficha recusada"); return; }
-    if (d.copiarmapa) { const mp = mapaPessoa(d.copiarmapa); copiar(assinar(mp.txt)); registrarCobranca(mp.rts, "mapa"); s.mapasCopiados = { ...(s.mapasCopiados || {}), [d.copiarmapa]: new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) }; render(); return; }
+    if (d.copiarmapa) { const mp = mapaPessoa(d.copiarmapa, false, tipoMapa()); copiar(mp.txt); registrarCobranca(mp.rts, "mapa"); s.mapasCopiados = { ...(s.mapasCopiados || {}), [d.copiarmapa]: new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) }; render(); return; }
     if (d.baixar) { aviso("Baixando…"); const x = await chamar("alfy_anexo_baixar", { p_id: +d.baixar }); const bin = atob(x.base64), u8 = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i); const url = URL.createObjectURL(new Blob([u8], { type: x.tipo || "application/octet-stream" })); const l = document.createElement("a"); l.href = url; l.download = x.nome; document.body.append(l); l.click(); l.remove(); setTimeout(() => URL.revokeObjectURL(url), 5000); return; }
     if (d.tiraranexo) { s.cartao = await chamar("alfy_anexo_tirar", { p_id: +d.tiraranexo }); refolha(); await recarregar(); render(); aviso("Anexo tirado da rota"); return; }
     if (d.rapido) { const rt = d.rrt; if (d.rapido === "concluida" && !(await qualidadeAoConcluir(rt))) return; if (s.aba === "rotas" && s.vista === "rar") await enviarRascunho(rt); await chamar("alfy_mover", { p_rt: rt, p_status: d.rapido }); if (d.rapido === "concluida" && s.rr.feitas) { s.rr.feitas = { ...s.rr.feitas, [rt]: true }; s.rr.foco = null; rrSalvar(); if (s.vista === "rar") setTimeout(rrNoLugar, 60); } aviso(d.rapido === "concluida" ? `✓ ${nomeRota(rt)} concluída` : `${nomeRota(rt)} em andamento`); await recarregar(); render(); return; }
@@ -2558,7 +2610,7 @@ document.addEventListener("click", async (e) => {
     if (d.alvo) { s.alvo = d.alvo; render(); return; }
     if (d.wahoras) { s.waHoras = +d.wahoras; render(); return; }
     if (d.mapamodo) { s.mapaModo = d.mapamodo; render(); return; }
-    if (d.mapatipo) { s.mapaTipo = d.mapatipo; render(); return; }
+    if (d.mapatipo) { s.mapaTipo = d.mapatipo === "rapido" ? (s.mapaTipo === "status" ? "status" : "objetivo") : d.mapatipo; render(); return; }
     if (d.grupo) { s.grupo = s.grupo || []; s.grupo = s.grupo.includes(d.grupo) ? s.grupo.filter((x) => x !== d.grupo) : [...s.grupo, d.grupo]; render(); return; }
     if (d.col) { const k = $("#kanban"), w = k.querySelector(".coluna").offsetWidth + 10; k.scrollTo({ left: +d.col * w, behavior: "smooth" }); return; }
     if (d.sug) {
@@ -2615,7 +2667,7 @@ document.addEventListener("click", async (e) => {
     if (a === "gravar") { gravar(); return; }
     if (a === "whatsapp" || a === "grupos") { await pedir("whatsapp", null, { horas: a === "grupos" ? 168 : s.waHoras || 24 }); render(); aviso("Lendo o WhatsApp… leva de 1 a 3 minutos"); return; }
     if (a === "ronda") { await pedir(a, null, {}); render(); aviso("Pedido na fila do robô"); return; }
-    if (a === "copiar-mapa") { const cob = s.cmd === "cobrar" || s.mapaModo === "cobrar", modo = cob ? "pessoa" : s.mapaModo || "pessoa"; const mp = modo === "grupo" ? mapaGrupo(s.grupo || []) : modo === "setor" ? mapaSetor(s.alvo) : (!cob && s.mapaTipo === "atual" ? mapaAtualizacao(s.alvo) : mapaPessoa(s.alvo, cob)); copiar(assinar(mp.txt)); registrarCobranca(mp.rts, "mapa"); return; }
+    if (a === "copiar-mapa") { const cob = s.cmd === "cobrar" || s.mapaModo === "cobrar", modo = cob ? "pessoa" : s.mapaModo || "pessoa"; const mp = modo === "grupo" ? mapaGrupo(s.grupo || []) : modo === "setor" ? mapaSetor(s.alvo) : mapaPessoa(s.alvo, cob, tipoMapa()); copiar(mp.cm ? mp.txt : assinar(mp.txt)); registrarCobranca(mp.rts, "mapa"); return; }
     if (a === "sair") { sair(); return; }
     if (a === "lembrar") { $("[data-irf=lembrete]")?.click(); return; }
     if (a === "lem-confirmar") {

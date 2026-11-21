@@ -1654,3 +1654,4 @@ textarea.melhorando{opacity:.6;border-color:var(--lilas)!important}
 .desp-tr summary{cursor:pointer;color:var(--aco);font-size:13px;margin-top:8px}
 @media (max-width:600px){.desp-corpo{padding-left:0}}
 @media (max-width:600px){.desp-corpo .sugestao{flex-wrap:wrap}.desp-corpo .sugestao .tx{flex-basis:100%}}
+.zap .zq { display: block; border-left: 3px solid var(--turq); padding: 1px 0 1px 9px; margin: 2px 0; opacity: .92; }
