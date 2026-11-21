@@ -1,4 +1,4 @@
-// ALFY · Mapa de Rotas · Ilha Tech · v2.61.0 · 21/11/2026 · Painel de Ferro · 🪎 Placar do Tesouro (Baú, Corrida da Semana, patentes, Maré Boa, conquistas)
+// ALFY · Mapa de Rotas · Ilha Tech · v2.62.0 · 21/11/2026 · Painel de Ferro · 📝 Rascunho + 🦜 Pedir contexto (rota sem contexto sai do mapa)
 // Tudo passa pelas funções alfy_* do banco, sempre com a chave pessoal de quem está usando.
 // O banco decide o que cada pessoa vê; a tela só desenha o que voltou.
 // A IA e os comandos são pedidos numa fila (alfy.pedido) que o robô do Mac atende.
@@ -260,7 +260,7 @@ function tag(r) {
 const semEmoji = (t) => (t || "").replace(/^\S+\s/, "");
 function metaLinha(r, semPessoa) {
   const pz = prazoInfo(r), b = r.budget_valor || r.budget_status !== "sem custo";
-  return `<span class="meta2">${semPessoa ? "" : `<span>👤 ${esc(curto(nomeDe(r.responsavel_id)))}${r.co_responsavel_id ? " + " + esc(curto(nomeDe(r.co_responsavel_id))) : ""}</span>`}${r.repete ? `<span style="color:var(--turq)">🔁 ${{ diaria: "diária", semanal: "semanal", quinzenal: "quinzenal", mensal: "mensal", sob_demanda: "quando precisar" }[r.repete]}</span>` : ""}${r.prioridade ? `<span>${prioTxt(r.prioridade)}</span>` : ""}<span class="${pz.cls}">📅 ${pz.txt}</span>${r.natureza ? `<span>🧭 ${esc(semEmoji(r.natureza))}</span>` : ""}${r.tipo ? `<span>🏷️ ${esc(semEmoji(r.tipo))}</span>` : ""}${b && r.budget_status !== "sem custo" ? `<span class="bud ${r.budget_status === "aprovado" ? "ok" : ""}">💰 ${esc(r.budget_valor || "")} ${r.budget_status}</span>` : ""}${r.comentarios ? `<span style="color:var(--turq)">💬 ${r.comentarios}</span>` : ""}${r.n_anexos ? `<span>📎 ${r.n_anexos}</span>` : ""}${tocando(r) ? `<span class="sino">🔔 lembrete</span>` : ""}${temNova(r) ? `<span class="nova-l">💬 nova resposta</span>` : ""}${r.volta_em ? `<span class="idade-l">💤 volta ${ddmm(r.volta_em)}</span>` : ""}${r.cobr?.aguarda && (r.responsavel_id === eu().id || r.co_responsavel_id === eu().id) ? `<span class="nova-l">📣 aguardando seu retorno</span>` : ""}${ABERTOS.includes(r.status) && r.criado_em ? `<span class="idade-l" title="${esc(idadeTxt(r))}${r.cobr?.n ? " · cobrada " + r.cobr.n + "x" : ""}">${diasEntre(r.criado_em, new Date().toISOString())}d${r.cobr?.n ? ` · 📣${r.cobr.n}` : ""}</span>` : ""}${ultLinha(r)}</span>`;
+  return `<span class="meta2">${r.contexto_falta ? `<span class="rasc4" title="Falta: ${esc(r.contexto_falta)}">📝 Rascunho · falta contexto</span>` : ""}${semPessoa ? "" : `<span>👤 ${esc(curto(nomeDe(r.responsavel_id)))}${r.co_responsavel_id ? " + " + esc(curto(nomeDe(r.co_responsavel_id))) : ""}</span>`}${r.repete ? `<span style="color:var(--turq)">🔁 ${{ diaria: "diária", semanal: "semanal", quinzenal: "quinzenal", mensal: "mensal", sob_demanda: "quando precisar" }[r.repete]}</span>` : ""}${r.prioridade ? `<span>${prioTxt(r.prioridade)}</span>` : ""}<span class="${pz.cls}">📅 ${pz.txt}</span>${r.natureza ? `<span>🧭 ${esc(semEmoji(r.natureza))}</span>` : ""}${r.tipo ? `<span>🏷️ ${esc(semEmoji(r.tipo))}</span>` : ""}${b && r.budget_status !== "sem custo" ? `<span class="bud ${r.budget_status === "aprovado" ? "ok" : ""}">💰 ${esc(r.budget_valor || "")} ${r.budget_status}</span>` : ""}${r.comentarios ? `<span style="color:var(--turq)">💬 ${r.comentarios}</span>` : ""}${r.n_anexos ? `<span>📎 ${r.n_anexos}</span>` : ""}${tocando(r) ? `<span class="sino">🔔 lembrete</span>` : ""}${temNova(r) ? `<span class="nova-l">💬 nova resposta</span>` : ""}${r.volta_em ? `<span class="idade-l">💤 volta ${ddmm(r.volta_em)}</span>` : ""}${r.cobr?.aguarda && (r.responsavel_id === eu().id || r.co_responsavel_id === eu().id) ? `<span class="nova-l">📣 aguardando seu retorno</span>` : ""}${ABERTOS.includes(r.status) && r.criado_em ? `<span class="idade-l" title="${esc(idadeTxt(r))}${r.cobr?.n ? " · cobrada " + r.cobr.n + "x" : ""}">${diasEntre(r.criado_em, new Date().toISOString())}d${r.cobr?.n ? ` · 📣${r.cobr.n}` : ""}</span>` : ""}${ultLinha(r)}</span>`;
 }
 const podeMexer = (r) => manda() || r.responsavel_id === eu().id || r.co_responsavel_id === eu().id;
 function acoesLinha(r) {
@@ -729,6 +729,7 @@ function rrItem(r, foco) {
           podeCM(r) ? it(`type="button" data-cmpush="${r.rt}"`, "🔔", "Push: cobrar o andamento") : "",
           podeCM(r) ? it(`type="submit" form="${fid}" data-clmodo="cmcom"`, "💬", "Enviar o meu comentário") : "",
           podeCM(r) ? it(`type="button" data-cm="${r.rt}"`, "🦜", "A rota, um recado ou no privado…") : "",
+          podeCM(r) ? it(`type="button" data-cmctx="${r.rt}"`, "📝", "Pedir contexto", "O CM pede a explicação no tático; a rota vira Rascunho até a resposta") : "",
           comando() && r.externo ? `<small class="dd4-t">🤝 Externo</small>` + it(`type="button" data-cmext="${r.rt}"`, "🤝", `Recado para ${esc(r.externo.nome)}`) : "",
           `<small class="dd4-t">📋 Copiar para o meu WhatsApp</small>`,
           it(`type="button" data-copiarrota="${r.rt}"`, "📋", "Copiar a rota"),
@@ -1076,6 +1077,7 @@ function cmTexto(tipo, r, extra) {
     comentario: () => [`${nome}, o Miguel deixou um recado na *Rota ${n}*:`, "", `“${(extra || "").trim()}”`, "", blocoMapa(r), "", resp],
     push: () => [`${nome}, como está o andamento desta rota?`, "", blocoMapa(r), "", resp],   // o cutucão padrão do CM: cobra o andamento, sem dizer o que mudou
     livre: () => [nome ? `${nome}, ${(extra || "").trim()}` : (extra || "").trim(), "", resp],
+    contexto: () => [`${nome} 🛡️, para a *Rota ${n}* entrar no mapa, me explica: ${(extra || "").trim() || "o que precisa ser entregue, por quê e qual a prioridade (P1 a P5)?"}`, "", `*${tituloCurto(r)}*`, "", `Responda aqui com *Rota ${n}* + a explicação.`],
   }[tipo]();
   return [...corpo.map((x, k) => (k === 0 ? "🦜 " + x : x)), "", CM_FECHO].filter((x, k, a) => !(x === "" && a[k - 1] === "")).join("\n").trim();
 }
@@ -1168,12 +1170,13 @@ function cmCaixa(rt, tipo0) {   // escolher o que mandar, conferir o texto e man
   chamar("alfy_cm_destinos", {}).then((d) => { s.cmDest = d || {}; if (document.body.contains(c)) desenha($("#cm-livre")?.value); }).catch(() => {});
   const c = document.createElement("div");
   c.className = "qconc cmcx"; c.setAttribute("role", "dialog"); c.setAttribute("aria-label", "Mandar pelo Contramestre");
-  const ops = [["push", "🔔 Push (andamento)"], ["rota", "📋 A rota"], ["livre", "✍️ Recado"]];
+  const ops = [["push", "🔔 Push (andamento)"], ["rota", "📋 A rota"], ["livre", "✍️ Recado"], ["contexto", "📝 Pedir contexto"]];
   const desenha = (livre) => { c.innerHTML = `<div class="qc-caixa"><b>🦜 Mandar pelo Contramestre</b><small>para ${esc(nomeDe(r.responsavel_id))} · ${esc(nomeRota(rt))}</small>
       <div class="seg5 cm-tipos" role="group" aria-label="O que mandar">${ops.map(([k, n]) => `<button type="button" data-cmt="${k}" aria-pressed="${tipo === k}">${n}</button>`).join("")}</div>
       <div class="seg5 cm-tipos" role="group" aria-label="Onde">${[...(r.responsavel_id ? [["tatico", "🎯 No tático"], ["privado", "👤 No privado"]] : []), ...(r.externo ? [["externo", "🤝 " + r.externo.nome]] : [])].map(([k, n]) => `<button type="button" data-cmd="${k}" aria-pressed="${destino === k}">${esc(n)}</button>`).join("")}</div>
       <small class="cm-onde">${destino === "tatico" ? (s.cmDest?.[r.responsavel_id] ? "Grupo: " + esc(s.cmDest[r.responsavel_id]) : s.cmDest ? "⚠️ Esta pessoa ainda não tem grupo tático cadastrado" : "") : "Só quando você quiser: vai direto para o WhatsApp da pessoa."}</small>
       ${tipo === "livre" ? `<textarea id="cm-livre" rows="3" placeholder="O que o Contramestre deve dizer">${esc(livre || "")}</textarea>` : ""}
+      ${tipo === "contexto" ? `<small class="cm-onde">O que falta para a rota ficar clara (a rota vira 📝 Rascunho e sai do mapa até a pessoa responder):</small><textarea id="cm-livre" rows="2">${esc(livre ?? (r.contexto_falta || "o que precisa ser entregue, por quê e qual a prioridade (P1 a P5)?"))}</textarea>` : ""}
       <pre class="cm-prev" id="cm-prev"></pre>
       <p class="cm-modo">${s.cmDest?._modo === "equipe" ? "🦜 Vai de verdade, pelo número do Contramestre." : "🧪 Modo teste: chega no seu WhatsApp, pelo número do Contramestre, dizendo para quem e onde iria."}</p>
       <div class="qc-pe"><button type="button" class="mini" data-qx="1">Cancelar</button><button type="button" class="cta" data-cmok="1">🦜 Mandar</button></div></div>`;
@@ -1187,7 +1190,7 @@ function cmCaixa(rt, tipo0) {   // escolher o que mandar, conferir o texto e man
     if (b?.dataset.cmd) { const lv = $("#cm-livre")?.value; destino = b.dataset.cmd; desenha(lv); return; }
     if (b?.dataset.cmok) { if (tipo === "livre" && !($("#cm-livre")?.value || "").trim()) { aviso("Escreva o recado", true); return; }
       const texto = destino === "externo" ? cmExterno(r, $("#cm-livre")?.value || "") : cmTexto(tipo, r, $("#cm-livre")?.value || ""); b.disabled = true;
-      try { if (destino === "externo") { const x = await chamar("alfy_cm_externo", { p_rt: rt, p_texto: texto }); aviso(x?.modo === "equipe" ? `🦜 Mandando para ${r.externo.nome}` : "🦜 Teste: chega no seu WhatsApp"); recarregar().then(renderSeguro); } else await cmMandar(r.responsavel_id, tipo, texto, [rt], destino); fecha(); } catch (er) { b.disabled = false; falhou(er); } } });
+      try { if (destino === "externo") { const x = await chamar("alfy_cm_externo", { p_rt: rt, p_texto: texto }); aviso(x?.modo === "equipe" ? `🦜 Mandando para ${r.externo.nome}` : "🦜 Teste: chega no seu WhatsApp"); recarregar().then(renderSeguro); } else { await cmMandar(r.responsavel_id, tipo, texto, [rt], destino); if (tipo === "contexto") { await chamar("alfy_contexto", { p_rt: rt, p_falta: $("#cm-livre")?.value || "o que precisa ser entregue, por quê e qual a prioridade (P1 a P5)?" }).catch(falhou); recarregar().then(renderSeguro); } } fecha(); } catch (er) { b.disabled = false; falhou(er); } } });
   document.addEventListener("keydown", tecla, true);
   document.body.appendChild(c); desenha("");
 }
@@ -1208,7 +1211,8 @@ function cobrHTML(r) {   // as duas linhas do cartão: tempo aberta e cobranças
   const cob = n ? `<button type="button" class="cobr-l" data-cobrhist="${r.rt}" aria-expanded="${!!h}">📣 Cobrada ${n} ${n === 1 ? "vez" : "vezes"} · respondeu ${+c.resp || 0} · última em ${ddmm(c.ult)} <i>${h ? "▴" : "▾"}</i></button>` : `<span class="cobr-l nada">📣 Ainda não cobrada</span>`;
   const lista = h ? `<ul class="cobr-hist">${h === "carregando" ? "<li>carregando…</li>" : h.map((x) => `<li><span>${ddmm(x.em)} ${hhmm(x.em)}</span><span>${{ copiar: "📋 Copiar", mapa: "🗺️ Mapa", cobrar: "📣 Cobrar", cm: "🦜 Contramestre" }[x.origem]}${x.por ? " · " + esc(curto(x.por)) : ""}</span><span class="${x.respondida ? "ok" : ""}">${x.respondida ? "respondeu ✓" : "sem resposta"}</span></li>`).join("")}</ul>` : "";
   const aguarda = c.aguarda && (r.responsavel_id === eu().id || r.co_responsavel_id === eu().id) ? `<p class="aguarda4">📣 Estão aguardando seu retorno nesta rota. Comente o que andou.</p>` : "";
-  return `<div class="cobr4">${aguarda}<span class="cobr-l idade">${idadeTxt(r)}</span>${ABERTOS.includes(r.status) || n ? cob : ""}${lista}</div>`;
+  const rasc = r.contexto_falta ? `<p class="rasc4b">📝 <b>Rascunho:</b> fora do mapa até ficar clara. Falta: ${esc(r.contexto_falta)}${r.contexto_pedido_em ? ` · pedido em ${ddmm(r.contexto_pedido_em)}` : ""}${comando() ? ` <button type="button" class="lk" data-ctxok="${r.rt}">✓ Já está clara</button>` : ""}</p>` : "";
+  return `<div class="cobr4">${rasc}${aguarda}<span class="cobr-l idade">${idadeTxt(r)}</span>${ABERTOS.includes(r.status) || n ? cob : ""}${lista}</div>`;
 }
 const podeCM = (r) => comando() && ABERTOS.includes(r.status) && r.rt.startsWith("RT-") && r.responsavel_id && r.responsavel_id !== eu().id;
 const podeCobrar = (r) => manda() && ABERTOS.includes(r.status) && r.rt.startsWith("RT-") && r.responsavel_id && r.responsavel_id !== eu().id;
@@ -1240,7 +1244,7 @@ function mapaAtualizacao(id) {
   return { n: rs.length, txt: l.join("\n"), rts: rs.map((r) => r.rt) };
 }
 const contagem = (l) => { const v = l.filter(vencida).length, n = l.length; return `${n} rota${n !== 1 ? "s" : ""} aberta${n !== 1 ? "s" : ""}` + (v ? `, ${v} vencida${v !== 1 ? "s" : ""}` : ""); };
-const mapeavel = (r) => ABERTOS.includes(r.status) && !ehNova(r) && !r.rt.startsWith("IDEIA-") && r.frente !== "🧍 Pessoal" && r.tipo !== "📅 Compromisso" && !r.inicio && !ehRotina(r) && !/\b[Rr]otina\b/.test(r.titulo);
+const mapeavel = (r) => ABERTOS.includes(r.status) && !r.contexto_falta && !ehNova(r) && !r.rt.startsWith("IDEIA-") && r.frente !== "🧍 Pessoal" && r.tipo !== "📅 Compromisso" && !r.inicio && !ehRotina(r) && !/\b[Rr]otina\b/.test(r.titulo);
 // rotinas abertas entram no mapa numa parte própria
 const rotinasMapa = (filtro) => (M.rotas || []).filter((r) => ehRotina(r) && ABERTOS.includes(r.status) && r.frente !== "🧍 Pessoal" && filtro(r)).sort((x, y) => (x.prazo || "9").localeCompare(y.prazo || "9"));
 function blocoRotina(r, quem) {
@@ -2568,6 +2572,8 @@ document.addEventListener("click", async (e) => {
         aviso(`✕ ${nomeRota(rt)} cancelada (não realizada)`); await recarregar(); if (s.aberta === rt) { await recarregarCartao(); refolha(); } render(); } catch (er) { falhou(er); } return; }
     if (d.pausar) { if (s.pil) { s.pil = null; if (s.aberta) refolha(); render(); } pausarCaixa(d.pausar); return; }
     if (d.cmpush) { const r = rotaDe(d.cmpush); if (r) { b.disabled = true; try { await cmMandar(r.responsavel_id, "push", cmTexto("push", r), [r.rt], "tatico"); } catch (er) { falhou(er); } b.disabled = false; } return; }
+    if (d.cmctx) { cmCaixa(d.cmctx, "contexto"); return; }
+    if (d.ctxok) { try { await chamar("alfy_contexto", { p_rt: d.ctxok, p_falta: "" }); await recarregar(); if (s.aberta) recarregarCartao().then(() => refolha()); aviso("📝 Saiu do rascunho"); renderSeguro(); } catch (er) { falhou(er); } return; }
     if (d.cmmapa) { const mp = mapaPessoa(d.cmmapa, false, tipoMapa()); b.disabled = true; try { await cmMandar(d.cmmapa, "mapa", mp.txt, mp.rts, "tatico"); s.mapasCopiados = { ...(s.mapasCopiados || {}), [d.cmmapa]: "🦜 " + new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) }; render(); } catch (er) { b.disabled = false; falhou(er); } return; }
     if (d.cobrar) { const r = rotaDe(d.cobrar); if (r) { copiar(textoCobrar(r)); registrarCobranca([r.rt], "cobrar"); aviso(`📣 Cobrança copiada. Cole no WhatsApp de ${curto(nomeDe(r.responsavel_id))}`); } return; }
     if (d.cobrhist) { const rt = d.cobrhist; s.cobrHist = s.cobrHist || {}; if (s.cobrHist[rt]) delete s.cobrHist[rt]; else { s.cobrHist[rt] = "carregando"; chamar("alfy_cobrancas", { p_rt: rt }).then((h) => { if (s.cobrHist[rt]) { s.cobrHist[rt] = h || []; s.aberta === rt && refolha(); renderSeguro(); } }); } if (s.aberta === rt) refolha(); renderSeguro(); return; }
