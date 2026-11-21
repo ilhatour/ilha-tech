@@ -1655,3 +1655,20 @@ textarea.melhorando{opacity:.6;border-color:var(--lilas)!important}
 @media (max-width:600px){.desp-corpo{padding-left:0}}
 @media (max-width:600px){.desp-corpo .sugestao{flex-wrap:wrap}.desp-corpo .sugestao .tx{flex-basis:100%}}
 .zap .zq { display: block; border-left: 3px solid var(--turq); padding: 1px 0 1px 9px; margin: 2px 0; opacity: .92; }
+/* 🪎 Placar do Tesouro (21/11) */
+.ts8bau{display:flex;align-items:baseline;gap:8px}
+.ts8bau b{font-family:var(--fd);font-weight:800;font-size:30px;color:var(--ouro,#E8C468)}
+.ts8bau small{color:var(--aco)}
+.ts8bar{display:block;height:10px;border-radius:6px;background:var(--ferro-3);overflow:hidden;margin-top:10px}
+.ts8bar>i{display:block;height:100%;border-radius:6px;background:linear-gradient(90deg,#B8913A,var(--ouro,#E8C468))}
+.ts8pat{display:flex;align-items:center;gap:12px}
+.ts8pat b{font-family:var(--fd);font-size:19px;display:block}
+.ts8pat small{color:var(--aco)}
+.ts8bdg{width:54px;height:54px;border-radius:50%;display:grid;place-items:center;font-size:26px;background:var(--ferro-2);box-shadow:0 0 0 2px var(--turq);flex:none}
+.ts8tag{font-weight:500;font-size:12px;color:var(--aco);white-space:nowrap}
+.ts8cq{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px}
+.ts8cq div{background:var(--ferro-2);border-radius:10px;padding:10px;text-align:center;opacity:.55}
+.ts8cq div.ok{opacity:1;box-shadow:inset 0 0 0 1px var(--ouro,#E8C468)}
+.ts8cq span{font-size:24px;display:block}
+.ts8cq b{display:block;font-size:13px;margin-top:2px}
+.ts8cq small{color:var(--aco);font-size:11.5px}
