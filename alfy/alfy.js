@@ -1261,12 +1261,15 @@ function blocoRotina(r, quem) {
 const dataHoje = () => new Date().toLocaleDateString("pt-BR", { timeZone: FUSO });
 // 21/11 (Miguel): 3 mapas da pessoa, na voz do CM. 🦜 sozinho na 1ª linha, frase fixa por tipo, blocos por prioridade,
 // linha da rota = bolinha · Rota N (⚠️ se venceu) · título · (vezes enviada) · emoji + P; 🪎 tesouros = pontos do Placar
-const MAPA_TIPO = { completo: "Mapa completo", objetivo: "Objetivo", status: "Status" };
+const MAPA_TIPO = { completo: "Mapa completo", objetivo: "Objetivo", status: "Status", novas: "Só as novas" };
+// 🆕 21/11 (Miguel): rota nova = nunca saiu em mapa nem mensagem do 🦜 (nenhuma cobrança registrada)
+const rotaNova = (r) => !(+r.cobr?.n > 0);
 const PRIO_BLOCO = { P1: "🚨 *P1 · Atualizar em até 24 horas*", P2: "⚡ *P2 · Atualizar em até 3 dias*", P3: "⏳ *P3 · Atualizar em até 7 dias*", P4: "💤 *P4 · Atualizar em até 30 dias*", P5: "⏸️ *P5 · Sem prazo*", "": "▫️ *Sem prioridade*" };
 const saudacao = () => { const h = +new Date().toLocaleString("en-US", { timeZone: FUSO, hour: "numeric", hour12: false }) % 24; return h < 12 ? "Bom dia" : h < 18 ? "Boa tarde" : "Boa noite"; };
 const FRASE_MAPA = {
   objetivo: "Bora navegar nessas rotas! Separe um tempo e me atualize todas, escrevendo *Rota + número* e como está. *Vai lá e faz.*",
   completo: "Este é o seu mapa de rotas, com o contexto e a última atualização que eu tenho. Vamos navegar juntos? Bora executar essas rotas e me atualizar sobre elas.",
+  novas: "Chegaram rotas novas para você. Veja o que é cada uma e me confirme escrevendo *Rota + número* e como vai fazer.",
   status: "Hora de conferir a navegação. Veja em que pé está cada rota e, se alguma estiver diferente, me corrija escrevendo *Rota + número* e como está de verdade.",
 };
 const diaCurto = () => new Date().toLocaleDateString("pt-BR", { timeZone: FUSO, weekday: "short" }).replace(/\.$/, "") + " " + new Date().toLocaleDateString("pt-BR", { timeZone: FUSO, day: "2-digit", month: "2-digit" });
@@ -1289,6 +1292,7 @@ function atualRota(r) {   // 💬 a última atualização com a data na frente
   return `💬 *${quando}:* ${t}`;
 }
 function linhaRota(r, tipo) {
+  if (tipo === "novas") tipo = "completo";
   const p = pcod(r.prioridade), ts = tesouro(r);
   // (n) = vezes enviada CONTANDO este envio: se ainda não foi enviada hoje, este mapa é a vez n+1 (Miguel, 21/11: a 1ª vez conta como 1x)
   const c = r.cobr || {}, hojeJa = c.ult && new Date(c.ult).toDateString() === new Date().toDateString(), n = +(c.n || 0) + (hojeJa ? 0 : 1);
@@ -1296,6 +1300,7 @@ function linhaRota(r, tipo) {
   return `${ST[r.status]?.bola || "▫️"} *${nomeRota(r.rt)}*${vencida(r) ? " ⚠️" : ""} · ${tit} (${n})${p ? ` · ${PRIO_IC[p]} ${p}` : ""}${tipo !== "completo" && ts != null ? ` · 🪎 ${tesTxt(ts)}` : ""}`;
 }
 function blocoRota(r, tipo) {
+  if (tipo === "novas") tipo = "completo";
   if (tipo === "objetivo") return [linhaRota(r, tipo)];
   if (tipo === "status") return ["", linhaRota(r, tipo), "> " + atualRota(r)];
   const ts = tesouro(r), prazo = pcod(r.prioridade) === "P5" || !r.prazo ? "Sem prazo" : `Prazo ${ddmm(r.prazo)}${vencida(r) ? " (venceu)" : ""}`;
@@ -1306,13 +1311,14 @@ function mapaPessoa(id, soVencidas, tipo) {
   const p = pessoa(id);
   let minhas = (M.rotas || []).filter((r) => mapeavel(r) && r.responsavel_id === id).sort(ordPrio);
   if (soVencidas) minhas = minhas.filter(vencida);
-  const rotinas = rotinasMapa((r) => r.responsavel_id === id).filter((r) => !soVencidas || vencida(r));
+  if (tipo === "novas") minhas = minhas.filter(rotaNova);
+  const rotinas = tipo === "novas" ? [] : rotinasMapa((r) => r.responsavel_id === id).filter((r) => !soVencidas || vencida(r));
   const tot = minhas.reduce((a, r) => a + (tesouro(r) || 0), 0), nv = minhas.filter(vencida).length;
-  const sub = [diaCurto(), `${minhas.length} rota${minhas.length !== 1 ? "s" : ""}${soVencidas ? " vencidas" : ""}`, tipo === "status" && nv && !soVencidas ? `${nv} com prazo vencido` : "", tot ? `🪎 ${tesTxt(tot)} tesouros no mapa` : ""].filter(Boolean).join(" · ");
-  const l = ["🦜", `🗺️ *Mapa de Rotas${tipo === "status" ? " · Status" : ""} · ${curto(p?.nome || "")}*`, `_${sub}_`, "", `${saudacao()}, Guardião 🛡️ ${FRASE_MAPA[tipo]}`];
+  const sub = [diaCurto(), `${minhas.length} rota${minhas.length !== 1 ? "s" : ""}${soVencidas ? " vencidas" : tipo === "novas" ? (minhas.length !== 1 ? " novas" : " nova") : ""}`, tipo === "status" && nv && !soVencidas ? `${nv} com prazo vencido` : "", tot ? `🪎 ${tesTxt(tot)} tesouros no mapa` : ""].filter(Boolean).join(" · ");
+  const l = ["🦜", `🗺️ *Mapa de Rotas${tipo === "status" ? " · Status" : tipo === "novas" ? " · Novas" : ""} · ${curto(p?.nome || "")}*`, `_${sub}_`, "", `${saudacao()}, Guardião 🛡️ ${FRASE_MAPA[tipo]}`];
   const grupos = [...new Set(minhas.map((r) => pcod(r.prioridade)))].sort((a, b) => (a || "P9").localeCompare(b || "P9"));
   grupos.forEach((g) => { l.push("", PRIO_BLOCO[g]); minhas.filter((r) => pcod(r.prioridade) === g).forEach((r) => l.push(...blocoRota(r, tipo))); });
-  if (!minhas.length) l.push("", soVencidas ? "Nenhuma rota vencida com você agora." : "Nenhuma rota aberta com você agora.");
+  if (!minhas.length) l.push("", soVencidas ? "Nenhuma rota vencida com você agora." : tipo === "novas" ? "Nenhuma rota nova para você agora." : "Nenhuma rota aberta com você agora.");
   if (rotinas.length) { l.push("", "🔁 *Suas rotinas*", ""); rotinas.forEach((r) => l.push(blocoRotina(r), "")); if (l[l.length - 1] === "") l.pop(); }
   const st = [...new Set(minhas.map((r) => r.status))].map((k) => LEG_ST[k]).filter(Boolean).join(" · ");
   l.push("", (st ? st + "\n" : "") + "(5) = vezes que a rota foi enviada");
@@ -1323,8 +1329,8 @@ function mapaPessoa(id, soVencidas, tipo) {
 const tipoMapa = () => (MAPA_TIPO[s.mapaTipo] ? s.mapaTipo : "completo");
 // 21/11 (Miguel): dois botões. 🗺️ Mapa completo (o clássico) e ⚡ Mapa rápido, que abre a escolha Objetivo ou Status
 function seletorMapa() {
-  const t = tipoMapa(), rap = t !== "completo";
-  return `<div class="alterna" role="group" style="margin:4px 0 8px"><button type="button" data-mapatipo="completo" aria-pressed="${!rap}">🗺️ Mapa completo</button><button type="button" data-mapatipo="rapido" aria-pressed="${rap}">⚡ Mapa rápido</button></div>${rap ? `<div class="alvos" style="margin:0 0 10px"><button class="chip" type="button" data-mapatipo="objetivo" aria-pressed="${t === "objetivo"}">🎯 Objetivo</button><button class="chip" type="button" data-mapatipo="status" aria-pressed="${t === "status"}">📡 Status</button></div>` : ""}`;
+  const t = tipoMapa(), rap = t === "objetivo" || t === "status", nv = (M.rotas || []).filter((r) => mapeavel(r) && rotaNova(r) && r.responsavel_id && pessoa(r.responsavel_id)?.papel !== "comando").length;
+  return `<div class="alterna" role="group" style="margin:4px 0 8px"><button type="button" data-mapatipo="completo" aria-pressed="${t === "completo"}">🗺️ Mapa completo</button><button type="button" data-mapatipo="rapido" aria-pressed="${rap}">⚡ Mapa rápido</button><button type="button" data-mapatipo="novas" aria-pressed="${t === "novas"}">🆕 Só as novas${nv ? ` · ${nv}` : ""}</button></div>${rap ? `<div class="alvos" style="margin:0 0 10px"><button class="chip" type="button" data-mapatipo="objetivo" aria-pressed="${t === "objetivo"}">🎯 Objetivo</button><button class="chip" type="button" data-mapatipo="status" aria-pressed="${t === "status"}">📡 Status</button></div>` : ""}`;
 }
 // prévia do mapa no app: negrito, itálico e a barrinha de citação ("> ") como no WhatsApp
 const zapMapa = (t) => esc(t).split("\n").map((x) => { const q = /^(&gt;|>) /.test(x); x = x.replace(/^(&gt;|>) /, "").replace(/\*([^*\n]+)\*/g, "<b>$1</b>").replace(/(^|\s)_([^_\n]+)_/g, "$1<i>$2</i>"); return q ? `<span class="zq">${x}</span>` : x + "\n"; }).join("");
@@ -1615,11 +1621,12 @@ function detCmd(c) {
     if (modo === "setor" && !setores.includes(s.alvo)) s.alvo = setores[0] || null;
     s.grupo = (s.grupo || []).filter((id) => pessoasAlvo.some((p) => p.id === id));
     if (modo === "rapido") {
-      const lista = pessoasAlvo.map((p) => { const rs = (M.rotas || []).filter((r) => mapeavel(r) && r.responsavel_id === p.id); return { p, n: rs.length, v: rs.filter(vencida).length }; }).sort((x, y) => y.v - x.v || y.n - x.n);
+      const soNovas = tipoMapa() === "novas";
+      const lista = pessoasAlvo.map((p) => { const rs = (M.rotas || []).filter((r) => mapeavel(r) && r.responsavel_id === p.id && (!soNovas || rotaNova(r))); return { p, n: rs.length, v: rs.filter(vencida).length }; }).filter((x) => !soNovas || x.n).sort((x, y) => y.v - x.v || y.n - x.n);
       const env = s.mapasCopiados || {};
       return `<div class="bloco">${h}<div class="alterna" role="group" style="margin-bottom:12px"><button type="button" data-mapamodo="rapido" aria-pressed="true">Todos</button><button type="button" data-mapamodo="pessoa" aria-pressed="false">Pessoa</button><button type="button" data-mapamodo="grupo" aria-pressed="false">Grupo</button><button type="button" data-mapamodo="setor" aria-pressed="false">Setor</button><button type="button" data-mapamodo="cobrar" aria-pressed="false">Vencidas</button></div>
         ${seletorMapa()}<p class="nota" style="margin:0 0 8px">Cada botão copia o mapa escolhido acima, só com as rotas da pessoa. 🦜 Mandar: o Contramestre manda no tático dela.</p>
-        ${lista.map(({ p, n, v }) => `<div class="sugestao ${env[p.id] ? "feita" : ""}"><span class="avatar" style="width:30px;height:30px;font-size:12px">${ini(p.nome)}</span><div class="tx"><b>${esc(p.nome)}</b><small>${n} ${n === 1 ? "rota aberta" : "rotas abertas"}${v ? ` · <span style="color:#FF9A9C">${v} ${v === 1 ? "vencida" : "vencidas"}</span>` : ""}${env[p.id] ? " · copiado " + env[p.id] : ""}</small></div><button class="btn ${env[p.id] ? "" : "turq"} peq" type="button" data-copiarmapa="${p.id}">${env[p.id] ? "Copiar de novo" : "Copiar mapa"}</button>${comando() ? `<button class="btn peq" type="button" data-cmmapa="${p.id}" title="O Contramestre manda o mapa pelo WhatsApp">🦜 Mandar</button>` : ""}</div>`).join("") || '<div class="vazio">Ninguém com rota aberta.</div>'}</div>`;
+        ${lista.map(({ p, n, v }) => `<div class="sugestao ${env[p.id] ? "feita" : ""}"><span class="avatar" style="width:30px;height:30px;font-size:12px">${ini(p.nome)}</span><div class="tx"><b>${esc(p.nome)}</b><small>${n} ${soNovas ? (n === 1 ? "rota nova" : "rotas novas") : n === 1 ? "rota aberta" : "rotas abertas"}${v ? ` · <span style="color:#FF9A9C">${v} ${v === 1 ? "vencida" : "vencidas"}</span>` : ""}${env[p.id] ? " · copiado " + env[p.id] : ""}</small></div><button class="btn ${env[p.id] ? "" : "turq"} peq" type="button" data-copiarmapa="${p.id}">${env[p.id] ? "Copiar de novo" : "Copiar mapa"}</button>${comando() ? `<button class="btn peq" type="button" data-cmmapa="${p.id}" title="O Contramestre manda o mapa pelo WhatsApp">🦜 Mandar</button>` : ""}</div>`).join("") || `<div class="vazio">${soNovas ? "🆕 Nenhuma rota nova: tudo o que está aberto já foi enviado." : "Ninguém com rota aberta."}</div>`}</div>`;
     }
     const m = modo === "grupo" ? (s.grupo.length ? mapaGrupo(s.grupo) : { n: 0, txt: "Escolha as pessoas do grupo." }) : !s.alvo ? { n: 0, txt: "" } : modo === "setor" ? mapaSetor(s.alvo) : mapaPessoa(s.alvo, cobrando, tipoMapa());
     const chipsPessoa = (sel, attr) => pessoasAlvo.map((p) => `<button class="chip" type="button" ${attr}="${p.id}" aria-pressed="${sel(p.id)}">${esc(curto(p.nome))}${cobrando ? ` · ${(M.rotas || []).filter((r) => mapeavel(r) && r.responsavel_id === p.id && vencida(r)).length}` : ""}</button>`).join("");
@@ -1631,7 +1638,7 @@ function detCmd(c) {
       <div style="display:flex;gap:8px;margin:4px 0 12px;flex-wrap:wrap"><button class="btn turq" type="button" data-acao="copiar-mapa">Copiar para o WhatsApp</button>${m.cm && comando() && s.alvo ? `<button class="btn" type="button" data-cmmapa="${s.alvo}" title="O Contramestre manda no tático da pessoa">🦜 Mandar pelo CM</button>` : ""}<span class="nota" style="align-self:center;margin:0">${m.n} rotas</span></div>
       <div class="zap"><div class="msg" style="max-width:none">${m.cm ? zapMapa(m.txt) : zap(m.txt)}<small>prévia · ${m.n} rotas</small></div></div>
       <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap"><button class="btn turq" type="button" data-acao="copiar-mapa">Copiar para o WhatsApp</button></div>
-      <p class="nota">🗺️ Mapa completo: cada rota com o que é, a última atualização e as datas. ⚡ Mapa rápido: Objetivo (uma linha por rota, pede para atualizar todas) ou Status (a última atualização de cada rota, para a pessoa corrigir). (n) = vezes que a rota já foi enviada; 🪎 = tesouros que a rota vale. Rota Pessoal e concluída nunca entram.</p></div>`;
+      <p class="nota">🗺️ Mapa completo: cada rota com o que é, a última atualização e as datas. ⚡ Mapa rápido: Objetivo (uma linha por rota, pede para atualizar todas) ou Status (a última atualização de cada rota, para a pessoa corrigir). 🆕 Só as novas: só as rotas que ainda não saíram em nenhum mapa nem mensagem do 🦜. (n) = vezes que a rota já foi enviada; 🪎 = tesouros que a rota vale. Rota Pessoal e concluída nunca entram.</p></div>`;
   }
   if (c.k === "bomdia") {
     const hoje = (M.rotas || []).filter((r) => ABERTOS.includes(r.status) && r.prazo && dias(r.prazo) === 0 && (r.responsavel_id === eu().id || r.co_responsavel_id === eu().id));
