@@ -453,7 +453,7 @@ function vistaPlacar() {
   const nums = (l) => `<div class="pl7nums">${l.map(([v, t]) => `<div><b>${v}</b><small>${t}</small></div>`).join("")}</div>`;
   let topo = "";
   if (comando()) {
-    const rank = (pl.rank || []).filter((r) => pessoa(r.id)?.papel !== "comando").map((r, i, l) => ({ ...r, pos: l.findIndex((x) => +x.pontos === +r.pontos && +x.entregas === +r.entregas) + 1 })), pod = rank.filter((r) => r.pontos > 0).slice(0, 3), tesP = Object.fromEntries((s.tesouro?.pessoas || []).map((x) => [x.id, x]));
+    const rank = (pl.rank || []).map((r, i, l) => ({ ...r, pos: l.findIndex((x) => +x.pontos === +r.pontos && +x.entregas === +r.entregas) + 1 })), pod = rank.filter((r) => r.pontos > 0).slice(0, 3), tesP = Object.fromEntries((s.tesouro?.pessoas || []).map((x) => [x.id, x]));
     const placa = (r, k) => `<div class="pod7 md${k}"><span class="pod7pos">${k}º</span><span class="pod7av">${ini(r.nome)}</span><b class="pod7nm">${esc(curto(r.nome))}</b><span class="pod7pt">🪎 ${pts(r.pontos)}</span><small class="pod7mt">${r.entregas} ${r.entregas === 1 ? "entrega" : "entregas"}</small></div>`;
     topo = (pod.length ? `<section class="pl7pod">${[1, 0, 2].filter((k) => pod[k]).map((k) => placa(pod[k], pod[k].pos)).join("")}</section>` : `<p class="nota">Ninguém pontuou neste mês ainda.</p>`)
       + nums([[ents.length, "entregas no mês"], [ents.length ? Math.round(100 * noPrazo / ents.length) + "%" : "–", "no prazo"], [media.toLocaleString("pt-BR", { maximumFractionDigits: 1 }), "tesouros por entrega"]]);
@@ -1285,7 +1285,9 @@ function atualRota(r) {   // 💬 a última atualização com a data na frente
   return `💬 *${quando}:* ${t}`;
 }
 function linhaRota(r, tipo) {
-  const p = pcod(r.prioridade), n = +(r.cobr?.n || 0), ts = tesouro(r);
+  const p = pcod(r.prioridade), ts = tesouro(r);
+  // (n) = vezes enviada CONTANDO este envio: se ainda não foi enviada hoje, este mapa é a vez n+1 (Miguel, 21/11: a 1ª vez conta como 1x)
+  const c = r.cobr || {}, hojeJa = c.ult && new Date(c.ult).toDateString() === new Date().toDateString(), n = +(c.n || 0) + (hojeJa ? 0 : 1);
   const tit = tipo === "completo" ? `*${tituloCurto(r)}*` : tituloCurto(r);
   return `${ST[r.status]?.bola || "▫️"} *${nomeRota(r.rt)}*${vencida(r) ? " ⚠️" : ""} · ${tit} (${n})${p ? ` · ${PRIO_IC[p]} ${p}` : ""}${tipo !== "completo" && ts != null ? ` · 🪎 ${tesTxt(ts)}` : ""}`;
 }
