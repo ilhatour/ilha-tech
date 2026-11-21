@@ -364,27 +364,30 @@ const PATENTES = [[0, "⚓", "Grumete"], [25, "🪢", "Marinheiro"], [60, "🧭"
 const patente = (v) => { v = +v || 0; let i = 0; PATENTES.forEach((x, k) => { if (v >= x[0]) i = k; }); const at = PATENTES[i], prox = PATENTES[i + 1]; return { ic: at[1], nome: at[2], prox, falta: prox ? prox[0] - v : 0, pct: prox ? Math.round(100 * (v - at[0]) / (prox[0] - at[0])) : 100 }; };
 const CONQ = [["primeiro", "🪎", "Primeiro tesouro", "1ª rota entregue"], ["mare10", "🌊", "Maré de 10", "10 entregas no prazo seguidas"], ["mapa_limpo", "🗺️", "Mapa limpo", "nenhuma rota vencida agora"], ["resgate", "⚓", "Resgate", "concluiu rota enviada 5 vezes ou mais"], ["raio", "⚡", "Raio", "P1 entregue em até 24h"]];
 const tes = (n) => (+n || 0).toLocaleString("pt-BR", { maximumFractionDigits: 1 });
-function recadoSemana() {
-  const t = s.tesouro || {}, top = (t.pessoas || []).filter((x) => +x.semana > 0).slice(0, 3), med = ["👑", "🥈", "🥉"];
-  const ini = new Date(t.semana_ini), fim = new Date(ini); fim.setDate(fim.getDate() + 6);
-  const d = (x) => x.toLocaleDateString("pt-BR", { timeZone: FUSO, day: "2-digit", month: "2-digit" }), falta = Math.max(0, (+t.meta || 0) - (+t.bau || 0));
-  return ["🦜", `🏆 *Corrida da Semana · ${d(ini)} a ${d(fim)}*`, "", `${saudacao()}, Tripulação 🛡️ A semana fechou e os tesouros foram contados.`, "", ...top.map((x, k) => `${med[k]} *${curto(x.nome)}* · 🪎 ${tes(x.semana)}`), "",
-    `🪎 Baú da Tripulação: *${tes(t.bau)} de ${tes(t.meta)}*.${falta ? ` Faltam ${tes(falta)} até o fim do mês. Bora navegar juntos!` : " Meta batida! 🎉"}`, "", "A corrida zerou. Nova semana, novo tesouro. *Vai lá e faz.*", "", `*${CM_FECHO}*`].join("\n");
+function recadoSemana() {   // 21/11 (Miguel): não é competição; o recado fala do baú de todos, sem pódio
+  const t = s.tesouro || {}, sem_ = (t.pessoas || []).reduce((n, x) => n + (+x.semana || 0), 0), ent = (t.pessoas || []).reduce((n, x) => n + (+x.semana_ent || 0), 0);
+  const falta = Math.max(0, (+t.meta || 0) - (+t.bau || 0));
+  return ["🦜", "🪎 *Rotas do Tesouro*", "", `${saudacao()}, Tripulação 🛡️ Mais uma semana de navegação: ${ent} ${ent === 1 ? "rota concluída" : "rotas concluídas"} e 🪎 ${tes(sem_)} tesouros para o baú.`, "",
+    `🪎 Baú da Tripulação: *${tes(t.bau)} de ${tes(t.meta)}*.${falta ? ` Faltam ${tes(falta)} até o fim do mês.` : " Meta batida! 🎉"}`, "",
+    "O baú é de todos: bateu a meta, o prêmio é dividido e cada um leva a parte dos tesouros que encontrou. Quanto mais a tripulação encontra, maior a parte de cada um. *Vai lá e faz.*", "", `*${CM_FECHO}*`].join("\n");
 }
+const BRIEFING_TES = `<details class="pl6sec ts8 ts9brief" open><summary><h3>🗺️ O que são as Rotas do Tesouro</h3></summary>
+  <p>Cada rota concluída esconde um baú de <b>tesouros 🪎</b>. Todos os tesouros que a tripulação encontra vão para o mesmo lugar: o <b>Baú da Tripulação</b>.</p>
+  <p><b>Não é competição.</b> Bateu a meta do mês, o prêmio é um só e é dividido: cada um leva a parte proporcional aos tesouros que encontrou. Ninguém ganha tirando do outro; quanto mais a tripulação encontra, maior fica o baú de todos.</p>
+  <p>Uma rota vale até 🪎 10: depende do impacto, da dificuldade e da qualidade da entrega. No prazo vale inteira, até 7 dias depois vale metade, e depois disso não vale mais.</p>
+  <p class="ts9premio">🎁 Prêmio do mês: <b>a definir</b>.</p></details>`;
 function tesouroHTML(ehMesAtual) {
   const t = s.tesouro; if (!t) return "";
   const meta = +t.meta || 500, bau = +t.bau || 0, pct = Math.min(100, Math.round(100 * bau / meta));
-  let h = `<section class="pl6sec ts8"><h3>🪎 Baú da Tripulação</h3><div class="ts8bau"><b>${tes(bau)}</b><small>de ${tes(meta)} tesouros ${ehMesAtual ? "neste mês" : "no mês"}</small></div><i class="ts8bar"><i style="width:${pct}%"></i></i><p class="nota" style="margin:6px 0 0">${bau >= meta ? "Meta batida! A tripulação inteira leva o prêmio do mês." : `Faltam ${tes(meta - bau)} tesouros. Bateu a meta, a tripulação inteira ganha.`}</p></section>`;
+  let h = `<section class="pl6sec ts8"><h3>🪎 Baú da Tripulação</h3><div class="ts8bau"><b>${tes(bau)}</b><small>de ${tes(meta)} tesouros ${ehMesAtual ? "neste mês" : "no mês"}</small></div><i class="ts8bar"><i style="width:${pct}%"></i></i><p class="nota" style="margin:6px 0 0">${bau >= meta ? "Meta batida! O prêmio é dividido entre a tripulação, cada um pela sua parte." : `Faltam ${tes(meta - bau)} tesouros. Bateu a meta, o prêmio é dividido: cada um leva a parte dos tesouros que encontrou.`}</p>${comando() && ehMesAtual ? `<button class="lk" type="button" data-acao="copiar-recado-semana" style="margin-top:8px">🦜 Copiar recado do baú</button>` : ""}</section>`;
   if (!ehMesAtual) return h;
   const ps = t.pessoas || [];
   if (comando()) {
-    const cor = ps.filter((x) => +x.semana > 0).slice(0, 6);
-    h += `<section class="pl6sec ts8"><div class="pl6h"><h3>🏁 Corrida da Semana</h3><button class="lk" type="button" data-acao="copiar-recado-semana">🦜 Copiar recado da semana</button></div>${cor.map((x) => `<div class="rk7 ${x.pos_sem <= 3 ? "md" + x.pos_sem : ""}"><span class="rk6p">${x.pos_sem}º</span><span class="rk7b"><span class="rk7l"><b>${esc(curto(x.nome))}</b><small>${x.semana_ent} ${x.semana_ent === 1 ? "entrega" : "entregas"}${+x.mare >= 3 ? ` · 🌊 maré de ${x.mare}` : ""}</small></span></span><span class="rk6n">🪎 ${tes(x.semana)}</span></div>`).join("") || '<p class="nota">Ninguém entregou nesta semana ainda.</p>'}<p class="nota" style="margin:8px 0 0">Zera toda segunda às 00h. Quem foi mal no mês ainda pode ganhar a semana.</p></section>`;
   } else {
     const eu_ = ps[0]; if (!eu_) return h;
     const pa = patente(eu_.vida);
     h += `<section class="pl6sec ts8"><h3>Sua patente</h3><div class="ts8pat"><span class="ts8bdg">${pa.ic}</span><div><b>${pa.nome}</b><small>${tes(eu_.vida)} tesouros na vida${pa.prox ? ` · faltam ${tes(pa.falta)} para ${pa.prox[1]} ${pa.prox[2]}` : " · patente máxima"}</small></div></div><i class="ts8bar"><i style="width:${pa.pct}%"></i></i>
-      <div class="pl7nums"><div><b>🌊 ${eu_.mare}</b><small>maré boa (no prazo seguidas)</small></div><div><b>${+eu_.semana > 0 ? eu_.pos_sem + "º" : "–"}</b><small>na corrida da semana</small></div><div><b>🪎 ${tes(eu_.semana)}</b><small>nesta semana</small></div></div></section>`;
+      <div class="pl7nums"><div><b>🌊 ${eu_.mare}</b><small>maré boa (no prazo seguidas)</small></div><div><b>${+t.bau ? tes(Math.round(1000 * (+(s.placar?.eu?.pontos) || 0) / +t.bau) / 10) + "%" : "–"}</b><small>sua parte do baú</small></div><div><b>🪎 ${tes(eu_.semana)}</b><small>nesta semana</small></div></div></section>`;
     h += `<section class="pl6sec ts8"><h3>Conquistas</h3><div class="ts8cq">${CONQ.map(([k, e, n, d]) => `<div class="${eu_.conq?.[k] ? "ok" : ""}"><span>${e}</span><b>${n}</b><small>${d}</small></div>`).join("")}</div></section>`;
   }
   return h;
@@ -453,22 +456,23 @@ function vistaPlacar() {
   const nums = (l) => `<div class="pl7nums">${l.map(([v, t]) => `<div><b>${v}</b><small>${t}</small></div>`).join("")}</div>`;
   let topo = "";
   if (comando()) {
-    const rank = (pl.rank || []).map((r, i, l) => ({ ...r, pos: l.findIndex((x) => +x.pontos === +r.pontos && +x.entregas === +r.entregas) + 1 })), pod = rank.filter((r) => r.pontos > 0).slice(0, 3), tesP = Object.fromEntries((s.tesouro?.pessoas || []).map((x) => [x.id, x]));
-    const placa = (r, k) => `<div class="pod7 md${k}"><span class="pod7pos">${k}º</span><span class="pod7av">${ini(r.nome)}</span><b class="pod7nm">${esc(curto(r.nome))}</b><span class="pod7pt">🪎 ${pts(r.pontos)}</span><small class="pod7mt">${r.entregas} ${r.entregas === 1 ? "entrega" : "entregas"}</small></div>`;
-    topo = (pod.length ? `<section class="pl7pod">${[1, 0, 2].filter((k) => pod[k]).map((k) => placa(pod[k], pod[k].pos)).join("")}</section>` : `<p class="nota">Ninguém pontuou neste mês ainda.</p>`)
-      + nums([[ents.length, "entregas no mês"], [ents.length ? Math.round(100 * noPrazo / ents.length) + "%" : "–", "no prazo"], [media.toLocaleString("pt-BR", { maximumFractionDigits: 1 }), "tesouros por entrega"]]);
-    const max = Math.max(1, ...rank.map((r) => +r.pontos || 0)), com = rank.filter((r) => r.pontos > 0 || r.entregas > 0), sem = rank.filter((r) => !(r.pontos > 0 || r.entregas > 0) && comRota().has(r.id));   // Placar só com quem tem rota (Miguel, 15/11)
-    topo += `<section class="pl6sec"><h3>Ranking</h3>${com.map((r) => `<div class="rk7 ${r.pos <= 3 && r.pontos > 0 ? "md" + r.pos : ""}"><span class="rk6p">${r.pos}º</span><span class="rk7b"><span class="rk7l"><b>${esc(r.nome)}${(() => { const x = tesP[r.id]; if (!x) return ""; const pa = patente(x.vida); return ` <span class="ts8tag">${pa.ic} ${pa.nome}</span>`; })()}</b><small>${r.entregas} ${r.entregas === 1 ? "entrega" : "entregas"}${r.faltas ? ` · ${r.faltas} fora do prazo` : ""}${+tesP[r.id]?.mare >= 3 ? ` · 🌊 maré de ${tesP[r.id].mare}` : ""}</small></span><i class="rk7bar"><i style="width:${Math.max(3, Math.round(100 * (+r.pontos || 0) / max))}%"></i></i></span><span class="rk6n">🪎 ${pts(r.pontos)}</span></div>`).join("")}${sem.length ? `<p class="pl6sem">Ainda sem entrega: ${sem.map((r) => esc(curto(r.nome))).join(", ")}</p>` : ""}</section>`;
+    const bauT = +s.tesouro?.bau || (pl.rank || []).reduce((n, r) => n + (+r.pontos || 0), 0), tesP = Object.fromEntries((s.tesouro?.pessoas || []).map((x) => [x.id, x]));
+    const rank = [...(pl.rank || [])].sort((a, b) => (+b.pontos || 0) - (+a.pontos || 0)), max = Math.max(1, ...rank.map((r) => +r.pontos || 0));
+    const parte = (r) => bauT ? (Math.round(1000 * (+r.pontos || 0) / bauT) / 10).toLocaleString("pt-BR") + "%" : "–";
+    topo = nums([[ents.length, "rotas concluídas no mês"], [ents.length ? Math.round(100 * noPrazo / ents.length) + "%" : "–", "no prazo"], [media.toLocaleString("pt-BR", { maximumFractionDigits: 1 }), "tesouros por rota"]]);
+    const com = rank.filter((r) => r.pontos > 0 || r.entregas > 0), sem = rank.filter((r) => !(r.pontos > 0 || r.entregas > 0) && comRota().has(r.id));   // só quem tem rota (Miguel, 15/11)
+    topo += `<section class="pl6sec"><h3>Parte de cada um no baú</h3>${com.map((r) => `<div class="rk7"><span class="rk7b"><span class="rk7l"><b>${esc(r.nome)}${(() => { const x = tesP[r.id]; if (!x) return ""; const pa = patente(x.vida); return ` <span class="ts8tag">${pa.ic} ${pa.nome}</span>`; })()}</b><small>🪎 ${pts(r.pontos)} · ${r.entregas} ${r.entregas === 1 ? "rota" : "rotas"}${r.faltas ? ` · ${r.faltas} fora do prazo` : ""}${+tesP[r.id]?.mare >= 3 ? ` · 🌊 maré de ${tesP[r.id].mare}` : ""}</small></span><i class="rk7bar"><i style="width:${Math.max(3, Math.round(100 * (+r.pontos || 0) / max))}%"></i></i></span><span class="rk6n">${parte(r)}</span></div>`).join("") || '<p class="nota">Ninguém encontrou tesouro neste mês ainda.</p>'}${sem.length ? `<p class="pl6sem">Ainda sem tesouro: ${sem.map((r) => esc(curto(r.nome))).join(", ")}</p>` : ""}<p class="nota" style="margin:8px 0 0">A parte de cada um = os tesouros dele ÷ os tesouros do baú. É assim que o prêmio do mês é dividido.</p></section>`;
   } else {
     const eu_ = pl.eu || {};
-    topo = `<section class="pl7eu"><div class="pl7eupos"><b>${eu_.pos ? eu_.pos + "º" : "–"}</b><small>de ${pl.total} na equipe</small></div><div class="pl7eupt"><b>🪎 ${pts(eu_.pontos)}</b><small>tesouros no mês</small></div></section>`
+    const bauE = +s.tesouro?.bau || 0;
+    topo = `<section class="pl7eu"><div class="pl7eupos"><b>${bauE ? (Math.round(1000 * (+eu_.pontos || 0) / bauE) / 10).toLocaleString("pt-BR") + "%" : "–"}</b><small>sua parte do baú</small></div><div class="pl7eupt"><b>🪎 ${pts(eu_.pontos)}</b><small>tesouros no mês</small></div></section>`
       + nums([[eu_.entregas || 0, eu_.entregas === 1 ? "entrega" : "entregas"], [ents.length ? Math.round(100 * noPrazo / ents.length) + "%" : "–", "no prazo"], [media.toLocaleString("pt-BR", { maximumFractionDigits: 1 }), "tesouros por entrega"]])
-      + `<p class="nota" style="margin:0">Os tesouros dos outros não aparecem: só a sua posição.</p>`;
+      + `<p class="nota" style="margin:0">Não é competição: o prêmio é dividido pela parte de cada um no baú.</p>`;
   }
   const lista = comando() ? (pl.entregas || []).filter((e) => !s.plBusca || (e.titulo + " " + nomeDe(e.resp) + " " + nomeDe(e.co)).toLowerCase().includes(s.plBusca.toLowerCase())) : (pl.minhas || []);
   const banco = `<section class="pl6sec"><div class="pl6h"><h3>${comando() ? "Entregas do mês" : "Suas entregas"} · ${(comando() ? pl.entregas : pl.minhas || []).length}</h3><button class="lk" type="button" data-verconc="1">✓ Ver rotas concluídas</button>${comando() ? `<input class="busca" id="pl-busca" placeholder="Buscar entrega ou pessoa" value="${esc(s.plBusca || "")}">` : ""}</div>${lista.map((e) => entregaHTML(e, comando())).join("") || '<p class="nota">Nenhuma entrega neste mês ainda. Cada rota concluída vale até 🪎 10 tesouros.</p>'}</section>`;
   const regra = `<details class="pl7regra"><summary>Como pontua</summary><div class="pl7tab"><div><b>Impacto</b><span>Alto 3 · Médio 2 · Baixo 1</span></div><div><b>Dificuldade</b><span>Muito difícil 4 · Difícil 3 · Simples 2 · Fácil 1</span></div><div><b>Qualidade</b><span>Acima do esperado 3 · Como esperado 2 · Abaixo do esperado 1 · Cancelada, não realizada não conta</span></div><div><b>Prazo</b><span>No prazo ×1 · até 7 dias fora ×½ · mais que isso ×0</span></div></div><p class="nota" style="margin:8px 0 0">🪎 Tesouros = (Impacto + Dificuldade + Qualidade) × prazo, até 10 por rota. Patentes pelos tesouros da vida: ⚓ Grumete 0 · 🪢 Marinheiro 25 · 🧭 Navegador 60 · ☸️ Timoneiro 120 · 🎖️ Imediato 250 · 👑 Capitão 500 (nunca cai). 🌊 Maré Boa = entregas no prazo seguidas; uma fora do prazo zera. Campo vazio conta como o do meio (2 + 2 + 2 = 6). Responsável e co-responsável pontuam. Compromisso e frente Pessoal não contam.</p></details>`;
-  return `<div class="pl7">${nav}<div class="pl7grade"><div class="pl7a">${tesouroHTML(ehMesAtual)}${topo}</div><div class="pl7b">${banco}${regra}</div></div></div>`;
+  return `<div class="pl7">${nav}<div class="pl7grade"><div class="pl7a">${BRIEFING_TES}${tesouroHTML(ehMesAtual)}${topo}</div><div class="pl7b">${banco}${regra}</div></div></div>`;
 }
 
 // ---------------------------------------------------------------- 🔁 Rotinas

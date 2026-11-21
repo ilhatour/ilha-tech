@@ -1675,3 +1675,11 @@ textarea.melhorando{opacity:.6;border-color:var(--lilas)!important}
 /* 📝 Rascunho (21/11) */
 .rasc4{color:var(--amber);font-weight:600}
 .rasc4b{margin:0 0 8px;padding:8px 10px;border-radius:8px;background:rgba(246,178,74,.1);border:1px solid rgba(246,178,74,.35);font-size:14px}
+/* 21/11 briefing das Rotas do Tesouro (não é competição) */
+.ts9brief summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:8px}
+.ts9brief summary::-webkit-details-marker{display:none}
+.ts9brief summary h3{margin:0}
+.ts9brief summary::after{content:"▾";margin-left:auto;color:var(--aco,#8C979F)}
+.ts9brief:not([open]) summary::after{content:"▸"}
+.ts9brief p{margin:10px 0 0;line-height:1.5}
+.ts9premio{padding:8px 10px;border-radius:8px;background:rgba(232,196,104,.12)}
