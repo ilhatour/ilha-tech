@@ -362,7 +362,7 @@ async function carregarPlacar() { [s.placar, s.tesouro, s.missoes] = await Promi
 function missoesHTML() {
   const ms = (s.missoes || []).filter((m) => m.estado !== "coletada" || (m.coletada_em && Date.now() - new Date(m.coletada_em) < 3 * 864e5));
   if (!ms.length) return "";
-  return `<section class="pl6sec ts8 ms9"><h3>🎯 Missões</h3>${ms.map((m) => {
+  return `<section class="pl6sec ts8 ms9"><h3>🎯 Desafios</h3>${ms.map((m) => {
     const rec = `<b class="ms9rec">+${(+m.tesouros || 0).toLocaleString("pt-BR")} 🪎</b>`;
     const falta = (m.falta || []).length ? `<small class="ms9falta">Falta: ${esc(m.falta.join(", "))}</small>` : "";
     const acao = m.estado === "pronta" ? `<button class="btn ouro9" type="button" data-colmissao="${m.ganho}">Coletar +${m.tesouros} 🪎</button>`
