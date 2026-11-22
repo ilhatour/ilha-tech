@@ -1,5 +1,5 @@
 // 🪎 Rotas do Tesouro · Modelo de Moedas v3 (22/11/2026): baús conquistados e guardados, 🪙 moeda, elementos 🔥💧⚡🌱, 💎 e 🎖️;
-// desafios no formato de missões do MU (atividade do dia com 3 baús), 📦 Abrir Baús (efeito de caixa, abrir todos), Mercado com orçamento do mês,
+// desafios no formato de missões do MU (atividade do dia com 3 baús), 🪎 Abrir Baús (1 por vez), ☸️ Roda do Leme (🪙 + 🔥, única fonte de 💎), Mercado (só o Cais por enquanto),
 // ⚓ Cais (baú ↔ moeda), 🏦 Lastro, XP e nível 1 a 100, patentes da Marinha, frentes, conquistas, Trilha, reconhecimento e Ponte.
 // Toda conta e todo sorteio acontecem no banco (alfy_tesouros, alfy_coletar, alfy_abrir_baus, alfy_roda_girar, alfy_mercado_comprar, alfy_reconhecer...).
 // Usa os globais do alfy.js: s, token, chamar, esc, render, aviso, falhou, comando, vistaPlacar.
@@ -39,11 +39,11 @@ function vistaTesouros() {
   if (!t4ok()) return vistaPlacar();
   const t = s.tes, sub = s.tsub || "inicio", mand = ["comando", "gerente"].includes(t.eu.papel);
   const prontos = (t.ganhos || []).filter((g) => g.estado === "pronta");
-  const abas = [["inicio", "⚓ Início"], ["desafios", "🎯 Desafios"], ["conquistas", "🏅 Conquistas"], ["trilha", "🗺️ Trilha"], ["baus", "📦 Abrir Baús"], ["mercado", "🏪 Mercado"], ["bau", "🏆 Baú da Tripulação"]].concat(mand ? [["ponte", "🎛️ Ponte"]] : []);
-  const conta = { baus: Math.floor((+t.abrir?.abrivel || 0) / +(t.abrir?.custo || 10)), desafios: prontos.filter((g) => !g.missao.startsWith("c_") && g.missao !== "trilha").length, conquistas: prontos.filter((g) => g.missao.startsWith("c_")).length, trilha: prontos.filter((g) => g.missao === "trilha").length, ponte: mand ? (s.ponte?.pedidos || []).length : 0 };
-  const V = { inicio: t4inicio, desafios: t4desafios, conquistas: t4conquistas, trilha: t4trilha, mercado: t4mercado, baus: t4baus, bau: () => vistaPlacar(), ponte: t4ponte }[sub] || t4inicio;
+  const abas = [["inicio", "⚓ Início"], ["desafios", "🎯 Desafios"], ["conquistas", "🏅 Conquistas"], ["trilha", "🗺️ Trilha"], ["baus", "🪎 Abrir Baús"], ["roda", "☸️ Roda do Leme"], ["mercado", "🏪 Mercado"], ["bau", "🏆 Baú da Tripulação"]].concat(mand ? [["ponte", "🎛️ Ponte"]] : []);
+  const conta = { desafios: prontos.filter((g) => !g.missao.startsWith("c_") && g.missao !== "trilha").length, conquistas: prontos.filter((g) => g.missao.startsWith("c_")).length, trilha: prontos.filter((g) => g.missao === "trilha").length, ponte: mand ? (s.ponte?.pedidos || []).length : 0 };
+  const V = { inicio: t4inicio, desafios: t4desafios, conquistas: t4conquistas, trilha: t4trilha, mercado: t4mercado, baus: t4baus, roda: t4roda, bau: () => vistaPlacar(), ponte: t4ponte }[sub] || t4inicio;
   return `<div class="t4">${t4topo(prontos.length)}
-    <div class="t4abas" role="tablist">${abas.map(([k, n]) => `<button type="button" role="tab" class="chip" aria-pressed="${sub === k}" data-tsub="${k}">${n}${conta[k] ? ` <b class="t4bd">${conta[k]}</b>` : ""}</button>`).join("")}</div>
+    <nav class="t4abas" aria-label="Rotas do Tesouro">${abas.map(([k, n]) => `<button type="button" class="t4aba" aria-pressed="${sub === k}" data-tsub="${k}"><span>${n}</span>${conta[k] ? `<b class="t4bd">${conta[k] > 99 ? "99+" : conta[k]}</b>` : ""}</button>`).join("")}</nav>
     ${t.lancado !== "todos" && t.eu.papel === "comando" ? `<p class="t4aviso">🔒 Só você está vendo. A equipe continua na tela antiga até você tocar em <b>Lançar para a equipe</b>, na Ponte.</p>` : ""}
     <div class="t4tela">${V()}</div></div>`;
 }
@@ -56,7 +56,6 @@ function t4topo(np) {
       <div class="t4xp" aria-hidden="true"><i style="width:${pct}%"></i></div>
       <small class="t4muted">${nv.prox != null ? `${nv.xp.toLocaleString("pt-BR")} XP · faltam ${faltam.toLocaleString("pt-BR")} para o nível ${nv.nivel + 1}` : "nível máximo"} · ${t4n(t.baus?.conquistados)} 🪎 conquistados na vida</small></div>
     <div class="t4joias t4joias8">${T4_ORDEM.map((k) => `<div class="t4joia ${T4_BREVE.includes(k) ? "breve" : ""}" title="${T4_JOIA[k][2]}${T4_BREVE.includes(k) ? " · em breve" : ""}"><span>${T4_JOIA[k][0]}</span><b>${T4_BREVE.includes(k) ? "—" : t4n(t.saldo[k])}</b><small>${k === "tesouro" ? "baús guardados" : k === "medalha" ? "medalhas" : T4_JOIA[k][2]}</small></div>`).join("")}</div>
-    ${np ? `<button type="button" class="btn ouro9 t4col" data-t4coletar="tudo">🎁 Coletar tudo (${np})</button>` : ""}
   </section>`;
 }
 function t4inicio() {
@@ -166,6 +165,7 @@ function t4trilha() {
 }
 function t4falta(preco) { const sd = s.tes.saldo, f = []; Object.entries(preco || {}).forEach(([k, v]) => { const d = +v - (+sd[k] || 0); if (d > 0) f.push(`${t4n(d)} ${T4_JOIA[k][0]}`); }); return f; }
 function t4mercado() {
+  if (!s.tes.loja_aberta) return `<p class="t4aviso">🏪 A Loja da Ilha abre em breve. Por enquanto o comércio é aqui no Cais, entre a tripulação.</p>` + t4cais();
   const m = s.t4mm || "loja";
   return `<div class="t4filtros t4mm"><button type="button" class="chip" aria-pressed="${m === "loja"}" data-t4mm="loja">🏪 Loja</button><button type="button" class="chip" aria-pressed="${m === "cais"}" data-t4mm="cais">⚓ Cais da tripulação${(s.cais?.ofertas || []).filter((o) => !o.minha).length ? ` <b class="t4bd2">${s.cais.ofertas.filter((o) => !o.minha).length}</b>` : ""}</button></div>` + (m === "cais" ? t4cais() : t4loja());
 }
@@ -185,7 +185,7 @@ function t4cais() {
         ${c.congelado ? '<p class="t4muted">Suas trocas estão pausadas pelo comando.</p>' : !opt.length ? '<p class="t4muted">Você ainda não tem joia fora da carência para vender.</p>' : `<form data-t4form="cais" class="t4form">
           <label>Vender<select name="moeda">${opt.map((k) => `<option value="${k}">${T4_JOIA[k][0]} ${T4_JOIA[k][2]} (até ${t4n(c.vendavel[k])})</option>`).join("")}</select></label>
           <label>Quantidade<input name="qtd" type="number" min="1" step="1" value="1" required></label>
-          <label>Quero receber em<select name="quer"><option value="tesouro">🪎 tesouros</option><option value="moeda">🪙 moedas</option></select></label>
+          <label>Quero receber em<select name="quer"><option value="tesouro">🪎 baús</option><option value="moeda">🪙 moedas</option></select></label>
           <label>Preço<input name="preco" type="number" min="1" step="0.5" required></label>
           <small class="t4muted" data-t4caisdica></small>
           <button type="submit" class="btn ouro9">Pôr no Cais</button></form>`}
@@ -220,41 +220,46 @@ function t4chances(tab) {
   return { med, html: `<table class="t4ch"><tbody>${tab.map((x) => `<tr><td>${t4premio(x.premio)}</td><td>${String(x.p).replace(".", ",")}%</td></tr>`).join("")}</tbody></table>` };
 }
 function t4valorPremio(pr) { const v = t4valor(); let n = 0; T4_ORDEM.forEach((k) => { n += (+pr[k] || 0) * (+v[k] || 0); }); if (pr.vale) n += { cafe: 1500, copo: 2500, camisa: 5000 }[pr.vale] || 0; if (pr.gratis) n += +(s.tes.abrir?.custo || 10) * v.tesouro * .87; return n; }
-const T4_RAR = [["comum", "Comum"], ["incomum", "Incomum"], ["raro", "Raro"], ["mitico", "Mítico"], ["lendario", "Lendário"], ["imortal", "Imortal"], ["arcana", "Arcana"]];
-function t4rar(pr) {
-  if (pr.diamante) return 6; if (pr.titulo || pr.vale) return 5;
-  const m = +pr.moeda || 0; if (m >= 500) return 4; if (m >= 200 || pr.gratis) return 3; if (m >= 100 || pr.tesouro) return 2; if (m >= 60) return 1; return 0;
+const T4_RARN = { Comum: 0, Incomum: 1, Raro: 2, "Mítico": 3, "Lendário": 4, "Nova rodada": 5, Foguinho: 7, Gotinha: 8, Raio: 9, Brotinho: 10, Diamante: 6 };
+const T4_RAR = [["comum", "Comum"], ["incomum", "Incomum"], ["raro", "Raro"], ["mitico", "Mítico"], ["lendario", "Lendário"], ["rodada", "Nova rodada"], ["diamante", "Diamante"], ["fogo", "Foguinho"], ["gota", "Gotinha"], ["raio", "Raio"], ["broto", "Brotinho"]];
+function t4rar(pr, nome) {
+  if (nome && T4_RARN[nome] != null) return T4_RARN[nome];
+  if (pr.diamante) return 6; if (pr.gratis) return 5; if (pr.fogo) return 7; if (pr.gota) return 8; if (pr.raio) return 9; if (pr.broto) return 10;
+  const m = +pr.moeda || 0; if (m >= 500) return 4; if (m >= 200 || (m >= 30 && m < 50)) return 3; if (m >= 100 || m === 12) return 2; if (m >= 50 || m === 6) return 1; return 0;
+}
+const t4rarNome = (x) => x.nome || T4_RAR[t4rar(x.premio)]?.[1] || "";
+const t4ico = (pr) => pr.diamante ? "💎" : pr.gratis ? "🔁" : pr.fogo ? "🔥" : pr.gota ? "💧" : pr.raio ? "⚡" : pr.broto ? "🌱" : pr.tesouro ? "🪎" : "🪙";
+function t4tabelaPremios(tab, roda) {
+  const tot = tab.reduce((a, x) => a + +x.p, 0);
+  return `<div class="t4chs">${tab.map((x) => `<div class="t4chl r${t4rar(x.premio, x.nome)}"><span class="t4chi">${t4ico(x.premio)}</span><b>${esc(t4rarNome(x))}</b><span class="t4chp">${x.premio.gratis ? (roda ? "gira de novo grátis" : "abre outro grátis") : t4premio(x.premio)}</span><span class="t4chc">${(100 * x.p / tot).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%</span></div>`).join("")}</div>`;
 }
 function t4baus() {
-  const a = s.tes.abrir || {}, g = +s.tes.saldo.tesouro || 0, ab = +a.abrivel || 0, n = Math.floor(ab / +(a.custo || 10)), ch = t4chances(a.tabela || []);
-  return `<div class="t4g2"><section class="pl6sec t4cx t4bauw"><h3>📦 Abrir Baús</h3>
-      <button type="button" class="t4bauv" data-t4abrir="1" ${n && !s.t4abrindo ? "" : "disabled"} aria-label="Abrir 1 baú"><span class="t4raios" aria-hidden="true"></span><span class="t4bau">🪎</span></button>
-      <div class="t4saiu">Você tem <b>${t4n(g)} 🪎</b> guardados${ab < g ? ` (${t4n(g - ab)} de rotas de hoje abrem amanhã)` : ""}. Cada abertura usa <b>${a.custo} 🪎</b>.</div>
-      <div class="t4row" style="justify-content:center">
-        <button type="button" class="btn ouro9" data-t4abrir="1" ${n && !s.t4abrindo ? "" : "disabled"}>${n ? `Abrir ${a.custo} 🪎` : `Faltam ${t4n(a.custo - ab)} 🪎`}</button>
-        ${n > 1 ? `<button type="button" class="btn ouro9 t4todos" data-t4abrir="todos" ${s.t4abrindo ? "disabled" : ""}>Abrir todos (${n})</button>` : ""}</div>
+  const a = s.tes.abrir || {}, g = +s.tes.saldo.tesouro || 0, ab = +a.abrivel || 0, pode = ab >= +(a.custo || 1) && !s.t4abrindo, u = s.t4ult;
+  return `<div class="t4g2"><section class="pl6sec t4cx t4bauw">
+      <button type="button" class="t4bauv ${s.t4abrindo ? "abrindo" : ""} ${u && !s.t4abrindo ? "r" + t4rar(u.premio, u.nome) : ""}" data-t4abrir="1" ${pode ? "" : "disabled"} aria-label="Abrir 1 baú"><span class="t4bau">🪎</span></button>
+      <div class="t4abriu" aria-live="polite">${s.t4abrindo ? "Abrindo…" : u ? `<span class="t4rarp r${t4rar(u.premio, u.nome)}">${esc(t4rarNome(u))}</span><b>${u.sorteado?.gratis ? "🔁 Nova rodada: abre outro grátis" : esc(t4premio(u.premio))}</b>` : "Toque no baú para abrir"}</div>
+      <button type="button" class="btn ouro9 t4btnL" data-t4abrir="1" ${pode ? "" : "disabled"}>${ab >= +(a.custo || 1) ? "Abrir 1 baú" : "Sem baú para abrir"}</button>
+      <div class="t4bauinfo"><span><b>${t4n(g)}</b> 🪎 guardados</span>${ab < g ? `<span>${t4n(g - ab)} de rotas de hoje abrem amanhã</span>` : ""}</div>
+      ${(s.t4hist || []).length ? `<div class="t4hist" aria-label="Últimos prêmios">${s.t4hist.map((x) => `<span class="t4hi r${t4rar(x.premio, x.nome)}" title="${esc(t4rarNome(x))}">${t4ico(x.premio)}${x.premio.moeda ? `<small>${x.premio.moeda}</small>` : ""}</span>`).join("")}</div>` : ""}
       <small class="t4muted">Abrir não mexe nos baús conquistados: sua patente e sua parte no prêmio da tripulação continuam iguais.</small></section>
-    <section class="pl6sec t4cx"><h3>O que pode vir</h3>
-      <table class="t4ch"><tbody>${(a.tabela || []).map((x) => `<tr><td><span class="t4rarp r${t4rar(x.premio)}">${T4_RAR[t4rar(x.premio)][1]}</span> ${t4premio(x.premio)}</td><td>${String(x.p).replace(".", ",")}%</td></tr>`).join("")}</tbody></table>
-      <p class="t4muted" style="margin:8px 0 0">As chances são sempre estas. Em média cada abertura de ${a.custo} 🪎 (${t4n(a.custo * t4valor().tesouro)} 🪙) devolve uns ${t4n(Math.round(ch.med))} 🪙. Nunca vem elemento nem 🎖️. Sem limite por dia.</p></section></div>`;
+    <section class="pl6sec t4cx"><h3>O que pode vir de 1 baú</h3>${t4tabelaPremios(a.tabela || [])}
+      <p class="t4muted" style="margin:10px 0 0">Em 100 baús vêm, em média, uns 550 🪙, 4 🔥 e de vez em quando 💧, ⚡ ou 🌱. As chances são sempre estas.</p></section></div>`;
 }
-// efeito de abrir (estilo caixa do Dota): baú treme, brilha na cor da maior raridade, explode em luz e revela as cartas
-function t4abrirFx(lista) {
-  const reduz = matchMedia("(prefers-reduced-motion: reduce)").matches, max = lista.reduce((a, x) => Math.max(a, t4rar(x.premio)), 0);
-  const tot = {}; lista.forEach((x) => Object.entries(x.premio || {}).forEach(([k, v]) => { if (typeof v === "number" && k !== "gratis") tot[k] = (tot[k] || 0) + v; }));
-  const esp = lista.filter((x) => x.premio.titulo || x.premio.vale), grat = lista.filter((x) => x.premio.gratis).length;
-  const vis = lista.length > 60 ? lista.slice().sort((a, b) => t4rar(b.premio) - t4rar(a.premio)).slice(0, 60) : lista;
-  const carta = (x, i) => `<div class="t4pr r${t4rar(x.premio)}" style="animation-delay:${reduz ? 0 : 1600 + i * (lista.length > 1 ? 55 : 0)}ms"><i>${x.premio.titulo ? "🏷️" : x.premio.vale ? x.premio.icone || "🎟️" : x.premio.diamante ? "💎" : x.premio.gratis ? "🔁" : x.premio.tesouro ? "🪎" : "🪙"}</i><b>${esc(t4premio(x.premio))}</b><small>${T4_RAR[t4rar(x.premio)][1]}</small></div>`;
-  let el = document.getElementById("t4abre"); if (el) el.remove();
-  el = document.createElement("div"); el.id = "t4abre"; el.className = `t4ab r${max} ${reduz ? "sem" : ""}`; el.setAttribute("role", "dialog"); el.setAttribute("aria-label", "Baús abertos");
-  el.innerHTML = `<div class="t4abfx" aria-hidden="true"><span class="t4abraios"></span><span class="t4abbau">🪎</span><span class="t4abflash"></span>${Array.from({ length: 14 }, (_, i) => `<span class="t4abfa" style="--a:${i * 360 / 14}deg"></span>`).join("")}</div>
-    <div class="t4abres"><h3>${lista.length === 1 ? T4_RAR[max][1] + "!" : `${lista.length} baús abertos`}</h3>
-      <div class="t4cartas ${lista.length === 1 ? "uma" : ""}">${vis.map(carta).join("")}</div>
-      ${lista.length > 1 ? `<p class="t4abtot">Total: <b>${t4premio(tot) === "sem prêmio" ? "" : t4premio(tot)}</b>${esp.length ? ` · ${esp.map((x) => esc(t4premio(x.premio))).join(" · ")}` : ""}${grat ? ` · ${grat} ${grat > 1 ? "aberturas grátis" : "abertura grátis"}` : ""}</p>` : ""}
-      ${lista.some((x) => x.premio.vale) ? '<p class="t4muted">O vale virou pedido: o código está em Mercado › Meus pedidos.</p>' : ""}
-      <div class="t4row" style="justify-content:center"><button type="button" class="btn" data-t4abfechar="1">Fechar</button>${Math.floor((+s.tes.abrir?.abrivel || 0) / +(s.tes.abrir?.custo || 10)) ? `<button type="button" class="btn ouro9" data-t4abrir="1">Abrir mais 1</button>` : ""}</div></div>`;
-  document.body.appendChild(el);
-  el.querySelector("[data-t4abfechar]").focus?.();
+function t4roda() {
+  const r = s.tes.roda || {}, tab = r.tabela || [], tot = tab.reduce((a, x) => a + +x.p, 0), sd = s.tes.saldo, cu = r.custo || {};
+  let a0 = -90; const cx = 150, cy = 150, R = 136, cor = ["#2C3238", "#23282D", "#1E7F79", "#2C3238", "#5B3FA8", "#23282D", "#B4532A", "#2B6CB0", "#8C7A1E", "#2F7D45", "#A9B4F5"];
+  const fat = tab.map((x, i) => { const ang = 360 * x.p / tot, a1 = a0 + ang, rad = (v) => v * Math.PI / 180, meio = rad(a0 + ang / 2), tr = ang < 10 ? R * .84 : R * .62;
+    const p = `<path d="M${cx},${cy} L${(cx + R * Math.cos(rad(a0))).toFixed(1)},${(cy + R * Math.sin(rad(a0))).toFixed(1)} A${R},${R} 0 ${ang > 180 ? 1 : 0} 1 ${(cx + R * Math.cos(rad(a1))).toFixed(1)},${(cy + R * Math.sin(rad(a1))).toFixed(1)} Z" fill="${cor[t4rar(x.premio, x.nome) % cor.length]}" stroke="#15181B" stroke-width="2"/>${ang >= 3 ? `<text x="${(cx + tr * Math.cos(meio)).toFixed(1)}" y="${(cy + tr * Math.sin(meio)).toFixed(1)}" text-anchor="middle" dominant-baseline="central" font-size="${ang < 10 ? 12 : 18}">${t4ico(x.premio)}</text>` : ""}`;
+    x._a0 = a0 + 90; x._a1 = a1 + 90; a0 = a1; return p; }).join("");
+  const raios = Array.from({ length: 8 }, (_, i) => { const a = i * Math.PI / 4; return `<line x1="${(cx + (R + 2) * Math.cos(a)).toFixed(1)}" y1="${(cy + (R + 2) * Math.sin(a)).toFixed(1)}" x2="${(cx + (R + 16) * Math.cos(a)).toFixed(1)}" y2="${(cy + (R + 16) * Math.sin(a)).toFixed(1)}" stroke="#8C6A2A" stroke-width="8" stroke-linecap="round"/><circle cx="${(cx + (R + 18) * Math.cos(a)).toFixed(1)}" cy="${(cy + (R + 18) * Math.sin(a)).toFixed(1)}" r="7" fill="#B8913A"/>`; }).join("");
+  const falta = Object.entries(cu).filter(([k, v]) => (+sd[k] || 0) < +v).map(([k, v]) => `${t4n(+v - (+sd[k] || 0))} ${T4_JOIA[k][0]}`);
+  return `<div class="t4g2"><section class="pl6sec t4cx t4rodabox">
+      <div class="t4rodaw"><span class="t4pont" aria-hidden="true"></span><svg id="t4roda" viewBox="-25 -25 350 350" role="img" aria-label="Roda do Leme" style="transform:rotate(${s.t4rot || 0}deg)"><g>${raios}<circle cx="${cx}" cy="${cy}" r="${R + 3}" fill="none" stroke="#B8913A" stroke-width="5"/>${fat}<circle cx="${cx}" cy="${cy}" r="24" fill="#2C3238" stroke="#B8913A" stroke-width="4"/><text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="central" font-size="20">⚓</text></g></svg></div>
+      <div class="t4abriu" aria-live="polite">${s.t4saiu || `Cada giro custa <b>${t4premio(cu)}</b>`}</div>
+      <button type="button" class="btn ouro9 t4btnL" data-t4girar="1" ${!falta.length && !s.t4girando ? "" : "disabled"}>${s.t4girando ? "Girando…" : falta.length ? `Faltam ${falta.join(" + ")}` : `Girar · ${t4premio(cu)}`}</button>
+      <div class="t4bauinfo"><span>💎 este mês: <b>${t4n(r.diamante_mes || 0)} de ${t4n(r.diamante_max || 1)}</b></span></div></section>
+    <section class="pl6sec t4cx"><h3>O que pode sair</h3>${t4tabelaPremios(tab, true)}
+      <p class="t4muted" style="margin:10px 0 0">A Roda é o único lugar onde sai 💎, e é bem difícil: no máximo 1 💎 por pessoa por mês (se sair outro no mesmo mês, vira 500 🪙). Nova rodada devolve o giro.</p></section></div>`;
 }
 function t4ponte() {
   const p = s.ponte; if (!p) return '<p class="t4muted">Carregando a Ponte…</p>';
@@ -325,7 +330,7 @@ function t4lastro() {
 /* ---------- ações ---------- */
 function t4ganhou(pr) { const txt = t4premio(pr); return txt === "sem prêmio" ? "" : txt; }
 async function t4click(d, b) {
-  if (d.tsub) { s.tsub = d.tsub; s.t4saiu = ""; if (d.tsub === "ponte") { s.ponte = await chamar("alfy_ponte").catch(() => s.ponte); if (s.tes?.eu?.papel === "comando") s.lastro = await chamar("alfy_lastro", { p_pessoa: s.lastro?.pessoa?.id || null }).catch(() => s.lastro); } render(); return true; }
+  if (d.tsub) { s.tsub = d.tsub; s.t4saiu = ""; s.t4ult = null; if (d.tsub === "ponte") { s.ponte = await chamar("alfy_ponte").catch(() => s.ponte); if (s.tes?.eu?.papel === "comando") s.lastro = await chamar("alfy_lastro", { p_pessoa: s.lastro?.pessoa?.id || null }).catch(() => s.lastro); } render(); return true; }
   if (d.t4fc) { s.t4fc = d.t4fc; render(); return true; }
   if (d.t4mc) { s.t4mc = d.t4mc; render(); return true; }
   if (d.t4mm) { s.t4mm = d.t4mm; if (d.t4mm === "cais") s.cais = await chamar("alfy_cais").catch(() => s.cais); render(); return true; }
@@ -353,22 +358,36 @@ async function t4click(d, b) {
   }
   if (d.t4dc) { s.t4dc = d.t4dc; render(); return true; }
   if (d.t4titulo !== undefined) { try { await chamar("alfy_titulo_usar", { p_titulo: d.t4titulo }); aviso(d.t4titulo ? `🏷️ Agora você é ${d.t4titulo}.` : "Título tirado."); await t4carregar(); render(); } catch (er) { falhou(er); } return true; }
-  if (d.t4abfechar) { document.getElementById("t4abre")?.remove(); render(); return true; }
   if (d.t4abrir) {
     if (s.t4abrindo) return true;
-    s.t4abrindo = true; document.getElementById("t4abre")?.remove(); render();
+    s.t4abrindo = true; render();
+    const reduz = matchMedia("(prefers-reduced-motion: reduce)").matches;
     try {
-      const lista = [];
-      if (d.t4abrir === "todos") {
-        for (let i = 0; i < 40; i++) {   // até 2.000 aberturas por toque, de 50 em 50
-          const x = await chamar("alfy_abrir_baus", { p_vezes: 50 }); lista.push(...(x.aberturas || []));
-          if (!(+x.abrivel >= +(s.tes.abrir?.custo || 10)) || !(x.aberturas || []).length) break;
-        }
-      } else { const x = await chamar("alfy_abrir_baus", { p_vezes: 1 }); lista.push(...(x.aberturas || [])); }
+      const [x] = await Promise.all([chamar("alfy_abrir_baus", { p_vezes: 1 }), new Promise((r) => setTimeout(r, reduz ? 0 : 650))]);
+      const ab = (x.aberturas || [])[0];
+      if (ab) { const nome = (s.tes.abrir?.tabela || []).find((y) => JSON.stringify(y.premio) === JSON.stringify(ab.sorteado))?.nome; s.t4ult = { ...ab, nome }; s.t4hist = [{ premio: ab.premio, nome }, ...(s.t4hist || [])].slice(0, 12); }
       await t4carregar();
-      if (lista.length) t4abrirFx(lista);
     } catch (er) { falhou(er); await t4carregar(); }
     s.t4abrindo = false; render(); return true;
+  }
+  if (d.t4girar) {
+    if (s.t4girando) return true;
+    s.t4girando = true; s.t4saiu = ""; render();
+    try {
+      const x = await chamar("alfy_roda_girar");
+      const tab = s.tes.roda.tabela || [], i = Math.max(0, tab.findIndex((y) => JSON.stringify(y.premio) === JSON.stringify(x.sorteado))), f = tab[i];
+      const svg = document.getElementById("t4roda"), reduz = matchMedia("(prefers-reduced-motion: reduce)").matches;
+      if (svg && f && f._a0 != null) {
+        const alvo = f._a0 + (f._a1 - f._a0) * (0.25 + Math.random() * 0.5), atual = s.t4rot || 0;
+        s.t4rot = atual + 360 * 5 + ((360 - alvo - (atual % 360)) % 360 + 360) % 360;
+        svg.style.transition = reduz ? "none" : "transform 3.6s cubic-bezier(.12,.67,.18,1)";
+        svg.style.transform = `rotate(${s.t4rot}deg)`;
+        await new Promise((r) => setTimeout(r, reduz ? 50 : 3700));
+      }
+      s.t4saiu = `<span class="t4rarp r${t4rar(x.sorteado, f?.nome)}">${esc(f?.nome || "")}</span><b>${x.sorteado?.gratis ? "🔁 Nova rodada: o giro voltou" : x.premio?.teto_diamante ? "500 🪙 (você já ganhou o 💎 do mês)" : esc(t4premio(x.premio))}</b>`;
+      await t4carregar();
+    } catch (er) { falhou(er); await t4carregar(); }
+    s.t4girando = false; render(); return true;
   }
   if (d.t4comprar) {
     const i = (s.tes.mercado || []).find((x) => x.id === d.t4comprar);
