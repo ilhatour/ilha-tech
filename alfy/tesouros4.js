@@ -11,7 +11,12 @@ const T4_ELEM = ["fogo", "gota", "raio", "broto"];
 const T4_BREVE = ["raio", "broto"];
 const T4_VALOR = { tesouro: 10, moeda: 1, fogo: 30, gota: 300, raio: null, broto: null, diamante: 10000, medalha: 50000 };
 const t4valor = () => ({ ...T4_VALOR, ...(s.tes?.valor || {}) });
-const T4_PATENTES = [[1, "Recruta", "▫️", "Bote"], [5, "Marinheiro", "▪️", "Bote"], [10, "Cabo", "🔻", "Lancha"], [15, "Terceiro-Sargento", "🔺", "Lancha"], [20, "Segundo-Sargento", "🔺", "Navio-Patrulha"], [25, "Primeiro-Sargento", "🔺", "Navio-Patrulha"], [30, "Suboficial", "🔶", "Corveta"], [35, "Guarda-Marinha", "⚓", "Corveta"], [40, "Segundo-Tenente", "⭐", "Fragata"], [45, "Primeiro-Tenente", "⭐", "Fragata"], [50, "Capitão-Tenente", "🎖️", "Contratorpedeiro"], [60, "Capitão de Corveta", "🎖️", "Contratorpedeiro"], [70, "Capitão de Fragata", "🏅", "Cruzador"], [80, "Capitão de Mar e Guerra", "🏅", "Cruzador"], [88, "Contra-Almirante", "🌟", "Porta-Aviões"], [94, "Vice-Almirante", "🌟", "Porta-Aviões"], [100, "Almirante de Esquadra", "👑", "Capitânia da Esquadra"]];
+const T4_PATENTES = [[1, "Recruta", "▫️", "Bote", "🚣"], [2, "Marinheiro", "▪️", "Bote", "🚣"], [3, "Cabo", "🔻", "Lancha", "🚤"], [4, "Terceiro-Sargento", "🔺", "Lancha", "🚤"], [5, "Segundo-Sargento", "🔺", "Navio-Patrulha", "🛥️"], [6, "Primeiro-Sargento", "🔺", "Navio-Patrulha", "🛥️"], [7, "Suboficial", "🔶", "Corveta", "🛳️"], [8, "Guarda-Marinha", "⚓", "Corveta", "🛳️"], [9, "Segundo-Tenente", "⭐", "Fragata", "🚢"], [10, "Primeiro-Tenente", "⭐", "Fragata", "🚢"], [11, "Capitão-Tenente", "🎖️", "Contratorpedeiro", "🚢"], [12, "Capitão de Corveta", "🎖️", "Contratorpedeiro", "🚢"], [13, "Capitão de Fragata", "🏅", "Cruzador", "🚢"], [14, "Capitão de Mar e Guerra", "🏅", "Cruzador", "🚢"], [15, "Almirante", "👑", "Capitânia da Esquadra", "🚢"]];
+// nível e patente = os do passe da temporada (todo mundo começa Recruta; zera a cada temporada)
+function t4nivel(tes) {
+  const tp = (tes || s.tes)?.temporada || {}, niv = tp.niveis || [0], n = tp.comecou ? Math.max(1, +tp.nivel || 1) : 1, xp = tp.comecou ? +tp.xp || 0 : 0, p = T4_PATENTES[n - 1];
+  return { nivel: n, xp, ini: niv[n - 1] || 0, prox: niv[n] ?? null, patente: { nome: p[1], ins: p[2], navio: p[3], ni: p[4] } };
+}
 const T4_FRENTE_NIV = [0, 5, 15, 30, 60, 100, 160, 250, 400, 600];
 const t4n = (n) => (Math.round((+n || 0) * 10) / 10).toLocaleString("pt-BR");
 const t4premio = (pr, tes) => { const l = []; if (+tes) l.push(`${t4n(tes)} 🪎`); T4_ORDEM.forEach((k) => { if (pr && +pr[k] && !(k === "tesouro" && +tes)) l.push(`${t4n(pr[k])} ${T4_JOIA[k][0]}`); });
@@ -57,9 +62,9 @@ const T4_NIVSOM = { 0: 0, 1: 1, 2: 2, 3: 3, 4: 4, 5: 2, 6: 6, 7: 2, 8: 4, 9: 5, 
 (function t4presenca() { if (typeof token !== "undefined" && token) chamar("alfy_presenca").catch(() => {}); else setTimeout(t4presenca, 5000); })();
 
 async function t4carregar() {
-  const antes = s.tes?.nivel;
+  const antes = s.tes ? t4nivel(s.tes) : null;
   s.tes = await chamar("alfy_tesouros").catch(() => s.tes);
-  const dep = s.tes?.nivel;
+  const dep = s.tes ? t4nivel(s.tes) : null;
   if (antes && dep && dep.xp > antes.xp) { s.t4xpGanho = dep.xp - antes.xp; s.t4xpEm = Date.now(); }
   if (antes && dep && dep.nivel > antes.nivel) { s.t4subiu = dep.nivel; setTimeout(() => { T4SOM.vitoria(4); aviso(`🎉 Subiu para o nível ${dep.nivel}!${dep.patente?.nome !== antes.patente?.nome ? ` Nova patente: ${dep.patente.ins} ${dep.patente.nome}.` : ""}`); }, 400); }
   if (t4ok()) s.cais = await chamar("alfy_cais").catch(() => s.cais);
@@ -80,7 +85,7 @@ function vistaTesouros() {
     <div class="t4tela">${V()}</div></div>`;
 }
 function t4topo(np) {
-  const t = s.tes, nv = t.nivel, pa = nv.patente, faltam = nv.prox != null ? nv.prox - nv.xp : 0, pct = nv.prox != null ? Math.round(100 * (nv.xp - nv.ini) / (nv.prox - nv.ini)) : 100;
+  const t = s.tes, nv = t4nivel(), pa = nv.patente, faltam = nv.prox != null ? nv.prox - nv.xp : 0, pct = nv.prox != null ? Math.round(100 * (nv.xp - nv.ini) / (nv.prox - nv.ini)) : 100;
   if (s.t4xpGanho && Date.now() - (s.t4xpEm || 0) >= 1500) s.t4xpGanho = 0;
   const sub = s.t4subiu; if (sub) setTimeout(() => { s.t4subiu = null; }, 50);
   return `<section class="t4topo ${sub ? "levelup" : ""}">
@@ -89,18 +94,18 @@ function t4topo(np) {
     <div class="t4quem"><div class="t4nome"><b>${esc((t.eu.nome || "").split(" ")[0])}</b><span class="t4niv">Nível ${nv.nivel}</span>${t.eu.titulo ? `<span class="t4titulo">${esc(t.eu.titulo)}</span>` : ""}</div>
       <div class="t4pat">${pa.ins} ${esc(pa.nome)} · ${esc(pa.navio)}</div>
       <div class="t4xp ${s.t4subiu ? "subiu" : ""}" aria-hidden="true"><i style="width:${pct}%"></i>${s.t4xpGanho && Date.now() - (s.t4xpEm || 0) < 1500 ? `<b class="t4xpg">+${s.t4xpGanho} XP</b>` : ""}</div>
-      <small class="t4muted">${nv.prox != null ? `${nv.xp.toLocaleString("pt-BR")} XP · faltam ${faltam.toLocaleString("pt-BR")} para o nível ${nv.nivel + 1}` : "nível máximo"} · ${t4n(t.baus?.conquistados)} 🪎 conquistados na vida</small></div>
+      <small class="t4muted">${nv.prox != null ? `${nv.xp.toLocaleString("pt-BR")} XP na temporada · faltam ${faltam.toLocaleString("pt-BR")} para o nível ${nv.nivel + 1}` : "nível máximo da temporada"} · ${t4n(t.baus?.conquistados)} 🪎 conquistados</small></div>
     <div class="t4joias t4joias8">${T4_ORDEM.map((k) => `<div class="t4joia ${T4_BREVE.includes(k) ? "breve" : ""}" title="${T4_JOIA[k][2]}${T4_BREVE.includes(k) ? " · em breve" : ""}"><span>${T4_JOIA[k][0]}</span><b>${T4_BREVE.includes(k) ? "—" : t4n(t.saldo[k])}</b><small>${k === "tesouro" ? "baús guardados" : k === "medalha" ? "medalhas" : T4_JOIA[k][2]}</small></div>`).join("")}</div>
   </section>`;
 }
 function t4inicio() {
-  const t = s.tes, nv = t.nivel.nivel;
+  const t = s.tes, nv = t4nivel().nivel;
   const frentes = (t.frentes || []).map((f) => { let n = 1; T4_FRENTE_NIV.forEach((x, i) => { if (f.score >= x) n = i + 1; }); const prox = T4_FRENTE_NIV[n]; return { ...f, n, prox }; });
   return `<div class="t4g2">
     <section class="pl6sec t4cx"><h3>Suas frentes</h3><p class="t4muted" style="margin:0 0 10px">Cada rota entregue numa frente soma o score dela. O nível de cada frente vai de 1 a 10.</p>
       ${frentes.map((f) => `<div class="t4fr"><div class="t4frl"><b>${esc(t4frente(f.frente))}</b><span>Nív. ${f.n}</span></div><div class="t4frb"><i style="width:${f.prox ? Math.min(100, 100 * f.score / f.prox) : 100}%"></i></div><small class="t4muted">score ${t4n(f.score)} · ${f.rotas} ${f.rotas === 1 ? "rota" : "rotas"}${f.prox ? ` · faltam ${t4n(f.prox - f.score)} para o nível ${f.n + 1}` : " · nível máximo"}</small></div>`).join("") || '<p class="t4muted">Ainda sem rota entregue com frente.</p>'}</section>
-    <section class="pl6sec t4cx"><h3>Patentes da Marinha</h3><p class="t4muted" style="margin:0 0 8px">Sobem com o seu nível. Cada interação vale XP: ação ou comentário 1, missão coletada 2, dia com o app aberto 3, Diário do Guardião 3, rota entregue 5 (até 60 por dia). O baú também pode soltar ✨ XP.</p>
-      <ol class="t4pats">${T4_PATENTES.map(([m, n, ins, navio], i) => { const prox = T4_PATENTES[i + 1]?.[0] ?? 101, aqui = nv >= m && nv < prox; return `<li class="${nv >= m ? "ja" : ""} ${aqui ? "aqui" : ""}"><span>${ins}</span><b>${n}</b><small>nível ${m}${aqui ? " · você" : ""} · ${navio}</small></li>`; }).join("")}</ol></section>
+    <section class="pl6sec t4cx"><h3>Patentes da Marinha</h3><p class="t4muted" style="margin:0 0 8px">Cada nível do passe da temporada é uma patente; todo mundo começa Recruta e a patente zera junto com a temporada. Cada interação vale XP: ação ou comentário 1, missão coletada 2, dia com o app aberto 3, Diário do Guardião 3, rota entregue 5 (até 60 por dia). O baú também pode soltar ✨ XP.</p>
+      <ol class="t4pats">${T4_PATENTES.map(([m, n, ins, navio]) => `<li class="${nv >= m ? "ja" : ""} ${nv === m ? "aqui" : ""}"><span>${ins}</span><b>${n}</b><small>nível ${m}${nv === m ? " · você" : ""} · ${navio}</small></li>`).join("")}</ol></section>
   </div>
   ${s.tes.teto_mes ? `<section class="pl6sec t4cx" style="margin-top:14px"><h3>🎁 Prêmios do mês</h3><div class="t4orc"><span><i style="width:${Math.min(100, 100 * s.tes.teto_mes.usado / Math.max(1, s.tes.teto_mes.teto))}%"></i></span><b>${t4n(s.tes.teto_mes.usado)} de ${t4n(s.tes.teto_mes.teto)} 🪙</b></div><small class="t4muted">Cada pessoa tem um limite de prêmios por mês, medido em 🪙 (os elementos contam pelo valor deles). Conta o que sai das missões, do baú e da Roda (o 🪎 em si não conta). Os prêmios da temporada, o 💎 e a 🎖️ ficam fora. Bateu o teto, o que faltar fica guardado para o mês seguinte.</small>
     ${s.tes.limites ? `<h3 style="margin-top:14px">Moedas especiais</h3><div class="t4lims">${["fogo", "gota", "raio", "broto", "diamante"].filter((k) => s.tes.limites[k]).map((k) => { const l = s.tes.limites[k]; return `<div class="t4lim"><span>${T4_JOIA[k][0]}</span><b>${t4n(l.mes)}/${t4n(l.mes_max)}</b><small>no mês</small><b>${t4n(l.temp)}/${t4n(l.temp_max)}</b><small>na temporada</small></div>`; }).join("")}</div>
