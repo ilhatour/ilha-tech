@@ -357,7 +357,7 @@ function ligarKanban() {
 // ---------------------------------------------------------------- 🏆 Placar
 // pontuação V3: (Impacto + Dificuldade + Qualidade) × prazo, de 0 a 10, por rota concluída; responsável e co-responsável pontuam
 const MES_TXT = (d) => new Date(d + "T12:00:00-03:00").toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
-async function carregarPlacar() { [s.placar, s.tesouro, s.missoes] = await Promise.all([chamar("alfy_placar", { p_mes: s.placarMes || null }).catch(() => s.placar), chamar("alfy_placar_tesouro", { p_mes: s.placarMes || null }).catch(() => s.tesouro), chamar("alfy_missoes").catch(() => s.missoes)]); }
+async function carregarPlacar() { [s.placar, s.tesouro, s.missoes] = await Promise.all([chamar("alfy_placar", { p_mes: s.placarMes || null }).catch(() => s.placar), chamar("alfy_placar_tesouro", { p_mes: s.placarMes || null }).catch(() => s.tesouro), chamar("alfy_missoes").catch(() => s.missoes)]); if (window.t4Carregar) await window.t4Carregar(); }
 // 🎯 22/11 (Miguel): missões das Rotas do Tesouro. 1ª: Carta de Embarque = ficha da Nave ID completa vale 🪎 10 (o botão abre o /meu-cadastro da pessoa)
 function missoesHTML() {
   const ms = (s.missoes || []).filter((m) => m.estado !== "coletada" || (m.coletada_em && Date.now() - new Date(m.coletada_em) < 3 * 864e5));
@@ -393,7 +393,7 @@ function tesouroHTML(ehMesAtual) {
   const t = s.tesouro; if (!t) return "";
   const meta = +t.meta || 500, bau = +t.bau || 0, pct = Math.min(100, Math.round(100 * bau / meta));
   let h = `<section class="pl6sec ts8"><h3>🪎 Baú da Tripulação</h3><div class="ts8bau"><b>${tes(bau)}</b><small>de ${tes(meta)} tesouros ${ehMesAtual ? "neste mês" : "no mês"}</small></div><i class="ts8bar"><i style="width:${pct}%"></i></i><p class="nota" style="margin:6px 0 0">${bau >= meta ? "Meta batida! O prêmio é dividido entre a tripulação, cada um pela sua parte." : `Faltam ${tes(meta - bau)} tesouros. Bateu a meta, o prêmio é dividido: cada um leva a parte dos tesouros que encontrou.`}</p>${comando() && ehMesAtual ? `<button class="lk" type="button" data-acao="copiar-recado-semana" style="margin-top:8px">🦜 Copiar recado do baú</button>` : ""}</section>`;
-  if (!ehMesAtual) return h;
+  if (!ehMesAtual || (s.tes && !s.tes.bloqueado)) return h;   // v4 ativo: patente, Maré e conquistas ficam no tesouros4.js
   const ps = t.pessoas || [];
   if (comando()) {
   } else {
@@ -486,8 +486,8 @@ function vistaPlacar() {
   }
   const lista = comando() ? (pl.entregas || []).filter((e) => !s.plBusca || (e.titulo + " " + nomeDe(e.resp) + " " + nomeDe(e.co)).toLowerCase().includes(s.plBusca.toLowerCase())) : (pl.minhas || []);
   const banco = `<section class="pl6sec"><div class="pl6h"><h3>${comando() ? "Entregas do mês" : "Suas entregas"} · ${(comando() ? pl.entregas : pl.minhas || []).length}</h3><button class="lk" type="button" data-verconc="1">✓ Ver rotas concluídas</button>${comando() ? `<input class="busca" id="pl-busca" placeholder="Buscar entrega ou pessoa" value="${esc(s.plBusca || "")}">` : ""}</div>${lista.map((e) => entregaHTML(e, comando())).join("") || '<p class="nota">Nenhuma entrega neste mês ainda. Cada rota concluída vale até 🪎 10 tesouros.</p>'}</section>`;
-  const regra = `<details class="pl7regra"><summary>Como pontua</summary><div class="pl7tab"><div><b>Impacto</b><span>Alto 3 · Médio 2 · Baixo 1</span></div><div><b>Dificuldade</b><span>Muito difícil 4 · Difícil 3 · Simples 2 · Fácil 1</span></div><div><b>Qualidade</b><span>Acima do esperado 3 · Como esperado 2 · Abaixo do esperado 1 · Cancelada, não realizada não conta</span></div><div><b>Prazo</b><span>No prazo ×1 · até 7 dias fora ×½ · mais que isso ×0</span></div></div><p class="nota" style="margin:8px 0 0">🪎 Tesouros = (Impacto + Dificuldade + Qualidade) × prazo, até 10 por rota. Patentes pelos tesouros da vida: ⚓ Grumete 0 · 🪢 Marinheiro 25 · 🧭 Navegador 60 · ☸️ Timoneiro 120 · 🎖️ Imediato 250 · 👑 Capitão 500 (nunca cai). 🌊 Maré Boa = entregas no prazo seguidas; uma fora do prazo zera. Campo vazio conta como o do meio (2 + 2 + 2 = 6). Responsável e co-responsável pontuam. Compromisso e frente Pessoal não contam.</p></details>`;
-  return `<div class="pl7">${nav}<div class="pl7grade"><div class="pl7a">${ehMesAtual ? missoesHTML() : ""}${BRIEFING_TES}${tesouroHTML(ehMesAtual)}${topo}</div><div class="pl7b">${banco}${regra}</div></div></div>`;
+  const regra = `<details class="pl7regra"><summary>Como pontua</summary><div class="pl7tab"><div><b>Impacto</b><span>Alto 3 · Médio 2 · Baixo 1</span></div><div><b>Dificuldade</b><span>Muito difícil 4 · Difícil 3 · Simples 2 · Fácil 1</span></div><div><b>Qualidade</b><span>Acima do esperado 3 · Como esperado 2 · Abaixo do esperado 1 · Cancelada, não realizada não conta</span></div><div><b>Prazo</b><span>No prazo ×1 · até 7 dias fora ×½ · mais que isso ×0</span></div></div><p class="nota" style="margin:8px 0 0">🪎 Tesouros = (Impacto + Dificuldade + Qualidade) × prazo, até 10 por rota. ${s.tes && !s.tes.bloqueado ? "Rotina cumprida vale 1 🪎. Nível e patente da Marinha ficam no Início. " : "Patentes pelos tesouros da vida: ⚓ Grumete 0 · 🪢 Marinheiro 25 · 🧭 Navegador 60 · ☸️ Timoneiro 120 · 🎖️ Imediato 250 · 👑 Capitão 500 (nunca cai). 🌊 Maré Boa = entregas no prazo seguidas; uma fora do prazo zera. "}Campo vazio conta como o do meio (2 + 2 + 2 = 6). Responsável e co-responsável pontuam. Compromisso e frente Pessoal não contam.</p></details>`;
+  return `<div class="pl7">${nav}<div class="pl7grade"><div class="pl7a">${ehMesAtual && !(s.tes && !s.tes.bloqueado) ? missoesHTML() : ""}${s.tes && !s.tes.bloqueado ? "" : BRIEFING_TES}${tesouroHTML(ehMesAtual)}${topo}</div><div class="pl7b">${banco}${regra}</div></div></div>`;
 }
 
 // ---------------------------------------------------------------- 🔁 Rotinas
@@ -2320,7 +2320,7 @@ function render() {
   if (!M) return;
   casca(); topo(); medidores(); bolhas();
   const c = $("#conteudo");
-  c.innerHTML = { rotinas: vistaAbaRotinas, placar: vistaPlacar, zap: () => `<div style="max-width:1080px">${zapHTML("")}</div>`, rotas: () => (s.vista === "rar" && comando() ? vistaRotaARota() : s.vista === "rev" && comando() ? vistaRevisao() : s.vista === "kanban" ? vistaKanban() : vistaLista()), feed: () => (feedVivo() ? vistaFeedVivo() : vistaFeed()), agenda: vistaAgenda, equipe: vistaEquipe, pautas: vistaPautas, comandos: vistaComandos, eu: vistaEu }[s.aba]();
+  c.innerHTML = { rotinas: vistaAbaRotinas, placar: () => (window.vistaTesouros ? window.vistaTesouros() : vistaPlacar()), zap: () => `<div style="max-width:1080px">${zapHTML("")}</div>`, rotas: () => (s.vista === "rar" && comando() ? vistaRotaARota() : s.vista === "rev" && comando() ? vistaRevisao() : s.vista === "kanban" ? vistaKanban() : vistaLista()), feed: () => (feedVivo() ? vistaFeedVivo() : vistaFeed()), agenda: vistaAgenda, equipe: vistaEquipe, pautas: vistaPautas, comandos: vistaComandos, eu: vistaEu }[s.aba]();
   { const r = s.robo, semRobo = r?.visto_em && Date.now() - new Date(r.visto_em) > 5 * 60000, semIa = r && !r.ia_ok, semWa = r && r.wa_ok === false;   // aviso no topo: robô, IA ou leitura do WhatsApp fora
     if (comando() && (semRobo || semIa || semWa)) c.insertAdjacentHTML("afterbegin", `<div class="alerta-ia">${semRobo ? `💻 O robô do Mac está sem sinal desde ${quandoFoi(r.visto_em)}: os pedidos ao ALFY ficam na fila até ele voltar.` : semIa ? `🐙 A IA do ALFY está desligada: ${esc(r.ia_msg || "")} Os pedidos que falharam voltam sozinhos quando ligar.` : `📱 A leitura do WhatsApp do Mac falhou ${r.wa_falhas || 3} vezes seguidas${r.wa_em ? ` (última leitura boa ${quandoFoi(r.wa_em)})` : ""}. O robô já reiniciou e tenta de novo a cada 90 s. Se continuar: o WhatsApp do Mac está aberto? Apareceu janela pedindo permissão?`}</div>`); }
   if (s.aba === "rotas" && s.vista === "kanban") ligarKanban();
@@ -2330,7 +2330,7 @@ function render() {
 // não redesenha o que a pessoa está digitando: espera ela sair do campo
 function renderSeguro() {
   const a = document.activeElement, dentro = a && $("#conteudo").contains(a) && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName) && a.id !== "busca";
-  if (dentro) { s.pendente = true; return; }
+  if (dentro || s.t4girando) { s.pendente = true; return; }
   render();
 }
 async function recarregar() {
@@ -2539,6 +2539,7 @@ document.addEventListener("click", async (e) => {
   if (b.classList.contains("ocupado")) return;   // clique repetido enquanto o pedido roda não faz nada
   b.classList.add("ocupado"); b.setAttribute("aria-busy", "true");
   try {
+    if (window.t4Click && await window.t4Click(d, b)) return;   // 🪎 Rotas do Tesouro v4 (tesouros4.js)
     if (b.id === "eu-av-cel") { s.aba = "eu"; render(); return; }
     if (d.aba) { s.aba = d.aba; s.pauta = null; s.reuniao = null; if (d.aba === "agenda") { render(); await carregarAgenda(); } if (d.aba === "equipe") { s.aprovado = null; if ((s.naveBusca || "").trim()) s.naveRes = await chamar("alfy_nave_buscar", { p_q: s.naveBusca }).catch(() => null); s.fichas = await chamar("alfy_fichas"); if (comando()) s.equipe = await chamar("alfy_equipe"); } if (d.aba === "feed") { if (feedVivo()) await carregarPosts(); else FEED = await chamar("alfy_feed", { p_limite: 150 }); } if (d.aba === "zap") await carregarZap(); if (d.aba === "placar") await carregarPlacar(); if (d.aba === "rotinas") await carregarRotinas(); if (d.aba === "rotas" && s.vista === "rotinas") await carregarRotinas(); if (d.aba === "comandos" && s.cmd === "perguntar" && !s.chatGeral) s.chatGeral = await chamar("alfy_ia_conversa", { p_escopo: "geral" }); render(); scrollTo(0, 0); return; }
     if (d.vista) { s.vista = d.vista; if (d.vista === "rar") await rrCarregar(); if (d.vista === "rotinas") await carregarRotinas(); render(); return; }
