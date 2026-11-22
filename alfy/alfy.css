@@ -2093,3 +2093,5 @@ textarea.melhorando{opacity:.6;border-color:var(--lilas)!important}
 .t4pc.bloq{opacity:.45;filter:grayscale(.5)}
 @media (prefers-reduced-motion:reduce){.t4pc.pronto .btn{animation:none}}
 .t4passe{align-items:flex-start}
+.t4pc.final{border-color:#7FD8FF;background:linear-gradient(180deg,#1C2C3A,var(--ferro-0));box-shadow:0 0 18px rgba(127,216,255,.3)}
+.t4temph{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;font-size:14px}.t4temph span{color:var(--aco-2)}
