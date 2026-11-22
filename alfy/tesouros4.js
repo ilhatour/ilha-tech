@@ -102,7 +102,7 @@ function t4inicio() {
     <section class="pl6sec t4cx"><h3>Patentes da Marinha</h3><p class="t4muted" style="margin:0 0 8px">Sobem com o seu nível. Cada interação vale XP: ação ou comentário 1, missão coletada 2, dia com o app aberto 3, Diário do Guardião 3, rota entregue 5 (até 60 por dia). O baú também pode soltar ✨ XP.</p>
       <ol class="t4pats">${T4_PATENTES.map(([m, n, ins, navio], i) => { const prox = T4_PATENTES[i + 1]?.[0] ?? 101, aqui = nv >= m && nv < prox; return `<li class="${nv >= m ? "ja" : ""} ${aqui ? "aqui" : ""}"><span>${ins}</span><b>${n}</b><small>nível ${m}${aqui ? " · você" : ""} · ${navio}</small></li>`; }).join("")}</ol></section>
   </div>
-  ${s.tes.teto_mes ? `<section class="pl6sec t4cx" style="margin-top:14px"><h3>💰 Prêmios do mês</h3><div class="t4orc"><span><i style="width:${Math.min(100, 100 * s.tes.teto_mes.usado / Math.max(1, s.tes.teto_mes.teto))}%"></i></span><b>R$ ${t4rs(s.tes.teto_mes.usado / 100)} de R$ ${t4rs(s.tes.teto_mes.teto / 100)}</b></div><small class="t4muted">Cada pessoa ganha no máximo R$ ${t4rs(s.tes.teto_mes.teto / 100)} em prêmios por mês (1 🪙 = R$ 0,01). Conta o que sai das missões, do baú e da Roda (o 🪎 em si não conta). Os prêmios da temporada, o 💎 e a 🎖️ ficam fora. Bateu o teto, o que faltar fica guardado para o mês seguinte.</small>
+  ${s.tes.teto_mes ? `<section class="pl6sec t4cx" style="margin-top:14px"><h3>🎁 Prêmios do mês</h3><div class="t4orc"><span><i style="width:${Math.min(100, 100 * s.tes.teto_mes.usado / Math.max(1, s.tes.teto_mes.teto))}%"></i></span><b>${t4n(s.tes.teto_mes.usado)} de ${t4n(s.tes.teto_mes.teto)} 🪙</b></div><small class="t4muted">Cada pessoa tem um limite de prêmios por mês, medido em 🪙 (os elementos contam pelo valor deles). Conta o que sai das missões, do baú e da Roda (o 🪎 em si não conta). Os prêmios da temporada, o 💎 e a 🎖️ ficam fora. Bateu o teto, o que faltar fica guardado para o mês seguinte.</small>
     ${s.tes.limites ? `<h3 style="margin-top:14px">Moedas especiais</h3><div class="t4lims">${["fogo", "gota", "raio", "broto", "diamante"].filter((k) => s.tes.limites[k]).map((k) => { const l = s.tes.limites[k]; return `<div class="t4lim"><span>${T4_JOIA[k][0]}</span><b>${t4n(l.mes)}/${t4n(l.mes_max)}</b><small>no mês</small><b>${t4n(l.temp)}/${t4n(l.temp_max)}</b><small>na temporada</small></div>`; }).join("")}</div>
       <small class="t4muted">Limite de cada pessoa para o que sai do baú, da Roda e das missões. Passou: no baú ou na Roda vira 🪙; numa missão, fica guardado até caber. Os prêmios da temporada são garantidos e ficam fora.</small>` : ""}</section>` : ""}
   ${t4atributos()}
@@ -218,7 +218,7 @@ function t4temporada() {
       ${st === "pronto" ? `<button type="button" class="btn ouro9 peq" data-t4coletar="${pr.get(n)}">Coletar</button>` : st === "feito" ? '<span class="t4mok">✓</span>' : st === "prox" ? `<small class="t4muted">${t4n(niv[i] - tp.xp)} XP</small>` : `<small class="t4mlk">${t4n(niv[i])} XP</small>`}</div>`; };
   setTimeout(() => { const el = document.querySelector(".t4passe .t4pc.pronto") || document.getElementById("t4passeprox"); el?.scrollIntoView?.({ block: "nearest", inline: "center" }); }, 30);
   return `<section class="pl6sec t4cx t4temp"><h3>🗺️ ${esc(tp.nome)}</h3>
-    <p class="t4muted" style="margin:0 0 8px">De ${dt(tp.inicio)} a ${dt(tp.fim)}. Cada nível libera um prêmio, e os níveis 10 e 15 valem 💎. Conta só o XP feito dentro da temporada. Quem envia o Diário do Guardião (20 por mês) e cumpre as missões do dia chega no nível 10; quem também entrega muitas rotas chega no 15. No fim da temporada tudo zera e começa uma nova.</p>
+    <p class="t4muted" style="margin:0 0 8px">De ${dt(tp.inicio)} a ${dt(tp.fim)}. ${tp.id === "TESTE" ? "<b>Temporada de experiência de 15 dias.</b> " : ""}Cada nível libera um prêmio, e os níveis 10 e 15 valem 💎. Conta só o XP feito dentro da temporada. Quem envia o Diário do Guardião (20 por mês) e cumpre as missões do dia chega no nível 10; quem também entrega muitas rotas chega no 15. No fim da temporada tudo zera e começa uma nova.</p>
     ${tp.comecou ? `<div class="t4temph"><b>Nível ${nv} de 15</b><span>${t4n(tp.xp)} XP${prox != null ? ` · faltam ${t4n(prox - tp.xp)} para o ${nv + 1}` : " · temporada completa!"}</span></div><div class="t4xp"><i style="width:${pct}%"></i></div>`
       : `<p class="t4aviso" style="margin:0 0 8px">⏳ Começa em ${dt(tp.inicio)}. Os prêmios já estão aqui para você ver.</p>`}
     <div class="t4passe">${(tp.premios || []).map(card).join("")}</div></section>`;
@@ -378,6 +378,11 @@ function t4ponte() {
   ${cmd && (p.guardiao_sem_dono || []).length ? `<section class="pl6sec t4cx" style="margin-top:14px"><h3>🛡️ Guardião sem dono · ${p.guardiao_sem_dono.length}</h3>
     <p class="t4muted" style="margin:0 0 8px">Nomes digitados no Registro do Guardião que o sistema não reconheceu (últimos 30 dias). Ligue cada um à pessoa: os envios antigos e os próximos passam a contar para ela.</p>
     ${p.guardiao_sem_dono.map((x) => `<form data-t4form="guard" data-nome="${esc(x.nome)}" class="t4inl t4gd"><b>${esc(x.nome)}</b><small class="t4muted">${x.envios} envios</small><select name="pessoa" required><option value="">Quem é?</option>${(p.pessoas_todas || p.equipe || []).map((e) => `<option value="${e.id}">${esc(e.nome)}</option>`).join("")}</select><button type="submit" class="btn peq">Ligar</button></form>`).join("")}</section>` : ""}
+  ${cmd && p.temporada ? `<section class="pl6sec t4cx" style="margin-top:14px"><h3>🗺️ Temporada</h3>
+    <p style="margin:0 0 6px"><b>${esc(p.temporada.nome)}</b> · ${esc(p.temporada.inicio.split("-").reverse().join("/"))} a ${esc(p.temporada.fim.split("-").reverse().join("/"))}</p>
+    ${p.temporada_proxima ? `<p class="t4muted" style="margin:0 0 10px">Depois vem: <b>${esc(p.temporada_proxima.nome)}</b> (${esc(p.temporada_proxima.inicio.split("-").reverse().join("/"))} a ${esc(p.temporada_proxima.fim.split("-").reverse().join("/"))}).</p>` : ""}
+    <button type="button" class="btn" data-t4zerar="1">🧹 Zerar tudo e começar a próxima temporada</button>
+    <small class="t4muted" style="display:block;margin-top:6px">Zera moedas, elementos, baús guardados, 💎, títulos e prêmios não coletados de todo mundo. Nível de patente e o histórico ficam. Não dá para desfazer.</small></section>` : ""}
   <section class="pl6sec t4cx" style="margin-top:14px"><h3>👥 Tripulação</h3><p class="t4muted" style="margin:0 0 6px">Em ordem alfabética, de propósito.${cmd ? " Marque quem é CLT: só essas pessoas podem trocar itens de folga." : ""}</p>
     <div class="t4equipe">${(p.equipe || []).map((x) => `<div><b>${esc(x.nome)}</b><small>Nív. ${x.nivel} · ${esc(x.patente)} · ${t4n(x.ganho_mes)} 🪎 no mês</small>${cmd ? `<label class="t4chk t4clt"><input type="checkbox" data-t4clt="${x.id}" ${x.clt ? "checked" : ""}> CLT (pode trocar folga)</label>` : ""}</div>`).join("")}</div></section>`;
 }
@@ -446,6 +451,11 @@ async function t4click(d, b) {
       } catch (er) { falhou(er); }
     };
     inp.click(); return true;
+  }
+  if (d.t4zerar) {
+    if (!confirmaT4("Zerar tudo de todo mundo e começar a próxima temporada? Não dá para desfazer.", b)) return true;
+    try { const x = await chamar("alfy_temporada_zerar"); aviso(`🧹 Temporada zerada. Agora: ${x.temporada}.`); await t4carregar(); s.ponte = await chamar("alfy_ponte").catch(() => s.ponte); render(); } catch (er) { falhou(er); }
+    return true;
   }
   if (d.t4som) { T4SOM.troca(); if (T4SOM.on()) T4SOM.plim(); render(); return true; }
   if (d.t4abrir) {
