@@ -357,7 +357,20 @@ function ligarKanban() {
 // ---------------------------------------------------------------- 🏆 Placar
 // pontuação V3: (Impacto + Dificuldade + Qualidade) × prazo, de 0 a 10, por rota concluída; responsável e co-responsável pontuam
 const MES_TXT = (d) => new Date(d + "T12:00:00-03:00").toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
-async function carregarPlacar() { [s.placar, s.tesouro] = await Promise.all([chamar("alfy_placar", { p_mes: s.placarMes || null }).catch(() => s.placar), chamar("alfy_placar_tesouro", { p_mes: s.placarMes || null }).catch(() => s.tesouro)]); }
+async function carregarPlacar() { [s.placar, s.tesouro, s.missoes] = await Promise.all([chamar("alfy_placar", { p_mes: s.placarMes || null }).catch(() => s.placar), chamar("alfy_placar_tesouro", { p_mes: s.placarMes || null }).catch(() => s.tesouro), chamar("alfy_missoes").catch(() => s.missoes)]); }
+// 🎯 22/11 (Miguel): missões das Rotas do Tesouro. 1ª: Carta de Embarque = ficha da Nave ID completa vale 🪎 10 (o botão abre o /meu-cadastro da pessoa)
+function missoesHTML() {
+  const ms = (s.missoes || []).filter((m) => m.estado !== "coletada" || (m.coletada_em && Date.now() - new Date(m.coletada_em) < 3 * 864e5));
+  if (!ms.length) return "";
+  return `<section class="pl6sec ts8 ms9"><h3>🎯 Missões</h3>${ms.map((m) => {
+    const rec = `<b class="ms9rec">+${(+m.tesouros || 0).toLocaleString("pt-BR")} 🪎</b>`;
+    const falta = (m.falta || []).length ? `<small class="ms9falta">Falta: ${esc(m.falta.join(", "))}</small>` : "";
+    const acao = m.estado === "pronta" ? `<button class="btn ouro9" type="button" data-colmissao="${m.ganho}">Coletar +${m.tesouros} 🪎</button>`
+      : m.estado === "coletada" ? `<span class="ms9ok">✓ Recebida</span>`
+      : m.acao === "ficha" ? `<button class="btn turq peq" type="button" data-fichalink="1">Ir preencher</button>` : "";
+    return `<div class="ms9c ${m.estado === "pronta" ? "pronta" : ""}"><span class="ms9ic" aria-hidden="true">${m.icone || "🎯"}</span><div class="ms9tx">${rec}<b>${esc(m.nome)}</b><small>${esc(m.descricao || "")}</small>${m.estado === "disponivel" ? falta : ""}</div><div class="ms9ac">${acao}</div></div>`;
+  }).join("")}<p class="nota" style="margin:8px 0 0">Preencheu a ficha? Volte aqui: o ALFY confere sozinho e libera o Coletar.</p></section>`;
+}
 // 🪎 21/11 (Miguel): Placar do Tesouro. Baú da Tripulação (Sea of Thieves), Corrida da Semana (ligas do Duolingo), patente que nunca cai (Trailhead),
 // Maré Boa = entregas no prazo seguidas (ofensiva do Duolingo) e conquistas (Strava). Mesma conta de sempre: tesouro = ponto.
 const PATENTES = [[0, "⚓", "Grumete"], [25, "🪢", "Marinheiro"], [60, "🧭", "Navegador"], [120, "☸️", "Timoneiro"], [250, "🎖️", "Imediato"], [500, "👑", "Capitão"]];
@@ -400,6 +413,7 @@ function entregaHTML(e, comDono) {
 // quanto a rota vale no Placar (mesma conta do banco, alfy._pontos): (Impacto + Dificuldade + Qualidade) × prazo
 function valorRota(r) {
   if ((r.tipo || "").includes("Compromisso") || (r.frente || "").includes("Pessoal") || r.qualidade === "Não realizada") return null;
+  if (r.repete || r.repete_de) return { i: 0, d: 0, q: 0, base: 1, pts: 1, mod: 1, feito: !!r.pontos, rotina: true };   // 22/11: rotina cumprida = 🪎 1
   const i = { Alto: 3, Baixo: 1 }[r.impacto] || 2, d = { "Muito difícil": 4, "Difícil": 3, Alto: 3, "Fácil": 1, Baixo: 1 }[r.esforco] || 2, q = { Acima: 3, Abaixo: 1 }[r.qualidade] || 2, base = i + d + q;
   if (r.pontos) return { i, d, q, base, pts: +r.pontos.pontos, feito: true, mod: r.pontos.mod };
   const atraso = r.prazo && pcod(r.prioridade) !== "P5" ? (Date.now() - new Date(r.prazo)) / 864e5 : -1, mod = atraso <= 0.5 ? 1 : atraso <= 7 ? 0.5 : 0;
@@ -439,7 +453,8 @@ function qualidadeAoConcluir(rt) {
   });
 }
 function valeHTML(r) {
-  const v = valorRota(r); if (!v) return `<p class="vale4 nao">🪎 Não vale tesouro (${r.qualidade === "Não realizada" ? "cancelada, não realizada" : (r.tipo || "").includes("Compromisso") ? "compromisso" : "frente Pessoal"}).</p>`;
+  const v = valorRota(r); if (v?.rotina) return `<p class="vale4">🪎 ${v.feito ? "Valeu" : "Rotina cumprida vale"} <b>1 tesouro</b>.</p>`;
+  if (!v) return `<p class="vale4 nao">🪎 Não vale tesouro (${r.qualidade === "Não realizada" ? "cancelada, não realizada" : (r.tipo || "").includes("Compromisso") ? "compromisso" : "frente Pessoal"}).</p>`;
   const n = (x) => x.toLocaleString("pt-BR"), pad = (k) => !r[k] ? " (vazio, conta 2)" : "";
   const agora = v.feito ? `Valeu <b>${n(v.pts)} tesouros</b>${v.mod === 1 ? ", entregue no prazo" : v.mod === 0.5 ? ", entregue fora do prazo (metade)" : ", entregue muito fora do prazo (zero)"}.`
     : v.mod === 1 ? `Concluída no prazo vale <b>${n(v.base)} tesouros</b>. Até 7 dias fora vale ${n(v.base / 2)}; depois, zero.` : v.mod === 0.5 ? `Já passou do prazo: se concluir até 7 dias depois dele vale <b>${n(v.base / 2)} tesouros</b> (metade). Depois, zero.` : `Passou mais de 7 dias do prazo: <b>não vale mais tesouro</b>.`;
@@ -472,7 +487,7 @@ function vistaPlacar() {
   const lista = comando() ? (pl.entregas || []).filter((e) => !s.plBusca || (e.titulo + " " + nomeDe(e.resp) + " " + nomeDe(e.co)).toLowerCase().includes(s.plBusca.toLowerCase())) : (pl.minhas || []);
   const banco = `<section class="pl6sec"><div class="pl6h"><h3>${comando() ? "Entregas do mês" : "Suas entregas"} · ${(comando() ? pl.entregas : pl.minhas || []).length}</h3><button class="lk" type="button" data-verconc="1">✓ Ver rotas concluídas</button>${comando() ? `<input class="busca" id="pl-busca" placeholder="Buscar entrega ou pessoa" value="${esc(s.plBusca || "")}">` : ""}</div>${lista.map((e) => entregaHTML(e, comando())).join("") || '<p class="nota">Nenhuma entrega neste mês ainda. Cada rota concluída vale até 🪎 10 tesouros.</p>'}</section>`;
   const regra = `<details class="pl7regra"><summary>Como pontua</summary><div class="pl7tab"><div><b>Impacto</b><span>Alto 3 · Médio 2 · Baixo 1</span></div><div><b>Dificuldade</b><span>Muito difícil 4 · Difícil 3 · Simples 2 · Fácil 1</span></div><div><b>Qualidade</b><span>Acima do esperado 3 · Como esperado 2 · Abaixo do esperado 1 · Cancelada, não realizada não conta</span></div><div><b>Prazo</b><span>No prazo ×1 · até 7 dias fora ×½ · mais que isso ×0</span></div></div><p class="nota" style="margin:8px 0 0">🪎 Tesouros = (Impacto + Dificuldade + Qualidade) × prazo, até 10 por rota. Patentes pelos tesouros da vida: ⚓ Grumete 0 · 🪢 Marinheiro 25 · 🧭 Navegador 60 · ☸️ Timoneiro 120 · 🎖️ Imediato 250 · 👑 Capitão 500 (nunca cai). 🌊 Maré Boa = entregas no prazo seguidas; uma fora do prazo zera. Campo vazio conta como o do meio (2 + 2 + 2 = 6). Responsável e co-responsável pontuam. Compromisso e frente Pessoal não contam.</p></details>`;
-  return `<div class="pl7">${nav}<div class="pl7grade"><div class="pl7a">${BRIEFING_TES}${tesouroHTML(ehMesAtual)}${topo}</div><div class="pl7b">${banco}${regra}</div></div></div>`;
+  return `<div class="pl7">${nav}<div class="pl7grade"><div class="pl7a">${ehMesAtual ? missoesHTML() : ""}${BRIEFING_TES}${tesouroHTML(ehMesAtual)}${topo}</div><div class="pl7b">${banco}${regra}</div></div></div>`;
 }
 
 // ---------------------------------------------------------------- 🔁 Rotinas
@@ -2589,6 +2604,12 @@ document.addEventListener("click", async (e) => {
     if (d.ctxok) { try { await chamar("alfy_contexto", { p_rt: d.ctxok, p_falta: "" }); await recarregar(); if (s.aberta) recarregarCartao().then(() => refolha()); aviso("📝 Saiu do rascunho"); renderSeguro(); } catch (er) { falhou(er); } return; }
     if (d.cmmapa) { const mp = mapaPessoa(d.cmmapa, false, tipoMapa()); b.disabled = true; try { await cmMandar(d.cmmapa, "mapa", mp.txt, mp.rts, "tatico"); s.mapasCopiados = { ...(s.mapasCopiados || {}), [d.cmmapa]: "🦜 " + new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) }; render(); } catch (er) { b.disabled = false; falhou(er); } return; }
     if (d.cobrar) { const r = rotaDe(d.cobrar); if (r) { copiar(textoCobrar(r)); registrarCobranca([r.rt], "cobrar"); aviso(`📣 Cobrança copiada. Cole no WhatsApp de ${curto(nomeDe(r.responsavel_id))}`); } return; }
+    if (d.fichalink) {   // abre a ficha da Nave ID da pessoa numa aba nova (a aba abre já no clique, para o navegador não bloquear)
+      const w = window.open("about:blank", "_blank"); b.disabled = true;
+      try { const x = await chamar("alfy_ficha_link"); if (!x?.ok) { w?.close(); aviso(x?.erro || "Não consegui abrir a ficha.", true); } else if (w) w.location.href = x.url; else location.href = x.url; }
+      catch (er) { w?.close(); falhou(er); }
+      b.disabled = false; return; }
+    if (d.colmissao) { b.disabled = true; try { const x = await chamar("alfy_missao_coletar", { p_id: +d.colmissao }); if (x?.n) aviso(`🪎 +${(+x.tesouros).toLocaleString("pt-BR")} tesouros coletados!`); await carregarPlacar(); render(); } catch (er) { b.disabled = false; falhou(er); } return; }
     if (d.cobrhist) { const rt = d.cobrhist; s.cobrHist = s.cobrHist || {}; if (s.cobrHist[rt]) delete s.cobrHist[rt]; else { s.cobrHist[rt] = "carregando"; chamar("alfy_cobrancas", { p_rt: rt }).then((h) => { if (s.cobrHist[rt]) { s.cobrHist[rt] = h || []; s.aberta === rt && refolha(); renderSeguro(); } }); } if (s.aberta === rt) refolha(); renderSeguro(); return; }
     if (d.copiarrota) { const r = rotaDe(d.copiarrota); if (r) { copiar(textoRota(r)); registrarCobranca([r.rt], "copiar"); const tx = b.innerHTML; b.innerHTML = b.innerHTML.replace("📋", "✓"); setTimeout(() => { b.innerHTML = tx; }, 1500); } return; }
     if (d.rrmodo) { s.rr.modo = d.rrmodo; s.rr.foco = null; rrSalvar(); render(); return; }
@@ -2955,3 +2976,4 @@ async function conferirVersao() {
 }
 setInterval(conferirVersao, 180000);
 document.addEventListener("visibilitychange", () => { if (!document.hidden) conferirVersao(); });
+document.addEventListener("visibilitychange", () => { if (!document.hidden && token && s.aba === "placar") chamar("alfy_missoes").then((m) => { if (JSON.stringify(m) !== JSON.stringify(s.missoes)) { s.missoes = m; renderSeguro(); } }).catch(() => {}); });

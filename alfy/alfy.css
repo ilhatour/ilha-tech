@@ -1683,3 +1683,17 @@ textarea.melhorando{opacity:.6;border-color:var(--lilas)!important}
 .ts9brief:not([open]) summary::after{content:"▸"}
 .ts9brief p{margin:10px 0 0;line-height:1.5}
 .ts9premio{padding:8px 10px;border-radius:8px;background:rgba(232,196,104,.12)}
+/* 22/11 missões das Rotas do Tesouro */
+.ms9 h3{margin-bottom:6px}
+.ms9c{display:grid;grid-template-columns:40px minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px 0;border-top:1px solid var(--linha)}
+.ms9c:first-of-type{border-top:0}
+.ms9ic{font-size:28px;line-height:1;text-align:center}
+.ms9tx{display:flex;flex-direction:column;gap:2px;min-width:0}
+.ms9tx b{font-family:var(--fd);font-size:15px}
+.ms9tx small{font-size:13px;color:var(--aco-2)}
+.ms9rec{font-family:var(--fd);font-weight:800;font-size:18px;color:#E8C468}
+.ms9falta{color:#F6B24A!important}
+.ms9ok{color:var(--foam);font-weight:600;font-size:13px}
+.ms9c.pronta .ms9ic{filter:drop-shadow(0 0 10px rgba(232,196,104,.6))}
+.btn.ouro9{background:linear-gradient(180deg,#F1D27E,#D9B04F);color:#2B2008;border:1px solid #C9A44A;font-weight:700}
+@media (max-width:520px){.ms9c{grid-template-columns:34px minmax(0,1fr)}.ms9ac{grid-column:2}}
