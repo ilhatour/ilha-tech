@@ -2101,3 +2101,4 @@ textarea.melhorando{opacity:.6;border-color:var(--lilas)!important}
 @media (max-width:420px){.t4lims{grid-template-columns:repeat(3,minmax(0,1fr))}}
 .t4gd{flex-wrap:wrap;align-items:center;padding:6px 0;border-top:1px solid var(--linha)}.t4gd b{min-width:120px}.t4gd select{flex:1;min-width:140px;background:var(--ferro-0);border:1px solid var(--linha);border-radius:8px;padding:8px;color:var(--texto)}
 a.btn.t4mbtn{display:inline-flex;align-items:center;justify-content:center;text-decoration:none}
+.t4rod{font-family:var(--fb);font-size:13px;color:var(--foam)}

@@ -1,14 +1,14 @@
-// 🪎 Rotas do Tesouro · Modelo de Moedas v3 (22/11/2026): baús conquistados e guardados, 🪙 moeda, elementos 🔥💧🌬️🌱, 💎 e 🎖️;
+// 🪎 Rotas do Tesouro · Modelo de Moedas v3 (22/11/2026): baús conquistados e guardados, 🪙 moeda, elementos 🔥💧⚡🌱, 💎 e 🎖️;
 // desafios no formato de missões do MU (atividade do dia com 3 baús), 🪎 Abrir Baús (1 por vez), ☸️ Roda do Leme (🪙 + 🔥, única fonte de 💎), Mercado (só o Cais por enquanto),
 // ⚓ Cais (baú ↔ moeda), 🏦 Lastro, XP e nível 1 a 100, patentes da Marinha, frentes, conquistas, Trilha, reconhecimento e Ponte.
 // Toda conta e todo sorteio acontecem no banco (alfy_tesouros, alfy_coletar, alfy_abrir_baus, alfy_roda_girar, alfy_mercado_comprar, alfy_reconhecer...).
 // Usa os globais do alfy.js: s, token, chamar, esc, render, aviso, falhou, comando, vistaPlacar.
 /* global s, token, chamar, esc, render, aviso, falhou, comando, vistaPlacar, frenteCurta */
 "use strict";
-const T4_JOIA = { tesouro: ["🪎", "baú", "baús"], moeda: ["🪙", "moeda", "moedas"], fogo: ["🔥", "foguinho", "foguinhos"], gota: ["💧", "gotinha", "gotinhas"], raio: ["🌬️", "ventinho", "ventinhos"], broto: ["🌱", "brotinho", "brotinhos"], diamante: ["💎", "diamante", "diamantes"], medalha: ["🎖️", "Medalha de Honra", "Medalhas de Honra"] };
+const T4_JOIA = { tesouro: ["🪎", "baú", "baús"], moeda: ["🪙", "moeda", "moedas"], fogo: ["🔥", "foguinho", "foguinhos"], gota: ["💧", "gotinha", "gotinhas"], raio: ["⚡", "ventinho", "ventinhos"], broto: ["🌱", "brotinho", "brotinhos"], diamante: ["💎", "diamante", "diamantes"], medalha: ["🎖️", "Medalha de Honra", "Medalhas de Honra"] };
 const T4_ORDEM = ["tesouro", "moeda", "fogo", "gota", "raio", "broto", "diamante", "medalha"];
 const T4_ELEM = ["fogo", "gota", "raio", "broto"];
-const T4_BREVE = ["raio", "broto"];
+const T4_BREVE = [];
 const T4_VALOR = { tesouro: 10, moeda: 1, fogo: 30, gota: 300, raio: null, broto: null, diamante: 10000, medalha: 50000 };
 const t4valor = () => ({ ...T4_VALOR, ...(s.tes?.valor || {}) });
 const T4_PATENTES = [[1, "Recruta", "▫️", "Bote", "🚣"], [2, "Marinheiro", "▪️", "Bote", "🚣"], [3, "Cabo", "🔻", "Lancha", "🚤"], [4, "Terceiro-Sargento", "🔺", "Lancha", "🚤"], [5, "Segundo-Sargento", "🔺", "Navio-Patrulha", "🛥️"], [6, "Primeiro-Sargento", "🔺", "Navio-Patrulha", "🛥️"], [7, "Suboficial", "🔶", "Corveta", "🛳️"], [8, "Guarda-Marinha", "⚓", "Corveta", "🛳️"], [9, "Segundo-Tenente", "⭐", "Fragata", "🚢"], [10, "Primeiro-Tenente", "⭐", "Fragata", "🚢"], [11, "Capitão-Tenente", "🎖️", "Contratorpedeiro", "🚢"], [12, "Capitão de Corveta", "🎖️", "Contratorpedeiro", "🚢"], [13, "Capitão de Fragata", "🏅", "Cruzador", "🚢"], [14, "Capitão de Mar e Guerra", "🏅", "Cruzador", "🚢"], [15, "Almirante", "👑", "Capitânia da Esquadra", "🚢"]];
@@ -107,8 +107,8 @@ function t4inicio() {
     <section class="pl6sec t4cx"><h3>Patentes da Marinha</h3><p class="t4muted" style="margin:0 0 8px">Cada nível do passe da temporada é uma patente; todo mundo começa Recruta e a patente zera junto com a temporada. Cada interação vale XP: ação ou comentário 1, missão coletada 2, dia com o app aberto 3, Diário do Guardião 3, rota entregue 5 (até 60 por dia). O baú também pode soltar ✨ XP.</p>
       <ol class="t4pats">${T4_PATENTES.map(([m, n, ins, navio]) => `<li class="${nv >= m ? "ja" : ""} ${nv === m ? "aqui" : ""}"><span>${ins}</span><b>${n}</b><small>nível ${m}${nv === m ? " · você" : ""} · ${navio}</small></li>`).join("")}</ol></section>
   </div>
-  ${s.tes.teto_mes ? `<section class="pl6sec t4cx" style="margin-top:14px"><h3>🎁 Prêmios do mês</h3><div class="t4orc"><span><i style="width:${Math.min(100, 100 * s.tes.teto_mes.usado / Math.max(1, s.tes.teto_mes.teto))}%"></i></span><b>${t4n(s.tes.teto_mes.usado)} de ${t4n(s.tes.teto_mes.teto)} 🪙</b></div><small class="t4muted">Cada pessoa tem um limite de prêmios por mês, medido em 🪙 (os elementos contam pelo valor deles). Conta o que sai das missões, do baú e da Roda (o 🪎 em si não conta). Os prêmios da temporada, o 💎 e a 🎖️ ficam fora. Bateu o teto, o que faltar fica guardado para o mês seguinte.</small>
-    ${s.tes.limites ? `<h3 style="margin-top:14px">Moedas especiais</h3><div class="t4lims">${["fogo", "gota", "raio", "broto", "diamante"].filter((k) => s.tes.limites[k]).map((k) => { const l = s.tes.limites[k]; return `<div class="t4lim"><span>${T4_JOIA[k][0]}</span><b>${t4n(l.mes)}/${t4n(l.mes_max)}</b><small>no mês</small><b>${t4n(l.temp)}/${t4n(l.temp_max)}</b><small>na temporada</small></div>`; }).join("")}</div>
+  ${s.tes.teto_mes && +s.tes.teto_mes.teto < 1e7 ? `<section class="pl6sec t4cx" style="margin-top:14px"><h3>🎁 Prêmios do mês</h3><div class="t4orc"><span><i style="width:${Math.min(100, 100 * s.tes.teto_mes.usado / Math.max(1, s.tes.teto_mes.teto))}%"></i></span><b>${t4n(s.tes.teto_mes.usado)} de ${t4n(s.tes.teto_mes.teto)} 🪙</b></div><small class="t4muted">Cada pessoa tem um limite de prêmios por mês, medido em 🪙 (os elementos contam pelo valor deles). Conta o que sai das missões, do baú e da Roda (o 🪎 em si não conta). Os prêmios da temporada, o 💎 e a 🎖️ ficam fora. Bateu o teto, o que faltar fica guardado para o mês seguinte.</small>
+    ${s.tes.limites ? `<h3 style="margin-top:14px">Moedas especiais</h3><div class="t4lims">${["fogo", "gota", "raio", "broto", "diamante"].filter((k) => s.tes.limites[k]).map((k) => { const l = s.tes.limites[k]; return `<div class="t4lim"><span>${T4_JOIA[k][0]}</span><b>${t4n(l.mes)}/${t4n(l.mes_max)}</b><small>no mês</small>${+l.temp_max < 99 ? `<b>${t4n(l.temp)}/${t4n(l.temp_max)}</b><small>na temporada</small>` : ""}</div>`; }).join("")}</div>
       <small class="t4muted">Limite de cada pessoa para o que sai do baú, da Roda e das missões. Passou: no baú ou na Roda vira 🪙; numa missão, fica guardado até caber. Os prêmios da temporada são garantidos e ficam fora.</small>` : ""}</section>` : ""}
   ${t4atributos()}
   <section class="pl6sec t4cx" style="margin-top:14px"><h3>Valor das joias</h3><div class="t4valor">${T4_ORDEM.map((k) => `<span>${T4_JOIA[k][0]} 1 ${T4_JOIA[k][1]} ${T4_BREVE.includes(k) ? "· em breve" : `= ${t4n(t4valor()[k])} 🪙`}</span>`).join("")}</div>
@@ -119,7 +119,7 @@ function t4inicio() {
 const T4_ELEMS = [
   ["fogo", "🔥", "Fogo", ["Faísca", "Chama", "Fogueira", "Labareda", "Vulcão"], "foguinhos ganhos (não comprados) e missões de venda"],
   ["gota", "💧", "Água", ["Gota", "Riacho", "Rio", "Mar", "Oceano"], "gotinhas ganhas e missões de cliente e elogio"],
-  ["raio", "🌬️", "Ar", ["Brisa", "Vento", "Ventania", "Tempestade", "Furacão"], "ventinhos ganhos e missões da área Ar"],
+  ["raio", "⚡", "Ar", ["Brisa", "Vento", "Ventania", "Tempestade", "Furacão"], "ventinhos ganhos e missões da área Ar"],
   ["broto", "🌱", "Terra", ["Semente", "Broto", "Árvore", "Floresta", "Montanha"], "brotinhos ganhos e missões da operação na ilha"],
 ];
 function t4atributos() {
@@ -230,7 +230,7 @@ function t4temporada() {
 }
 function t4trilha() {
   const t = s.tes, marcos = t.trilha.marcos || [], g = +t.ganho_mes || 0, mes = t.trilha.mes;
-  const st = (i) => { const x = (t.ganhos || []).find((y) => y.missao === "trilha" && y.ref === `${mes}:${i + 1}`); return x ? x : null; };
+  const st = (i) => { const x = (t.ganhos || []).find((y) => y.missao === "trilha" && y.ref === `${t.temporada?.id}:${mes}:${i + 1}`); return x ? x : null; };
   const idx = marcos.filter((m) => g >= m[0]).length, prox = marcos[idx];
   return `${t4temporada()}<section class="pl6sec t4cx" style="margin-top:14px"><h3>📅 Marcos do mês</h3><p class="t4muted" style="margin:0 0 6px">Cada baú conquistado no mês leva o barco adiante. Abrir baús, girar a Roda ou comprar no Mercado não volta o barco.</p>
     <div class="t4trh"><b>${t4n(g)} 🪎 conquistados no mês</b><span class="t4muted">${prox ? `próximo marco em ${prox[0]} 🪎` : "trilha completa! 🎉"}</span></div>
@@ -302,7 +302,7 @@ function t4rar(pr, nome) {
   const m = +pr.moeda || 0; if (m >= 500) return 4; if (m >= 200 || (m >= 30 && m < 50)) return 3; if (m >= 100 || m === 12) return 2; if (m >= 50 || m === 6) return 1; return 0;
 }
 const t4rarNome = (x) => x.nome || T4_RAR[t4rar(x.premio)]?.[1] || "";
-const t4ico = (pr) => pr.diamante ? "💎" : pr.gratis ? "🔁" : pr.xp ? "✨" : pr.fogo ? "🔥" : pr.gota ? "💧" : pr.raio ? "🌬️" : pr.broto ? "🌱" : pr.tesouro ? "🪎" : "🪙";
+const t4ico = (pr) => pr.diamante ? "💎" : pr.gratis ? "🔁" : pr.xp ? "✨" : pr.fogo ? "🔥" : pr.gota ? "💧" : pr.raio ? "⚡" : pr.broto ? "🌱" : pr.tesouro ? "🪎" : "🪙";
 function t4tabelaPremios(tab, roda) {
   const tot = tab.reduce((a, x) => a + +x.p, 0);
   return `<div class="t4chs">${tab.map((x) => `<div class="t4chl r${t4rar(x.premio, x.nome)}"><span class="t4chi">${t4ico(x.premio)}</span><b>${esc(t4rarNome(x))}</b><span class="t4chp">${x.premio.gratis ? (roda ? "gira de novo grátis" : "abre outro grátis") : t4premio(x.premio)}</span><span class="t4chc">${(100 * x.p / tot).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%</span></div>`).join("")}</div>`;
@@ -312,15 +312,15 @@ function t4baus() {
   const btn = (n) => `<button type="button" class="btn ${n === 1 ? "ouro9" : "ouro9 t4lt"}" data-t4abrir="${n}" ${ab >= n * c && !s.t4abrindo ? "" : "disabled"}>Abrir ${n}</button>`;
   return `<div class="t4g2"><section class="pl6sec t4cx t4bauw">
       <div class="t4bauv ${s.t4abrindo ? "abrindo" : ""} ${s.t4estoura ? "estoura" : ""} ${u && !s.t4abrindo ? "r" + t4rar(u.premio, u.nome) : ""}" aria-hidden="true"><span class="t4raios"></span><span class="t4bau">🪎</span>${Array.from({ length: 10 }, (_, i) => `<i class="t4fai" style="--a:${i * 36}deg"></i>`).join("")}</div>
-      <div class="t4abriu" aria-live="polite">${s.t4abrindo ? "Abrindo…" : lote ? `<b>${lote.length} baús abertos</b>` : u ? `<span class="t4rarp r${t4rar(u.premio, u.nome)}">${esc(t4rarNome(u))}</span><b>${u.sorteado?.gratis ? "🔁 Nova rodada: abre outro grátis" : esc(t4premio(u.premio))}</b>` : "Escolha quantos baús abrir"}</div>
+      <div class="t4abriu" aria-live="polite">${s.t4abrindo ? "Abrindo…" : lote ? `<b>${lote.length} baús abertos</b>${lote.some((x) => x.sorteado?.gratis) ? `<small class="t4rod">🔁 ${lote.filter((x) => x.sorteado?.gratis).length} nova${lote.filter((x) => x.sorteado?.gratis).length > 1 ? "s rodadas" : " rodada"}: cada uma abriu outro baú de graça</small>` : ""}` : u ? `<span class="t4rarp r${t4rar(u.premio, u.nome)}">${esc(t4rarNome(u))}</span><b>${u.sorteado?.gratis ? "🔁 Nova rodada: abre outro grátis" : esc(t4premio(u.premio))}</b>` : "Escolha quantos baús abrir"}</div>
       <div class="t4tri">${btn(1)}${btn(10)}${btn(20)}</div>
       ${lote ? `<div class="t4lote">${lote.map((x, i) => `<span class="t4lc r${t4rar(x.premio, x.nome)}" style="animation-delay:${i * 90}ms"><i>${t4ico(x.sorteado?.gratis ? { gratis: 1 } : x.premio)}</i><small>${x.sorteado?.gratis ? "+1" : x.premio.moeda || Object.values(x.premio).find((v) => typeof v === "number") || ""}</small></span>`).join("")}</div>
         <p class="t4lotet">Total: <b>${esc(t4premio(lote.reduce((o, x) => { Object.entries(x.premio || {}).forEach(([k, v]) => { if (typeof v === "number" && k !== "gratis") o[k] = (o[k] || 0) + v; }); return o; }, {})))}</b>${lote.some((x) => x.sorteado?.gratis) ? ` · ${lote.filter((x) => x.sorteado?.gratis).length} nova rodada` : ""}</p>` : ""}
       <div class="t4bauinfo"><span><b>${t4n(g)}</b> 🪎 guardados</span>${ab < g ? `<span>${t4n(g - ab)} de rotas de hoje abrem amanhã</span>` : ""}</div>
       ${!lote && (s.t4hist || []).length ? `<div class="t4hist" aria-label="Últimos prêmios">${s.t4hist.map((x) => `<span class="t4hi r${t4rar(x.premio, x.nome)}" title="${esc(t4rarNome(x))}">${t4ico(x.premio)}${x.premio.moeda ? `<small>${x.premio.moeda}</small>` : ""}</span>`).join("")}</div>` : ""}
       <small class="t4muted">Abrir não mexe nos baús conquistados: sua patente e sua parte no prêmio da tripulação continuam iguais.</small></section>
-    <section class="pl6sec t4cx"><h3>O que pode vir de 1 baú</h3>${t4tabelaPremios(a.tabela || [])}
-      <p class="t4muted" style="margin:10px 0 0">Cada baú é sorteado sozinho, mesmo abrindo 10 ou 20 de uma vez. Em 100 baús vêm, em média, uns 500 🪙, 4 🔥, 40 ✨ XP e de vez em quando 💧, 🌬️ ou 🌱.</p></section></div>`;
+    <section class="pl6sec t4cx"><h3>O que pode vir de 1 baú</h3><p class="t4muted" style="margin:0 0 8px">🔁 Nova rodada = abre outro baú na hora, de graça.</p>${t4tabelaPremios(a.tabela || [])}
+      <p class="t4muted" style="margin:10px 0 0">Cada baú é sorteado sozinho, mesmo abrindo 10 ou 20 de uma vez. Em 100 baús vêm, em média, uns 500 🪙, 4 🔥, 40 ✨ XP e de vez em quando 💧, ⚡ ou 🌱.</p></section></div>`;
 }
 function t4roda() {
   const r = s.tes.roda || {}, tab = r.tabela || [], tot = tab.reduce((a, x) => a + +x.p, 0), sd = s.tes.saldo, cu = r.custo || {};
@@ -472,7 +472,8 @@ async function t4click(d, b) {
       const tab = s.tes.abrir?.tabela || [], nm = (pr) => tab.find((y) => JSON.stringify(y.premio) === JSON.stringify(pr))?.nome;
       const lista = (x.aberturas || []).map((ab) => ({ ...ab, nome: nm(ab.sorteado) }));
       s.t4abrindo = false; s.t4estoura = true;
-      if (lista.length === 1) { s.t4ult = lista[0]; } else if (lista.length) { s.t4lote = lista; }
+      const rod = lista.filter((y) => y.sorteado?.gratis).length;
+      if (n === 1 && lista.length) { s.t4ult = { ...lista[lista.length - 1], rodadas: rod }; if (rod) s.t4lote = lista; } else if (lista.length) { s.t4lote = lista; }
       s.t4hist = [...lista.map((y) => ({ premio: y.premio, nome: y.nome })).reverse(), ...(s.t4hist || [])].slice(0, 12);
       const top = lista.reduce((m, y) => Math.max(m, T4_NIVSOM[t4rar(y.premio, y.nome)] || 0), 0);
       await t4carregar(); render();
