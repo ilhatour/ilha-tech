@@ -2015,3 +2015,36 @@ textarea.melhorando{opacity:.6;border-color:var(--lilas)!important}
 }
 .t4catl .t4chk{display:flex;flex-direction:row;align-items:center;gap:8px;font-size:13px;color:var(--aco-2)}
 .t4catl input[type=checkbox],.t4 input[type=checkbox]{width:20px;height:20px;min-height:0;flex:none;accent-color:var(--turq)}
+/* v2.74.0 · baú girando no círculo, lote 1/10/20, Roda com expectativa, som */
+.t4topo{position:relative}
+.t4somb{position:absolute;top:10px;right:10px;width:36px;height:36px;border-radius:50%;border:1px solid var(--linha);background:var(--ferro-1);font-size:17px;cursor:pointer;display:grid;place-items:center;padding:0}
+.t4bauv{cursor:default;overflow:visible;perspective:600px}
+.t4bauv .t4raios{inset:-12%;border-radius:50%;overflow:hidden;opacity:.55;display:block}
+.t4bauv.abrindo .t4raios{opacity:1;animation:t4gira 1.2s linear infinite}
+.t4bauv.abrindo{animation:t4pulsa .5s ease-in-out infinite;border-color:#F1D27E}
+.t4bauv.abrindo .t4bau{animation:t4roda3d 1.7s cubic-bezier(.5,0,.2,1) forwards}
+@keyframes t4roda3d{0%{transform:rotateY(0) scale(1)}60%{transform:rotateY(1080deg) scale(1.12)}85%{transform:rotateY(1800deg) scale(1.22)}100%{transform:rotateY(2160deg) scale(1.3);filter:brightness(1.7) drop-shadow(0 0 22px #F1D27E)}}
+@keyframes t4pulsa{0%,100%{box-shadow:0 0 0 4px rgba(241,210,126,.2),0 0 24px rgba(241,210,126,.25)}50%{box-shadow:0 0 0 8px rgba(241,210,126,.35),0 0 60px rgba(241,210,126,.55)}}
+.t4fai{position:absolute;left:50%;top:50%;width:8px;height:8px;margin:-4px;border-radius:50%;background:var(--rc,#F1D27E);box-shadow:0 0 10px var(--rc,#F1D27E),0 0 18px #fff;opacity:0;pointer-events:none}
+.t4bauv.estoura .t4fai{animation:t4fai2 .8s ease-out forwards}
+.t4bauv.estoura .t4bau{animation:t4pop .5s cubic-bezier(.2,1.6,.4,1)}
+.t4bauv.estoura::after{content:"";position:absolute;inset:0;border-radius:50%;background:radial-gradient(circle,#fff,var(--rc,#F1D27E) 40%,transparent 70%);animation:t4flash2 .6s ease-out forwards;pointer-events:none}
+@keyframes t4fai2{0%{opacity:1;transform:rotate(var(--a)) translateX(0)}100%{opacity:0;transform:rotate(var(--a)) translateX(130px)}}
+@keyframes t4pop{0%{transform:scale(1.4)}100%{transform:scale(1)}}
+@keyframes t4flash2{0%{opacity:.95;transform:scale(.4)}100%{opacity:0;transform:scale(1.9)}}
+.t4tri{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;width:100%;max-width:360px}
+.t4tri .btn{min-height:48px;font-size:16px;border-radius:12px;justify-content:center}
+.t4lote{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;width:100%;max-width:360px}
+.t4lc{position:relative;aspect-ratio:1;display:grid;place-items:center;border-radius:10px;border:1.5px solid var(--rc);background:color-mix(in srgb,var(--rc) 18%,var(--ferro-0));font-size:22px;opacity:0;animation:t4carta2 .35s cubic-bezier(.2,1.5,.4,1) forwards;box-shadow:0 0 10px color-mix(in srgb,var(--rc) 40%,transparent)}
+.t4lc i{font-style:normal;line-height:1}
+.t4lc small{position:absolute;right:3px;bottom:1px;font-size:10.5px;font-weight:800;text-shadow:0 1px 2px #000}
+@keyframes t4carta2{from{opacity:0;transform:scale(.4) rotate(-12deg)}to{opacity:1;transform:none}}
+.t4lotet{margin:0;font-size:15px;text-align:center}
+.t4rodaw .t4rodag{position:absolute;inset:-8px;border-radius:50%;pointer-events:none;opacity:0}
+.t4rodaw.girando .t4rodag{opacity:1;animation:t4pulsa .45s ease-in-out infinite}
+.t4rodaw.girando .t4pont{animation:t4lingua .09s ease-in-out infinite alternate;transform-origin:50% 0}
+@keyframes t4lingua{from{transform:translateX(-50%) rotate(-9deg)}to{transform:translateX(-50%) rotate(9deg)}}
+.t4rodaw.ganhou .t4rodag{opacity:1;box-shadow:0 0 0 4px var(--rc),0 0 50px var(--rc);animation:t4fade .4s}
+@media (prefers-reduced-motion:reduce){.t4bauv.abrindo .t4bau,.t4bauv.abrindo,.t4bauv.abrindo .t4raios,.t4bauv.estoura::after,.t4lc,.t4rodaw.girando .t4pont,.t4rodaw.girando .t4rodag{animation:none!important;opacity:1}}
+@media (max-width:640px){.t4somb{top:8px;right:8px}}
+@media (prefers-reduced-motion:reduce){.t4fai{display:none}}

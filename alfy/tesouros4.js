@@ -25,6 +25,34 @@ const t4seg = () => { const h = new Date(t4hoje() + "T12:00:00Z"), d = (h.getUTC
 const t4frente = (f) => (typeof frenteCurta === "function" ? frenteCurta(f) : f);
 const t4ok = () => s.tes && !s.tes.bloqueado;
 
+// 🔊 som feito no próprio navegador (Web Audio): suspense, tique da Roda, plim e vitória. Sem arquivo de áudio. Desliga no 🔊 do topo.
+const T4SOM = (() => {
+  let ctx = null, mem = null;
+  const on = () => { if (mem != null) return mem; try { return localStorage.getItem("t4som") !== "0"; } catch (e) { return true; } };
+  const ac = () => { if (!on()) return null; try { if (!ctx) { const C = window.AudioContext || window.webkitAudioContext; if (!C) return null; ctx = new C(); } if (ctx.state === "suspended") ctx.resume(); return ctx; } catch (e) { return null; } };
+  const nota = (fr, t0, dur, tipo = "sine", vol = 0.15) => { const c = ac(); if (!c) return; const t = c.currentTime + t0, o = c.createOscillator(), g = c.createGain();
+    o.type = tipo; o.frequency.setValueAtTime(fr, t); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g); g.connect(c.destination); o.start(t); o.stop(t + dur + 0.03); };
+  return {
+    on, troca() { mem = !on(); try { localStorage.setItem("t4som", mem ? "1" : "0"); } catch (e) { /* sem armazenamento: fica só nesta visita */ } return mem; },
+    tick(t0 = 0, fr = 1900) { nota(fr, t0, 0.03, "square", 0.045); nota(fr / 2, t0, 0.02, "triangle", 0.03); },
+    plim() { nota(1318.5, 0, 0.3, "sine", 0.2); nota(1975.5, 0.09, 0.5, "sine", 0.16); nota(2637, 0.18, 0.45, "sine", 0.08); },
+    moeda(t0 = 0) { nota(2637, t0, 0.1, "triangle", 0.09); nota(3520, t0 + 0.04, 0.16, "triangle", 0.06); },
+    // rufar de tambor que acelera + nota subindo, para criar expectativa
+    suspense(seg) { const c = ac(); if (!c) return; let t = 0, gap = 0.13;
+      while (t < seg) { nota(196 + (t / seg) * 700, t, 0.07, "triangle", 0.06); nota(98, t, 0.05, "square", 0.025); t += gap; gap = Math.max(0.035, gap * 0.92); }
+      const o = c.createOscillator(), g = c.createGain(), fl = c.createBiquadFilter(), t0 = c.currentTime;
+      o.type = "sawtooth"; o.frequency.setValueAtTime(160, t0); o.frequency.exponentialRampToValueAtTime(880, t0 + seg); fl.type = "lowpass"; fl.frequency.value = 1400;
+      g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(0.035, t0 + seg * 0.9); g.gain.exponentialRampToValueAtTime(0.0001, t0 + seg + 0.06);
+      o.connect(fl); fl.connect(g); g.connect(c.destination); o.start(t0); o.stop(t0 + seg + 0.1); },
+    // vitória: quanto mais raro, maior a fanfarra
+    vitoria(n) { const esc = [523.25, 659.25, 783.99, 1046.5, 1318.5, 1567.98, 2093]; const k = Math.min(7, 2 + n);
+      for (let i = 0; i < k; i++) nota(esc[i], i * 0.085, 0.4, "triangle", 0.13);
+      if (n >= 4) for (let i = 0; i < 10; i++) nota(1800 + Math.random() * 2400, 0.55 + i * 0.055, 0.16, "sine", 0.05); },
+  };
+})();
+const T4_NIVSOM = { 0: 0, 1: 1, 2: 2, 3: 3, 4: 4, 5: 2, 6: 6, 7: 2, 8: 4, 9: 5, 10: 5 };
+
 // presença: 1 vez por carregamento do app (vale XP e o desafio "Bom dia, Guardião")
 (function t4presenca() { if (typeof token !== "undefined" && token) chamar("alfy_presenca").catch(() => {}); else setTimeout(t4presenca, 5000); })();
 
@@ -51,6 +79,7 @@ function t4topo(np) {
   const t = s.tes, nv = t.nivel, pa = nv.patente, faltam = nv.prox != null ? nv.prox - nv.xp : 0, pct = nv.prox != null ? Math.round(100 * (nv.xp - nv.ini) / (nv.prox - nv.ini)) : 100;
   return `<section class="t4topo">
     <div class="t4navio" aria-hidden="true">${pa.ni}</div>
+    <button type="button" class="t4somb" data-t4som="1" aria-label="${T4SOM.on() ? "Desligar o som" : "Ligar o som"}" title="${T4SOM.on() ? "Som ligado" : "Som desligado"}">${T4SOM.on() ? "🔊" : "🔇"}</button>
     <div class="t4quem"><div class="t4nome"><b>${esc((t.eu.nome || "").split(" ")[0])}</b><span class="t4niv">Nível ${nv.nivel}</span>${t.eu.titulo ? `<span class="t4titulo">${esc(t.eu.titulo)}</span>` : ""}</div>
       <div class="t4pat">${pa.ins} ${esc(pa.nome)} · ${esc(pa.navio)}</div>
       <div class="t4xp" aria-hidden="true"><i style="width:${pct}%"></i></div>
@@ -234,16 +263,19 @@ function t4tabelaPremios(tab, roda) {
   return `<div class="t4chs">${tab.map((x) => `<div class="t4chl r${t4rar(x.premio, x.nome)}"><span class="t4chi">${t4ico(x.premio)}</span><b>${esc(t4rarNome(x))}</b><span class="t4chp">${x.premio.gratis ? (roda ? "gira de novo grátis" : "abre outro grátis") : t4premio(x.premio)}</span><span class="t4chc">${(100 * x.p / tot).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%</span></div>`).join("")}</div>`;
 }
 function t4baus() {
-  const a = s.tes.abrir || {}, g = +s.tes.saldo.tesouro || 0, ab = +a.abrivel || 0, pode = ab >= +(a.custo || 1) && !s.t4abrindo, u = s.t4ult;
+  const a = s.tes.abrir || {}, g = +s.tes.saldo.tesouro || 0, ab = +a.abrivel || 0, c = +(a.custo || 1), u = s.t4ult, lote = s.t4lote;
+  const btn = (n) => `<button type="button" class="btn ${n === 1 ? "ouro9" : "ouro9 t4lt"}" data-t4abrir="${n}" ${ab >= n * c && !s.t4abrindo ? "" : "disabled"}>Abrir ${n}</button>`;
   return `<div class="t4g2"><section class="pl6sec t4cx t4bauw">
-      <button type="button" class="t4bauv ${s.t4abrindo ? "abrindo" : ""} ${u && !s.t4abrindo ? "r" + t4rar(u.premio, u.nome) : ""}" data-t4abrir="1" ${pode ? "" : "disabled"} aria-label="Abrir 1 baú"><span class="t4bau">🪎</span></button>
-      <div class="t4abriu" aria-live="polite">${s.t4abrindo ? "Abrindo…" : u ? `<span class="t4rarp r${t4rar(u.premio, u.nome)}">${esc(t4rarNome(u))}</span><b>${u.sorteado?.gratis ? "🔁 Nova rodada: abre outro grátis" : esc(t4premio(u.premio))}</b>` : "Toque no baú para abrir"}</div>
-      <button type="button" class="btn ouro9 t4btnL" data-t4abrir="1" ${pode ? "" : "disabled"}>${ab >= +(a.custo || 1) ? "Abrir 1 baú" : "Sem baú para abrir"}</button>
+      <div class="t4bauv ${s.t4abrindo ? "abrindo" : ""} ${s.t4estoura ? "estoura" : ""} ${u && !s.t4abrindo ? "r" + t4rar(u.premio, u.nome) : ""}" aria-hidden="true"><span class="t4raios"></span><span class="t4bau">🪎</span>${Array.from({ length: 10 }, (_, i) => `<i class="t4fai" style="--a:${i * 36}deg"></i>`).join("")}</div>
+      <div class="t4abriu" aria-live="polite">${s.t4abrindo ? "Abrindo…" : lote ? `<b>${lote.length} baús abertos</b>` : u ? `<span class="t4rarp r${t4rar(u.premio, u.nome)}">${esc(t4rarNome(u))}</span><b>${u.sorteado?.gratis ? "🔁 Nova rodada: abre outro grátis" : esc(t4premio(u.premio))}</b>` : "Escolha quantos baús abrir"}</div>
+      <div class="t4tri">${btn(1)}${btn(10)}${btn(20)}</div>
+      ${lote ? `<div class="t4lote">${lote.map((x, i) => `<span class="t4lc r${t4rar(x.premio, x.nome)}" style="animation-delay:${i * 90}ms"><i>${t4ico(x.sorteado?.gratis ? { gratis: 1 } : x.premio)}</i><small>${x.sorteado?.gratis ? "+1" : x.premio.moeda || Object.values(x.premio).find((v) => typeof v === "number") || ""}</small></span>`).join("")}</div>
+        <p class="t4lotet">Total: <b>${esc(t4premio(lote.reduce((o, x) => { Object.entries(x.premio || {}).forEach(([k, v]) => { if (typeof v === "number" && k !== "gratis") o[k] = (o[k] || 0) + v; }); return o; }, {})))}</b>${lote.some((x) => x.sorteado?.gratis) ? ` · ${lote.filter((x) => x.sorteado?.gratis).length} nova rodada` : ""}</p>` : ""}
       <div class="t4bauinfo"><span><b>${t4n(g)}</b> 🪎 guardados</span>${ab < g ? `<span>${t4n(g - ab)} de rotas de hoje abrem amanhã</span>` : ""}</div>
-      ${(s.t4hist || []).length ? `<div class="t4hist" aria-label="Últimos prêmios">${s.t4hist.map((x) => `<span class="t4hi r${t4rar(x.premio, x.nome)}" title="${esc(t4rarNome(x))}">${t4ico(x.premio)}${x.premio.moeda ? `<small>${x.premio.moeda}</small>` : ""}</span>`).join("")}</div>` : ""}
+      ${!lote && (s.t4hist || []).length ? `<div class="t4hist" aria-label="Últimos prêmios">${s.t4hist.map((x) => `<span class="t4hi r${t4rar(x.premio, x.nome)}" title="${esc(t4rarNome(x))}">${t4ico(x.premio)}${x.premio.moeda ? `<small>${x.premio.moeda}</small>` : ""}</span>`).join("")}</div>` : ""}
       <small class="t4muted">Abrir não mexe nos baús conquistados: sua patente e sua parte no prêmio da tripulação continuam iguais.</small></section>
     <section class="pl6sec t4cx"><h3>O que pode vir de 1 baú</h3>${t4tabelaPremios(a.tabela || [])}
-      <p class="t4muted" style="margin:10px 0 0">Em 100 baús vêm, em média, uns 550 🪙, 4 🔥 e de vez em quando 💧, ⚡ ou 🌱. As chances são sempre estas.</p></section></div>`;
+      <p class="t4muted" style="margin:10px 0 0">Cada baú é sorteado sozinho, mesmo abrindo 10 ou 20 de uma vez. Em 100 baús vêm, em média, uns 550 🪙, 4 🔥 e de vez em quando 💧, ⚡ ou 🌱.</p></section></div>`;
 }
 function t4roda() {
   const r = s.tes.roda || {}, tab = r.tabela || [], tot = tab.reduce((a, x) => a + +x.p, 0), sd = s.tes.saldo, cu = r.custo || {};
@@ -254,7 +286,7 @@ function t4roda() {
   const raios = Array.from({ length: 8 }, (_, i) => { const a = i * Math.PI / 4; return `<line x1="${(cx + (R + 2) * Math.cos(a)).toFixed(1)}" y1="${(cy + (R + 2) * Math.sin(a)).toFixed(1)}" x2="${(cx + (R + 16) * Math.cos(a)).toFixed(1)}" y2="${(cy + (R + 16) * Math.sin(a)).toFixed(1)}" stroke="#8C6A2A" stroke-width="8" stroke-linecap="round"/><circle cx="${(cx + (R + 18) * Math.cos(a)).toFixed(1)}" cy="${(cy + (R + 18) * Math.sin(a)).toFixed(1)}" r="7" fill="#B8913A"/>`; }).join("");
   const falta = Object.entries(cu).filter(([k, v]) => (+sd[k] || 0) < +v).map(([k, v]) => `${t4n(+v - (+sd[k] || 0))} ${T4_JOIA[k][0]}`);
   return `<div class="t4g2"><section class="pl6sec t4cx t4rodabox">
-      <div class="t4rodaw"><span class="t4pont" aria-hidden="true"></span><svg id="t4roda" viewBox="-25 -25 350 350" role="img" aria-label="Roda do Leme" style="transform:rotate(${s.t4rot || 0}deg)"><g>${raios}<circle cx="${cx}" cy="${cy}" r="${R + 3}" fill="none" stroke="#B8913A" stroke-width="5"/>${fat}<circle cx="${cx}" cy="${cy}" r="24" fill="#2C3238" stroke="#B8913A" stroke-width="4"/><text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="central" font-size="20">⚓</text></g></svg></div>
+      <div class="t4rodaw ${s.t4ganhou != null ? "ganhou r" + s.t4ganhou : ""}"><span class="t4pont" aria-hidden="true"></span><span class="t4rodag" aria-hidden="true"></span><svg id="t4roda" viewBox="-25 -25 350 350" role="img" aria-label="Roda do Leme" style="transform:rotate(${s.t4rot || 0}deg)"><g>${raios}<circle cx="${cx}" cy="${cy}" r="${R + 3}" fill="none" stroke="#B8913A" stroke-width="5"/>${fat}<circle cx="${cx}" cy="${cy}" r="24" fill="#2C3238" stroke="#B8913A" stroke-width="4"/><text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="central" font-size="20">⚓</text></g></svg></div>
       <div class="t4abriu" aria-live="polite">${s.t4saiu || `Cada giro custa <b>${t4premio(cu)}</b>`}</div>
       <button type="button" class="btn ouro9 t4btnL" data-t4girar="1" ${!falta.length && !s.t4girando ? "" : "disabled"}>${s.t4girando ? "Girando…" : falta.length ? `Faltam ${falta.join(" + ")}` : `Girar · ${t4premio(cu)}`}</button>
       <div class="t4bauinfo"><span>💎 este mês: <b>${t4n(r.diamante_mes || 0)} de ${t4n(r.diamante_max || 1)}</b></span></div></section>
@@ -330,7 +362,7 @@ function t4lastro() {
 /* ---------- ações ---------- */
 function t4ganhou(pr) { const txt = t4premio(pr); return txt === "sem prêmio" ? "" : txt; }
 async function t4click(d, b) {
-  if (d.tsub) { s.tsub = d.tsub; s.t4saiu = ""; s.t4ult = null; if (d.tsub === "ponte") { s.ponte = await chamar("alfy_ponte").catch(() => s.ponte); if (s.tes?.eu?.papel === "comando") s.lastro = await chamar("alfy_lastro", { p_pessoa: s.lastro?.pessoa?.id || null }).catch(() => s.lastro); } render(); return true; }
+  if (d.tsub) { s.tsub = d.tsub; s.t4saiu = ""; s.t4ult = null; s.t4lote = null; if (d.tsub === "ponte") { s.ponte = await chamar("alfy_ponte").catch(() => s.ponte); if (s.tes?.eu?.papel === "comando") s.lastro = await chamar("alfy_lastro", { p_pessoa: s.lastro?.pessoa?.id || null }).catch(() => s.lastro); } render(); return true; }
   if (d.t4fc) { s.t4fc = d.t4fc; render(); return true; }
   if (d.t4mc) { s.t4mc = d.t4mc; render(); return true; }
   if (d.t4mm) { s.t4mm = d.t4mm; if (d.t4mm === "cais") s.cais = await chamar("alfy_cais").catch(() => s.cais); render(); return true; }
@@ -351,24 +383,31 @@ async function t4click(d, b) {
       let tot = {};
       const ids = d.t4coletar === "tudo" ? [null] : d.t4coletar.split(",").map(Number);
       const avs = []; for (const id of ids) { const x = await chamar("alfy_coletar", { p_id: id }); if (x?.aviso && !avs.includes(x.aviso)) avs.push(x.aviso); Object.entries(x?.premio || {}).forEach(([k, v]) => { tot[k] = (tot[k] || 0) + +v; }); }
-      const g = t4ganhou(tot), at = +tot.atividade || 0; aviso((g || at ? `🎁 Coletado: ${[g, at ? `+${at} ✦ de atividade` : ""].filter(Boolean).join(" · ")}` : "Nada novo para coletar.") + (avs.length ? " " + avs.join(" ") : ""));
+      const g = t4ganhou(tot), at = +tot.atividade || 0; if (g || at) T4SOM.plim(); aviso((g || at ? `🎁 Coletado: ${[g, at ? `+${at} ✦ de atividade` : ""].filter(Boolean).join(" · ")}` : "Nada novo para coletar.") + (avs.length ? " " + avs.join(" ") : ""));
       await t4carregar(); render();
     } catch (er) { falhou(er); }
     return true;
   }
   if (d.t4dc) { s.t4dc = d.t4dc; render(); return true; }
   if (d.t4titulo !== undefined) { try { await chamar("alfy_titulo_usar", { p_titulo: d.t4titulo }); aviso(d.t4titulo ? `🏷️ Agora você é ${d.t4titulo}.` : "Título tirado."); await t4carregar(); render(); } catch (er) { falhou(er); } return true; }
+  if (d.t4som) { T4SOM.troca(); if (T4SOM.on()) T4SOM.plim(); render(); return true; }
   if (d.t4abrir) {
     if (s.t4abrindo) return true;
-    s.t4abrindo = true; render();
-    const reduz = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const n = +d.t4abrir || 1, reduz = matchMedia("(prefers-reduced-motion: reduce)").matches, dur = reduz ? 0 : n === 1 ? 1700 : 2300;
+    s.t4abrindo = true; s.t4lote = null; s.t4ult = null; s.t4estoura = false; render(); T4SOM.suspense(dur / 1000);
     try {
-      const [x] = await Promise.all([chamar("alfy_abrir_baus", { p_vezes: 1 }), new Promise((r) => setTimeout(r, reduz ? 0 : 650))]);
-      const ab = (x.aberturas || [])[0];
-      if (ab) { const nome = (s.tes.abrir?.tabela || []).find((y) => JSON.stringify(y.premio) === JSON.stringify(ab.sorteado))?.nome; s.t4ult = { ...ab, nome }; s.t4hist = [{ premio: ab.premio, nome }, ...(s.t4hist || [])].slice(0, 12); }
-      await t4carregar();
-    } catch (er) { falhou(er); await t4carregar(); }
-    s.t4abrindo = false; render(); return true;
+      const [x] = await Promise.all([chamar("alfy_abrir_baus", { p_vezes: n }), new Promise((r) => setTimeout(r, dur))]);
+      const tab = s.tes.abrir?.tabela || [], nm = (pr) => tab.find((y) => JSON.stringify(y.premio) === JSON.stringify(pr))?.nome;
+      const lista = (x.aberturas || []).map((ab) => ({ ...ab, nome: nm(ab.sorteado) }));
+      s.t4abrindo = false; s.t4estoura = true;
+      if (lista.length === 1) { s.t4ult = lista[0]; } else if (lista.length) { s.t4lote = lista; }
+      s.t4hist = [...lista.map((y) => ({ premio: y.premio, nome: y.nome })).reverse(), ...(s.t4hist || [])].slice(0, 12);
+      const top = lista.reduce((m, y) => Math.max(m, T4_NIVSOM[t4rar(y.premio, y.nome)] || 0), 0);
+      await t4carregar(); render();
+      if (lista.length > 1) { lista.forEach((y, i) => T4SOM.moeda(i * 0.09)); setTimeout(() => T4SOM.vitoria(top), lista.length * 90 + 150); } else T4SOM.vitoria(top);
+      setTimeout(() => { s.t4estoura = false; }, 900);
+    } catch (er) { s.t4abrindo = false; falhou(er); await t4carregar(); render(); }
+    return true;
   }
   if (d.t4girar) {
     if (s.t4girando) return true;
@@ -376,18 +415,25 @@ async function t4click(d, b) {
     try {
       const x = await chamar("alfy_roda_girar");
       const tab = s.tes.roda.tabela || [], i = Math.max(0, tab.findIndex((y) => JSON.stringify(y.premio) === JSON.stringify(x.sorteado))), f = tab[i];
-      const svg = document.getElementById("t4roda"), reduz = matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const svg = document.getElementById("t4roda"), caixa = document.querySelector(".t4rodaw"), reduz = matchMedia("(prefers-reduced-motion: reduce)").matches, D = reduz ? 50 : 6200;
       if (svg && f && f._a0 != null) {
-        const alvo = f._a0 + (f._a1 - f._a0) * (0.25 + Math.random() * 0.5), atual = s.t4rot || 0;
-        s.t4rot = atual + 360 * 5 + ((360 - alvo - (atual % 360)) % 360 + 360) % 360;
-        svg.style.transition = reduz ? "none" : "transform 3.6s cubic-bezier(.12,.67,.18,1)";
+        const alvo = f._a0 + (f._a1 - f._a0) * (0.2 + Math.random() * 0.6), atual = s.t4rot || 0;
+        const delta = 360 * 8 + ((360 - alvo - (atual % 360)) % 360 + 360) % 360; s.t4rot = atual + delta;
+        caixa?.classList.add("girando");
+        svg.style.transition = reduz ? "none" : `transform ${D}ms cubic-bezier(0.22, 1, 0.36, 1)`;
         svg.style.transform = `rotate(${s.t4rot}deg)`;
-        await new Promise((r) => setTimeout(r, reduz ? 50 : 3700));
+        if (!reduz) { // tique a cada pino que passa, desacelerando junto com a Roda (easeOutQuint ≈ curva acima)
+          const passo = 360 / 24; for (let k = 1; k * passo < delta; k++) { const t = 1 - Math.pow(1 - (k * passo) / delta, 1 / 5); T4SOM.tick(t * D / 1000, 1500 + Math.random() * 500); }
+        }
+        await new Promise((r) => setTimeout(r, D + 150));
+        caixa?.classList.remove("girando");
       }
       s.t4saiu = `<span class="t4rarp r${t4rar(x.sorteado, f?.nome)}">${esc(f?.nome || "")}</span><b>${x.sorteado?.gratis ? "🔁 Nova rodada: o giro voltou" : x.premio?.teto_diamante ? "500 🪙 (você já ganhou o 💎 do mês)" : esc(t4premio(x.premio))}</b>`;
+      T4SOM.vitoria(T4_NIVSOM[t4rar(x.sorteado, f?.nome)] || 0);
+      s.t4ganhou = t4rar(x.sorteado, f?.nome);
       await t4carregar();
     } catch (er) { falhou(er); await t4carregar(); }
-    s.t4girando = false; render(); return true;
+    s.t4girando = false; render(); setTimeout(() => { s.t4ganhou = null; }, 50); return true;
   }
   if (d.t4comprar) {
     const i = (s.tes.mercado || []).find((x) => x.id === d.t4comprar);
