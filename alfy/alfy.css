@@ -2068,3 +2068,14 @@ textarea.melhorando{opacity:.6;border-color:var(--lilas)!important}
 @media (max-width:640px){.t4atrs{grid-template-columns:1fr}}
 @media (prefers-reduced-motion:reduce){.t4xpg,.t4topo.levelup{animation:none}}
 .t4atrl>span:nth-child(2){display:flex;flex-direction:column;gap:1px;min-width:0}
+/* v2.76.0 · XP no baú, Maestria dos Elementos (em breve) */
+.r11{--rc:#F1D27E}
+.t4els{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.t4el{padding:12px;border-radius:12px;border:1px solid var(--linha);background:linear-gradient(180deg,color-mix(in srgb,var(--elc) 12%,var(--ferro-1)),var(--ferro-1));opacity:.8}
+.el-fogo{--elc:#FF7A45}.el-gota{--elc:#4FA3E3}.el-raio{--elc:#A9D6E5}.el-broto{--elc:#6BCB5C}
+.t4elh{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.t4eli{font-size:22px}.t4elh b{font-family:var(--fd);font-size:16px;color:var(--elc)}.t4eln{margin-left:auto;font-size:12px;color:var(--aco)}
+.t4elr{display:flex;gap:4px;margin-bottom:6px}
+.t4elr span{flex:1;text-align:center;font-size:10.5px;padding:4px 2px;border-radius:6px;background:var(--ferro-0);border:1px solid var(--linha);color:var(--aco-2)}
+.t4el small{font-size:12px;color:var(--aco)}
+@media (max-width:640px){.t4els{grid-template-columns:1fr}}
