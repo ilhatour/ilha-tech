@@ -1,11 +1,11 @@
-// 🪎 Rotas do Tesouro · Modelo de Moedas v3 (22/11/2026): baús conquistados e guardados, 🪙 moeda, elementos 🔥💧⚡🌱, 💎 e 🎖️;
+// 🪎 Rotas do Tesouro · Modelo de Moedas v3 (22/11/2026): baús conquistados e guardados, 🪙 moeda, elementos 🔥💧🌬️🌱, 💎 e 🎖️;
 // desafios no formato de missões do MU (atividade do dia com 3 baús), 🪎 Abrir Baús (1 por vez), ☸️ Roda do Leme (🪙 + 🔥, única fonte de 💎), Mercado (só o Cais por enquanto),
 // ⚓ Cais (baú ↔ moeda), 🏦 Lastro, XP e nível 1 a 100, patentes da Marinha, frentes, conquistas, Trilha, reconhecimento e Ponte.
 // Toda conta e todo sorteio acontecem no banco (alfy_tesouros, alfy_coletar, alfy_abrir_baus, alfy_roda_girar, alfy_mercado_comprar, alfy_reconhecer...).
 // Usa os globais do alfy.js: s, token, chamar, esc, render, aviso, falhou, comando, vistaPlacar.
 /* global s, token, chamar, esc, render, aviso, falhou, comando, vistaPlacar, frenteCurta */
 "use strict";
-const T4_JOIA = { tesouro: ["🪎", "baú", "baús"], moeda: ["🪙", "moeda", "moedas"], fogo: ["🔥", "fogo", "fogos"], gota: ["💧", "gota", "gotas"], raio: ["⚡", "raio", "raios"], broto: ["🌱", "broto", "brotos"], diamante: ["💎", "diamante", "diamantes"], medalha: ["🎖️", "Medalha de Honra", "Medalhas de Honra"] };
+const T4_JOIA = { tesouro: ["🪎", "baú", "baús"], moeda: ["🪙", "moeda", "moedas"], fogo: ["🔥", "foguinho", "foguinhos"], gota: ["💧", "gotinha", "gotinhas"], raio: ["🌬️", "ventinho", "ventinhos"], broto: ["🌱", "brotinho", "brotinhos"], diamante: ["💎", "diamante", "diamantes"], medalha: ["🎖️", "Medalha de Honra", "Medalhas de Honra"] };
 const T4_ORDEM = ["tesouro", "moeda", "fogo", "gota", "raio", "broto", "diamante", "medalha"];
 const T4_ELEM = ["fogo", "gota", "raio", "broto"];
 const T4_BREVE = ["raio", "broto"];
@@ -57,7 +57,11 @@ const T4_NIVSOM = { 0: 0, 1: 1, 2: 2, 3: 3, 4: 4, 5: 2, 6: 6, 7: 2, 8: 4, 9: 5, 
 (function t4presenca() { if (typeof token !== "undefined" && token) chamar("alfy_presenca").catch(() => {}); else setTimeout(t4presenca, 5000); })();
 
 async function t4carregar() {
+  const antes = s.tes?.nivel;
   s.tes = await chamar("alfy_tesouros").catch(() => s.tes);
+  const dep = s.tes?.nivel;
+  if (antes && dep && dep.xp > antes.xp) { s.t4xpGanho = dep.xp - antes.xp; s.t4xpEm = Date.now(); }
+  if (antes && dep && dep.nivel > antes.nivel) { s.t4subiu = dep.nivel; setTimeout(() => { T4SOM.vitoria(4); aviso(`🎉 Subiu para o nível ${dep.nivel}!${dep.patente?.nome !== antes.patente?.nome ? ` Nova patente: ${dep.patente.ins} ${dep.patente.nome}.` : ""}`); }, 400); }
   if (t4ok()) s.cais = await chamar("alfy_cais").catch(() => s.cais);
   if (t4ok() && ["comando", "gerente"].includes(s.tes.eu?.papel)) s.ponte = await chamar("alfy_ponte").catch(() => s.ponte);
 }
@@ -77,12 +81,14 @@ function vistaTesouros() {
 }
 function t4topo(np) {
   const t = s.tes, nv = t.nivel, pa = nv.patente, faltam = nv.prox != null ? nv.prox - nv.xp : 0, pct = nv.prox != null ? Math.round(100 * (nv.xp - nv.ini) / (nv.prox - nv.ini)) : 100;
-  return `<section class="t4topo">
-    <div class="t4navio" aria-hidden="true">${pa.ni}</div>
+  if (s.t4xpGanho && Date.now() - (s.t4xpEm || 0) >= 1500) s.t4xpGanho = 0;
+  const sub = s.t4subiu; if (sub) setTimeout(() => { s.t4subiu = null; }, 50);
+  return `<section class="t4topo ${sub ? "levelup" : ""}">
+    <button type="button" class="t4navio ${t.eu.foto ? "comfoto" : ""}" data-t4foto="1" aria-label="${t.eu.foto ? "Trocar foto de perfil" : "Colocar foto de perfil"}">${t.eu.foto ? `<img src="${t.eu.foto}" alt="">` : "📸"}<span class="t4navioi" aria-hidden="true">${pa.ni}</span></button>
     <button type="button" class="t4somb" data-t4som="1" aria-label="${T4SOM.on() ? "Desligar o som" : "Ligar o som"}" title="${T4SOM.on() ? "Som ligado" : "Som desligado"}">${T4SOM.on() ? "🔊" : "🔇"}</button>
     <div class="t4quem"><div class="t4nome"><b>${esc((t.eu.nome || "").split(" ")[0])}</b><span class="t4niv">Nível ${nv.nivel}</span>${t.eu.titulo ? `<span class="t4titulo">${esc(t.eu.titulo)}</span>` : ""}</div>
       <div class="t4pat">${pa.ins} ${esc(pa.nome)} · ${esc(pa.navio)}</div>
-      <div class="t4xp" aria-hidden="true"><i style="width:${pct}%"></i></div>
+      <div class="t4xp ${s.t4subiu ? "subiu" : ""}" aria-hidden="true"><i style="width:${pct}%"></i>${s.t4xpGanho && Date.now() - (s.t4xpEm || 0) < 1500 ? `<b class="t4xpg">+${s.t4xpGanho} XP</b>` : ""}</div>
       <small class="t4muted">${nv.prox != null ? `${nv.xp.toLocaleString("pt-BR")} XP · faltam ${faltam.toLocaleString("pt-BR")} para o nível ${nv.nivel + 1}` : "nível máximo"} · ${t4n(t.baus?.conquistados)} 🪎 conquistados na vida</small></div>
     <div class="t4joias t4joias8">${T4_ORDEM.map((k) => `<div class="t4joia ${T4_BREVE.includes(k) ? "breve" : ""}" title="${T4_JOIA[k][2]}${T4_BREVE.includes(k) ? " · em breve" : ""}"><span>${T4_JOIA[k][0]}</span><b>${T4_BREVE.includes(k) ? "—" : t4n(t.saldo[k])}</b><small>${k === "tesouro" ? "baús guardados" : k === "medalha" ? "medalhas" : T4_JOIA[k][2]}</small></div>`).join("")}</div>
   </section>`;
@@ -96,9 +102,27 @@ function t4inicio() {
     <section class="pl6sec t4cx"><h3>Patentes da Marinha</h3><p class="t4muted" style="margin:0 0 8px">Sobem com o seu nível. Cada interação no ALFY vale XP: ação ou comentário 1, dia com o app aberto 3, rota entregue 5 (até 60 por dia).</p>
       <ol class="t4pats">${T4_PATENTES.map(([m, n, ins, navio], i) => { const prox = T4_PATENTES[i + 1]?.[0] ?? 101, aqui = nv >= m && nv < prox; return `<li class="${nv >= m ? "ja" : ""} ${aqui ? "aqui" : ""}"><span>${ins}</span><b>${n}</b><small>nível ${m}${aqui ? " · você" : ""} · ${navio}</small></li>`; }).join("")}</ol></section>
   </div>
+  ${t4atributos()}
   <section class="pl6sec t4cx" style="margin-top:14px"><h3>Valor das joias</h3><div class="t4valor">${T4_ORDEM.map((k) => `<span>${T4_JOIA[k][0]} 1 ${T4_JOIA[k][1]} ${T4_BREVE.includes(k) ? "· em breve" : `= ${t4n(t4valor()[k])} 🪙`}</span>`).join("")}</div>
     <p class="t4muted" style="margin:8px 0 0">🪎 vem das rotas (1 a 10 por rota) · 🪙 de abrir baús, desafios, conquistas e Trilha · 🔥 de cada dia com venda lançada na Nave · 💧 de elogio de cliente com o seu nome (em breve) · 💎 de super missão e, raríssimo, do baú · 🎖️ só do reconhecimento do Miguel.</p></section>
   ${t4titulos()}`;
+}
+const T4_ATRIB = [
+  ["⚡", "Ágil nas rotas", "Vai lá e faz", "tempo entre a rota chegar e ser concluída"],
+  ["⏱️", "Pontual", "Como deve ser", "rotas entregues dentro do prazo"],
+  ["💬", "Responde rápido", "Amigo do viajante", "tempo para responder rota, comentário e WhatsApp do cliente"],
+  ["👀", "Atento ao grupo", "Guardião da ilha", "presença e resposta nos grupos de trabalho"],
+  ["🧩", "Solucionador", "Além do roteiro", "rotas P1 e difíceis resolvidas, sem voltar"],
+  ["📝", "Registro é rei", "Registro é rei", "rotas com comentário, foto e anexo de retorno"],
+  ["🛡️", "Rota segura", "Rota segura", "rotas que não voltam nem são reabertas"],
+  ["🤝", "Parceiro de tripulação", "Crescemos juntos", "rotas em dupla e reconhecimentos dados e recebidos"],
+  ["🏆", "Constância", "Alma de campeão", "dias seguidos entregando e abrindo o ALFY"],
+  ["🚀", "Evolução", "Coragem de evoluir", "nível, desafios novos e frentes diferentes"],
+];
+function t4atributos() {
+  return `<section class="pl6sec t4cx t4atr" style="margin-top:14px"><h3>🧬 Atributos <span class="t4em">em breve</span></h3>
+    <p class="t4muted" style="margin:0 0 10px">Cada atributo nasce de um dos 10 Valores do Grupo Ilha e vai ter ranking por área (Fogo e Água, Ar, Terra, Pousadas, Vou de Barco…). O sistema mede sozinho, ninguém dá nota.</p>
+    <div class="t4atrs">${T4_ATRIB.map(([ic, n, v, como]) => `<div class="t4atrl"><span class="t4atri">${ic}</span><span><b>${esc(n)}</b><small>Valor: ${esc(v)} · mede ${esc(como)}</small></span><span class="t4atrb" aria-hidden="true"><i></i></span></div>`).join("")}</div></section>`;
 }
 function t4titulos() {
   const v = s.tes.vitrine || [], uso = s.tes.eu.titulo;
@@ -126,15 +150,17 @@ function t4linhaDesafio(m) {
   const feito = e.feito && m.id !== "mesmo_dia" && !e.prontos.length;
   const st = e.prontos.length ? "pronta" : feito ? "feita" : fora || m.em_breve ? "bloq" : "andamento";
   const alvoF = m.id === "carta_embarque" ? 5 : alvo, atF = Math.min(at, alvoF);
+  const usu = m.id === "perfil_usuario" && s.tes.perfil?.usuario ? ` · @${esc(s.tes.perfil.usuario)}` : m.id === "perfil_insta" && s.tes.perfil?.instagram ? ` · ${esc(s.tes.perfil.instagram)}` : "";
   const acao = e.prontos.length ? `<button type="button" class="btn ouro9 peq t4mbtn" data-t4coletar="${ids}">Coletar</button>`
     : feito ? `<span class="t4mok">✓ Concluído</span>`
     : m.em_breve ? `<span class="t4mlk">🔒 Em breve</span>`
     : fora ? `<span class="t4mlk">${esc(fora)}</span>`
-    : m.id === "carta_embarque" ? `<button type="button" class="btn turq peq t4mbtn" data-fichalink="1">Ir</button>`
+    : m.id === "carta_embarque" || m.id === "perfil_insta" ? `<button type="button" class="btn turq peq t4mbtn" data-fichalink="1">Ir</button>`
+    : m.id === "perfil_foto" ? `<button type="button" class="btn turq peq t4mbtn" data-t4foto="1">Ir</button>`
     : T4_IR[m.id] ? `<button type="button" class="btn peq t4mbtn" data-aba="rotas">Ir</button>` : `<span class="t4mlk">em andamento</span>`;
   const falta = m.id === "carta_embarque" && (m.falta || []).length ? ` · falta ${esc(m.falta.join(", "))}` : "";
   return `<article class="t4m ${st}"><span class="t4mic" aria-hidden="true">${m.icone || "🎯"}</span>
-    <div class="t4mct"><b>${esc(m.nome)}</b><small>${esc(m.descricao || "")}${falta}</small>
+    <div class="t4mct"><b>${esc(m.nome)}</b><small>${esc(m.descricao || "")}${falta}${usu}</small>
       ${m.em_breve ? "" : `<div class="t4mpb" aria-label="${atF} de ${alvoF}"><span><i style="width:${Math.min(100, 100 * atF / Math.max(1, alvoF))}%"></i></span><small>${m.id === "mesmo_dia" ? `${at} hoje (até 5)` : `${atF}/${alvoF}`}</small></div>`}</div>
     ${t4slots(m.premio, m.tesouros)}<div class="t4mac">${acao}</div></article>`;
 }
@@ -151,7 +177,7 @@ function t4atividade() {
 }
 function t4desafios() {
   const ms = (s.tes.missoes || []).filter((m) => m.cat !== "conquista");
-  const CAT = [["diaria", "🌅 Diários"], ["semanal", "🧭 Semanais"], ["jornada", "⚓ Jornada"], ["campanha", "🗺️ Campanhas"], ["breve", "🔜 Em breve"]];
+  const CAT = [["diaria", "🌅 Diários"], ["semanal", "🧭 Semanais"], ["perfil", "👤 Perfil"], ["jornada", "⚓ Jornada"], ["campanha", "🗺️ Campanhas"], ["breve", "🔜 Em breve"]];
   const de = (c) => c === "breve" ? ms.filter((m) => m.em_breve) : ms.filter((m) => !m.em_breve && (m.cat === c || (c === "jornada" && m.cat === "mensal")));
   const conta = (c) => de(c).reduce((n, m) => n + t4estadoDesafio(m).prontos.length, 0);
   let cat = s.t4dc || "diaria"; if (!de(cat).length) cat = CAT.find(([c]) => de(c).length)?.[0] || "diaria";
@@ -249,15 +275,15 @@ function t4chances(tab) {
   return { med, html: `<table class="t4ch"><tbody>${tab.map((x) => `<tr><td>${t4premio(x.premio)}</td><td>${String(x.p).replace(".", ",")}%</td></tr>`).join("")}</tbody></table>` };
 }
 function t4valorPremio(pr) { const v = t4valor(); let n = 0; T4_ORDEM.forEach((k) => { n += (+pr[k] || 0) * (+v[k] || 0); }); if (pr.vale) n += { cafe: 1500, copo: 2500, camisa: 5000 }[pr.vale] || 0; if (pr.gratis) n += +(s.tes.abrir?.custo || 10) * v.tesouro * .87; return n; }
-const T4_RARN = { Comum: 0, Incomum: 1, Raro: 2, "Mítico": 3, "Lendário": 4, "Nova rodada": 5, Foguinho: 7, Gotinha: 8, Raio: 9, Brotinho: 10, Diamante: 6 };
-const T4_RAR = [["comum", "Comum"], ["incomum", "Incomum"], ["raro", "Raro"], ["mitico", "Mítico"], ["lendario", "Lendário"], ["rodada", "Nova rodada"], ["diamante", "Diamante"], ["fogo", "Foguinho"], ["gota", "Gotinha"], ["raio", "Raio"], ["broto", "Brotinho"]];
+const T4_RARN = { Comum: 0, Incomum: 1, Raro: 2, "Mítico": 3, "Lendário": 4, "Nova rodada": 5, Foguinho: 7, Gotinha: 8, Raio: 9, Ventinho: 9, Brotinho: 10, Diamante: 6 };
+const T4_RAR = [["comum", "Comum"], ["incomum", "Incomum"], ["raro", "Raro"], ["mitico", "Mítico"], ["lendario", "Lendário"], ["rodada", "Nova rodada"], ["diamante", "Diamante"], ["fogo", "Foguinho"], ["gota", "Gotinha"], ["raio", "Ventinho"], ["broto", "Brotinho"]];
 function t4rar(pr, nome) {
   if (nome && T4_RARN[nome] != null) return T4_RARN[nome];
   if (pr.diamante) return 6; if (pr.gratis) return 5; if (pr.fogo) return 7; if (pr.gota) return 8; if (pr.raio) return 9; if (pr.broto) return 10;
   const m = +pr.moeda || 0; if (m >= 500) return 4; if (m >= 200 || (m >= 30 && m < 50)) return 3; if (m >= 100 || m === 12) return 2; if (m >= 50 || m === 6) return 1; return 0;
 }
 const t4rarNome = (x) => x.nome || T4_RAR[t4rar(x.premio)]?.[1] || "";
-const t4ico = (pr) => pr.diamante ? "💎" : pr.gratis ? "🔁" : pr.fogo ? "🔥" : pr.gota ? "💧" : pr.raio ? "⚡" : pr.broto ? "🌱" : pr.tesouro ? "🪎" : "🪙";
+const t4ico = (pr) => pr.diamante ? "💎" : pr.gratis ? "🔁" : pr.fogo ? "🔥" : pr.gota ? "💧" : pr.raio ? "🌬️" : pr.broto ? "🌱" : pr.tesouro ? "🪎" : "🪙";
 function t4tabelaPremios(tab, roda) {
   const tot = tab.reduce((a, x) => a + +x.p, 0);
   return `<div class="t4chs">${tab.map((x) => `<div class="t4chl r${t4rar(x.premio, x.nome)}"><span class="t4chi">${t4ico(x.premio)}</span><b>${esc(t4rarNome(x))}</b><span class="t4chp">${x.premio.gratis ? (roda ? "gira de novo grátis" : "abre outro grátis") : t4premio(x.premio)}</span><span class="t4chc">${(100 * x.p / tot).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%</span></div>`).join("")}</div>`;
@@ -275,7 +301,7 @@ function t4baus() {
       ${!lote && (s.t4hist || []).length ? `<div class="t4hist" aria-label="Últimos prêmios">${s.t4hist.map((x) => `<span class="t4hi r${t4rar(x.premio, x.nome)}" title="${esc(t4rarNome(x))}">${t4ico(x.premio)}${x.premio.moeda ? `<small>${x.premio.moeda}</small>` : ""}</span>`).join("")}</div>` : ""}
       <small class="t4muted">Abrir não mexe nos baús conquistados: sua patente e sua parte no prêmio da tripulação continuam iguais.</small></section>
     <section class="pl6sec t4cx"><h3>O que pode vir de 1 baú</h3>${t4tabelaPremios(a.tabela || [])}
-      <p class="t4muted" style="margin:10px 0 0">Cada baú é sorteado sozinho, mesmo abrindo 10 ou 20 de uma vez. Em 100 baús vêm, em média, uns 550 🪙, 4 🔥 e de vez em quando 💧, ⚡ ou 🌱.</p></section></div>`;
+      <p class="t4muted" style="margin:10px 0 0">Cada baú é sorteado sozinho, mesmo abrindo 10 ou 20 de uma vez. Em 100 baús vêm, em média, uns 550 🪙, 4 🔥 e de vez em quando 💧, 🌬️ ou 🌱.</p></section></div>`;
 }
 function t4roda() {
   const r = s.tes.roda || {}, tab = r.tabela || [], tot = tab.reduce((a, x) => a + +x.p, 0), sd = s.tes.saldo, cu = r.custo || {};
@@ -390,6 +416,20 @@ async function t4click(d, b) {
   }
   if (d.t4dc) { s.t4dc = d.t4dc; render(); return true; }
   if (d.t4titulo !== undefined) { try { await chamar("alfy_titulo_usar", { p_titulo: d.t4titulo }); aviso(d.t4titulo ? `🏷️ Agora você é ${d.t4titulo}.` : "Título tirado."); await t4carregar(); render(); } catch (er) { falhou(er); } return true; }
+  if (d.t4foto) {
+    const inp = document.createElement("input"); inp.type = "file"; inp.accept = "image/*";
+    inp.onchange = async () => {
+      const f = inp.files?.[0]; if (!f) return;
+      try {
+        const img = await new Promise((ok, erro) => { const i = new Image(); i.onload = () => ok(i); i.onerror = erro; i.src = URL.createObjectURL(f); });
+        const lado = Math.min(img.width, img.height), cv = document.createElement("canvas"); cv.width = cv.height = 256;
+        cv.getContext("2d").drawImage(img, (img.width - lado) / 2, (img.height - lado) / 2, lado, lado, 0, 0, 256, 256);
+        await chamar("alfy_foto_salvar", { p_foto: cv.toDataURL("image/jpeg", 0.82) });
+        aviso("📸 Foto salva!"); await t4carregar(); render();
+      } catch (er) { falhou(er); }
+    };
+    inp.click(); return true;
+  }
   if (d.t4som) { T4SOM.troca(); if (T4SOM.on()) T4SOM.plim(); render(); return true; }
   if (d.t4abrir) {
     if (s.t4abrindo) return true;
