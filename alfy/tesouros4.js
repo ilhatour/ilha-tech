@@ -71,9 +71,9 @@ function vistaTesouros() {
   if (!t4ok()) return vistaPlacar();
   const t = s.tes, sub = s.tsub || "inicio", mand = ["comando", "gerente"].includes(t.eu.papel);
   const prontos = (t.ganhos || []).filter((g) => g.estado === "pronta");
-  const abas = [["inicio", "⚓ Início"], ["desafios", "🎯 Desafios"], ["conquistas", "🏅 Conquistas"], ["trilha", "🗺️ Trilha"], ["baus", "🪎 Abrir Baús"], ["roda", "☸️ Roda do Leme"], ["mercado", "🏪 Mercado"], ["bau", "🏆 Baú da Tripulação"]].concat(mand ? [["ponte", "🎛️ Ponte"]] : []);
-  const conta = { desafios: prontos.filter((g) => !g.missao.startsWith("c_") && g.missao !== "trilha").length, conquistas: prontos.filter((g) => g.missao.startsWith("c_")).length, trilha: prontos.filter((g) => g.missao === "trilha").length, ponte: mand ? (s.ponte?.pedidos || []).length : 0 };
-  const V = { inicio: t4inicio, desafios: t4desafios, conquistas: t4conquistas, trilha: t4trilha, mercado: t4mercado, baus: t4baus, roda: t4roda, bau: () => vistaPlacar(), ponte: t4ponte }[sub] || t4inicio;
+  const abas = [["inicio", "⚓ Início"], ["desafios", "🎯 Desafios"], ["conquistas", "🏅 Conquistas"], ["passe", "🎟️ Passe de Bordo"], ["trilha", "🗺️ Trilha"], ["baus", "🪎 Abrir Baús"], ["roda", "☸️ Roda do Leme"], ["mercado", "🏪 Mercado"], ["bau", "🏆 Baú da Tripulação"]].concat(mand ? [["ponte", "🎛️ Ponte"]] : []);
+  const conta = { passe: (t.passe?.prontos || []).length, desafios: prontos.filter((g) => !g.missao.startsWith("c_") && !["trilha", "passe"].includes(g.missao)).length, conquistas: prontos.filter((g) => g.missao.startsWith("c_")).length, trilha: prontos.filter((g) => g.missao === "trilha").length, ponte: mand ? (s.ponte?.pedidos || []).length : 0 };
+  const V = { inicio: t4inicio, desafios: t4desafios, conquistas: t4conquistas, trilha: t4trilha, mercado: t4mercado, passe: t4passe, baus: t4baus, roda: t4roda, bau: () => vistaPlacar(), ponte: t4ponte }[sub] || t4inicio;
   return `<div class="t4">${t4topo(prontos.length)}
     <nav class="t4abas" aria-label="Rotas do Tesouro">${abas.map(([k, n]) => `<button type="button" class="t4aba" aria-pressed="${sub === k}" data-tsub="${k}"><span>${n}</span>${conta[k] ? `<b class="t4bd">${conta[k] > 99 ? "99+" : conta[k]}</b>` : ""}</button>`).join("")}</nav>
     ${t.lancado !== "todos" && t.eu.papel === "comando" ? `<p class="t4aviso">🔒 Só você está vendo. A equipe continua na tela antiga até você tocar em <b>Lançar para a equipe</b>, na Ponte.</p>` : ""}
@@ -204,6 +204,17 @@ function t4conquistas() {
         <div class="t4ct"><div><b class="t4rec">+${t4premio(pr)}</b> <span class="t4tag">${x.feitos ? "Nív. " + T4_ROM[x.feitos - 1] : "Nív. 0"}</span></div><b>${esc(x.m.nome)}</b><small>${x.prox != null ? `Nível ${T4_ROM[x.feitos]}: ${x.prox} ${esc(x.m.descricao)}` : `Todos os níveis: ${esc(x.m.descricao)}`}</small>
         ${x.prontos.length ? `<button type="button" class="btn ouro9 peq" data-t4coletar="${x.prontos.map((g) => g.id).join(",")}">Coletar +${t4premio(x.prontos.reduce((a, g) => { Object.entries(g.premio || {}).forEach(([k, v]) => { a[k] = (a[k] || 0) + +v; }); return a; }, {}))}</button>`
           : `<div class="t4pb"><span><i style="width:${x.prox ? Math.min(100, 100 * x.at / x.prox) : 100}%"></i></span><small>${x.at}/${x.prox ?? x.niveis[x.niveis.length - 1]}</small></div>`}</div></article>`; }).join("")}</div></section>` : ""; }).join("") || '<p class="t4muted">Nenhuma conquista aqui.</p>'}`;
+}
+function t4passe() {
+  const t = s.tes, p = t.passe || {}, nv = t.nivel.nivel, col = new Set(p.coletados || []), pr = new Map((p.prontos || []).map((x) => [x.n, x.id]));
+  const card = (x) => { const st = pr.has(x.n) ? "pronto" : col.has(x.n) || (x.n <= nv && !pr.has(x.n)) ? "feito" : x.n === nv + 1 ? "prox" : "bloq", grande = x.n % 10 === 0 || [25, 75].includes(x.n);
+    return `<div class="t4pc ${st} ${grande ? "grande" : ""}" ${x.n === nv + 1 ? 'id="t4passeprox"' : ""}><div class="t4pcn">Nív. ${x.n}</div>${t4slots(x.premio)}
+      ${st === "pronto" ? `<button type="button" class="btn ouro9 peq" data-t4coletar="${pr.get(x.n)}">Coletar</button>` : st === "feito" ? '<span class="t4mok">✓</span>' : st === "prox" ? `<small class="t4muted">faltam ${t4n(t.nivel.prox - t.nivel.xp)} XP</small>` : '<span class="t4mlk">🔒</span>'}</div>`; };
+  const prontos = (p.prontos || []).length;
+  setTimeout(() => { const el = document.querySelector(".t4pc.pronto") || document.getElementById("t4passeprox"); el?.scrollIntoView?.({ block: "nearest", inline: "center" }); }, 30);
+  return `<section class="pl6sec t4cx"><h3>🎟️ Passe de Bordo</h3>
+    <p class="t4muted" style="margin:0 0 10px">Cada nível que você sobe libera um prêmio: baús para abrir, e nos marcos 🔥, 🪙 e elementos raros. Você está no nível <b>${nv}</b>${prontos ? ` e tem <b>${prontos}</b> ${prontos === 1 ? "prêmio" : "prêmios"} para coletar` : ""}. Os baús do passe são para abrir: não mudam a sua parte no prêmio da tripulação.</p>
+    <div class="t4passe">${(p.premios || []).map(card).join("")}</div></section>`;
 }
 function t4trilha() {
   const t = s.tes, marcos = t.trilha.marcos || [], g = +t.ganho_mes || 0, mes = t.trilha.mes;

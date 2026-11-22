@@ -2079,3 +2079,17 @@ textarea.melhorando{opacity:.6;border-color:var(--lilas)!important}
 .t4elr span{flex:1;text-align:center;font-size:10.5px;padding:4px 2px;border-radius:6px;background:var(--ferro-0);border:1px solid var(--linha);color:var(--aco-2)}
 .t4el small{font-size:12px;color:var(--aco)}
 @media (max-width:640px){.t4els{grid-template-columns:1fr}}
+/* v2.77.0 · Passe de Bordo */
+.t4passe{display:flex;gap:8px;overflow-x:auto;padding:6px 2px 10px;scroll-snap-type:x proximity}
+.t4pc{flex:none;width:112px;scroll-snap-align:center;display:flex;flex-direction:column;align-items:center;gap:8px;padding:10px 6px;border-radius:12px;border:1px solid var(--linha);background:var(--ferro-0);text-align:center}
+.t4pc .t4slots{flex-wrap:wrap;justify-content:center}
+.t4pc .t4slot{width:40px;height:40px}
+.t4pcn{font-family:var(--fd);font-size:13px;font-weight:700;color:var(--aco-2)}
+.t4pc.grande{border-color:#8C6A2A;background:linear-gradient(180deg,#2A2619,var(--ferro-0))}
+.t4pc.pronto{border-color:#F1D27E;box-shadow:0 0 16px rgba(241,210,126,.35)}
+.t4pc.pronto .btn{animation:t4brilho 1.6s infinite}
+.t4pc.feito{opacity:.55}
+.t4pc.prox{border-color:var(--turq)}
+.t4pc.bloq{opacity:.45;filter:grayscale(.5)}
+@media (prefers-reduced-motion:reduce){.t4pc.pronto .btn{animation:none}}
+.t4passe{align-items:flex-start}
