@@ -196,7 +196,7 @@ function casca() {
   $("#eu-av").textContent = ini(p.nome); $("#eu-av-cel").textContent = ini(p.nome);
   $("#eu-nome").textContent = p.nome;
   $("#eu-papel").textContent = papelTxt();
-  $("#titulo-cel").textContent = { rotinas: "Rotinas", placar: "Rotas do Tesouro", zap: "WhatsApp", rotas: "Rotas", equipe: "Equipe", agenda: "Agenda", feed: "Feed", pautas: "Pautas", comandos: "Comandos", eu: "Eu" }[s.aba];
+  $("#titulo-cel").textContent = { rotinas: "Rotinas", placar: tituloTes(true), zap: "WhatsApp", rotas: "Rotas", equipe: "Equipe", agenda: "Agenda", feed: "Feed", pautas: "Pautas", comandos: "Comandos", eu: "Eu" }[s.aba];
   $("#fab").hidden = s.aba !== "rotas" || s.vista === "rar";
 }
 const papelTxt = () => comando() ? "Comando · vê tudo" : papel() === "gerente" ? "Gerente · " + (eu().frentes || []).map(frenteCurta).join(", ") : "Vê as rotas dele";
@@ -231,7 +231,7 @@ function topo() {
     const tipos = [["todos", "Tudo"], ["comentario", "Comentários"], ["orientacao", "Orientações"], ["whatsapp", "WhatsApp"], ["status", "Status"], ["editar", "Edições"], ["nova", "Rotas novas"], ["budget", "Budget"], ["pauta", "Pautas"]];
     fi.innerHTML = filtrosHTML() + `<div style="display:flex;gap:6px;overflow-x:auto;flex-basis:100%;scrollbar-width:none">${tipos.map(([k, n]) => `<button class="chip" type="button" data-ffeed="${k}" aria-pressed="${s.fFeed === k}">${n}</button>`).join("")}</div>`;
   } else {
-    const t = { rotinas: "🔁 Rotinas", placar: "🪎 Rotas do Tesouro", zap: "📱 WhatsApp", pautas: "Pautas e reuniões", comandos: "Comandos do ALFY", agenda: "Agenda", equipe: "Equipe e cadastro", eu: "Eu" }[s.aba];
+    const t = { rotinas: "🔁 Rotinas", placar: "🪎 " + tituloTes(), zap: "📱 WhatsApp", pautas: "Pautas e reuniões", comandos: "Comandos do ALFY", agenda: "Agenda", equipe: "Equipe e cadastro", eu: "Eu" }[s.aba];
     l1.innerHTML = `<h1>${t}</h1><span class="espaco"></span>${vivo}${s.aba === "pautas" && manda() ? '<button class="btn" type="button" data-acao="nova-pauta">＋ Nova pauta</button><button class="cta" type="button" data-acao="nova-reuniao">＋ Nova reunião</button>' : ""}`;
     fi.innerHTML = ""; $("#alterna-cel").innerHTML = "";
   }
@@ -357,6 +357,12 @@ function ligarKanban() {
 // ---------------------------------------------------------------- 🏆 Placar
 // pontuação V3: (Impacto + Dificuldade + Qualidade) × prazo, de 0 a 10, por rota concluída; responsável e co-responsável pontuam
 const MES_TXT = (d) => new Date(d + "T12:00:00-03:00").toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+// título da aba Tesouros com a temporada e as datas (23/11, pedido do Miguel): "Rotas do Tesouro · Temporada 1 · 23/11 a 07/12"
+function tituloTes(curto) {
+  const tp = s.tes && !s.tes.bloqueado ? s.tes.temporada : null; if (!tp?.nome) return "Rotas do Tesouro";
+  const dm = (d) => String(d || "").split("-").reverse().slice(0, 2).join("/"), nome = String(tp.nome).split(" · ")[0];
+  return curto ? `Tesouros · ${nome}` : `Rotas do Tesouro · ${esc(nome)} · ${dm(tp.inicio)} a ${dm(tp.fim)}`;
+}
 async function carregarPlacar() { [s.placar, s.tesouro, s.missoes] = await Promise.all([chamar("alfy_placar", { p_mes: s.placarMes || null }).catch(() => s.placar), chamar("alfy_placar_tesouro", { p_mes: s.placarMes || null }).catch(() => s.tesouro), chamar("alfy_missoes").catch(() => s.missoes)]); if (window.t4Carregar) await window.t4Carregar(); }
 // 🎯 22/11 (Miguel): missões das Rotas do Tesouro. 1ª: Carta de Embarque = ficha da Nave ID completa vale 🪎 10 (o botão abre o /meu-cadastro da pessoa)
 function missoesHTML() {
