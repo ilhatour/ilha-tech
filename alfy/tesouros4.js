@@ -159,7 +159,8 @@ function t4linhaDesafio(m) {
     : feito ? `<span class="t4mok">✓ Concluído</span>`
     : m.em_breve ? `<span class="t4mlk">🔒 Em breve</span>`
     : fora ? `<span class="t4mlk">${esc(fora)}</span>`
-    : m.id === "carta_embarque" || m.id === "perfil_insta" ? `<button type="button" class="btn turq peq t4mbtn" data-fichalink="1">Ir</button>`
+    : m.id === "carta_embarque" ? `<button type="button" class="btn turq peq t4mbtn" data-fichalink="1">Ir</button>`
+    : m.id === "perfil_insta" ? `<button type="button" class="btn turq peq t4mbtn" data-t4insta="1">Pôr meu @</button>`
     : m.id === "perfil_foto" ? `<button type="button" class="btn turq peq t4mbtn" data-t4foto="1">Ir</button>`
     : m.id === "guardiao" ? `<a class="btn turq peq t4mbtn" href="https://form.jotform.com/261476991113057" target="_blank" rel="noopener">Ir</a>`
     : T4_IR[m.id] ? `<button type="button" class="btn peq t4mbtn" data-aba="rotas">Ir</button>` : `<span class="t4mlk">em andamento</span>`;
@@ -463,6 +464,15 @@ async function t4click(d, b) {
   if (d.t4dc) { s.t4dc = d.t4dc; render(); return true; }
   if (d.t4rk) { s.t4rk = d.t4rk; render(); return true; }
   if (d.t4titulo !== undefined) { try { await chamar("alfy_titulo_usar", { p_titulo: d.t4titulo }); aviso(d.t4titulo ? `🏷️ Agora você é ${d.t4titulo}.` : "Título tirado."); await t4carregar(); render(); } catch (er) { falhou(er); } return true; }
+  if (d.t4insta) {   // 23/11: o @ do Instagram é preenchido aqui mesmo (a ficha da Nave não tem esse campo)
+    const atual = s.tes?.perfil?.instagram || "";
+    $("#camada").innerHTML = `<div class="veu" id="veu"><section class="folha" role="dialog" aria-modal="true" aria-label="Seu Instagram">
+      <div class="cab"><h2>📷 Seu Instagram</h2><button class="fechar" type="button" data-acao="fechar" aria-label="Fechar">${IC.x}</button></div>
+      <form data-t4form="insta" class="t4form" style="padding:4px 2px 8px"><label>Seu @ no Instagram<input name="insta" required autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="@seu.perfil" value="${esc(atual ? "@" + atual : "")}"></label>
+        <small class="t4muted">Pode colar o link do perfil também. Ele fica na sua ficha do Grupo Ilha.</small>
+        <button type="submit" class="btn ouro9">Salvar</button></form></section></div>`;
+    setTimeout(() => $("#camada input[name=insta]")?.focus(), 30); return true;
+  }
   if (d.t4foto) {
     const inp = document.createElement("input"); inp.type = "file"; inp.accept = "image/*";
     inp.onchange = async () => {
@@ -559,7 +569,10 @@ document.addEventListener("submit", async (e) => {
   const fd = new FormData(f), num = (k) => Math.max(0, Math.floor(+fd.get(k) || 0)), btn = f.querySelector("[type=submit]");
   if (btn?.disabled) return; if (btn) btn.disabled = true;
   try {
-    if (f.dataset.t4form === "rec") {
+    if (f.dataset.t4form === "insta") {
+      const x = await chamar("alfy_instagram_salvar", { p_insta: String(fd.get("insta") || "") });
+      fechar(); aviso(`📷 Instagram salvo: @${x.instagram}`); await t4carregar(); render(); return;
+    } else if (f.dataset.t4form === "rec") {
       const pr = {}; ["tesouro", "moeda", "medalha"].forEach((k) => { if (num(k)) pr[k] = num(k); });
       const x = await chamar("alfy_reconhecer", { p_pessoa: fd.get("pessoa"), p_motivo: String(fd.get("motivo") || "").trim(), p_premio: pr, p_divulgar: !!fd.get("divulgar") });
       aviso(x?.envio ? "🏅 Reconhecido! O Contramestre está divulgando no grupo." : "🏅 Reconhecido!"); f.reset();
