@@ -157,7 +157,7 @@ function t4linhaDesafio(m) {
   const usu = m.id === "perfil_usuario" && s.tes.perfil?.usuario ? ` · @${esc(s.tes.perfil.usuario)}` : m.id === "perfil_insta" && s.tes.perfil?.instagram ? ` · ${esc(s.tes.perfil.instagram)}` : "";
   const acao = e.prontos.length ? `<button type="button" class="btn ouro9 peq t4mbtn" data-t4coletar="${ids}">Coletar</button>`
     : feito ? `<span class="t4mok">✓ Concluído</span>`
-    : m.em_breve && m.regra?.insta ? `<a class="btn peq t4mbtn" href="https://instagram.com/${esc(m.regra.insta)}" target="_blank" rel="noopener">Abrir perfil</a><span class="t4mlk">🔒 Em breve</span>`
+    : m.em_breve && m.regra?.insta ? `<span class="t4mpilha"><a class="btn peq t4mbtn" href="https://instagram.com/${esc(m.regra.insta)}" target="_blank" rel="noopener">Abrir perfil</a><span class="t4mlk">🔒 Em breve</span></span>`
     : m.em_breve ? `<span class="t4mlk">🔒 Em breve</span>`
     : fora ? `<span class="t4mlk">${esc(fora)}</span>`
     : m.id === "carta_embarque" ? `<button type="button" class="btn turq peq t4mbtn" data-fichalink="1">Ir</button>`
