@@ -2102,3 +2102,8 @@ textarea.melhorando{opacity:.6;border-color:var(--lilas)!important}
 .t4gd{flex-wrap:wrap;align-items:center;padding:6px 0;border-top:1px solid var(--linha)}.t4gd b{min-width:120px}.t4gd select{flex:1;min-width:140px;background:var(--ferro-0);border:1px solid var(--linha);border-radius:8px;padding:8px;color:var(--texto)}
 a.btn.t4mbtn{display:inline-flex;align-items:center;justify-content:center;text-decoration:none}
 .t4rod{font-family:var(--fb);font-size:13px;color:var(--foam)}
+
+/* 🥇 ranking dos Tesouros (23/11) */
+.t4rkpos{font-family:var(--fd);font-weight:700;font-size:16px;text-align:center}
+.rk7.t4rkeu{background:color-mix(in srgb,var(--turq) 10%,transparent);border-radius:10px;padding-left:6px;padding-right:6px}
+@media (max-width:600px){.rk7 .rk6n{font-size:13px;white-space:normal;text-align:right;max-width:40vw}}

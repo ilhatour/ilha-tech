@@ -76,9 +76,9 @@ function vistaTesouros() {
   if (!t4ok()) return vistaPlacar();
   const t = s.tes, sub = s.tsub || "inicio", mand = ["comando", "gerente"].includes(t.eu.papel);
   const prontos = (t.ganhos || []).filter((g) => g.estado === "pronta");
-  const abas = [["inicio", "⚓ Início"], ["desafios", "🎯 Missões"], ["conquistas", "🏅 Conquistas"], ["trilha", "🗺️ Trilha"], ["baus", "🪎 Abrir Baús"], ["roda", "☸️ Roda do Leme"], ["mercado", "🏪 Mercado"], ["bau", "🏆 Baú da Tripulação"]].concat(mand ? [["ponte", "🎛️ Ponte"]] : []);
+  const abas = [["inicio", "⚓ Início"], ["desafios", "🎯 Missões"], ["conquistas", "🏅 Conquistas"], ["trilha", "🗺️ Trilha"], ["baus", "🪎 Abrir Baús"], ["roda", "☸️ Roda do Leme"], ["mercado", "🏪 Mercado"], ["ranking", "🥇 Ranking"], ["bau", "🏆 Baú da Tripulação"]].concat(mand ? [["ponte", "🎛️ Ponte"]] : []);
   const conta = { desafios: prontos.filter((g) => !g.missao.startsWith("c_") && !["trilha", "passe", "temporada"].includes(g.missao)).length, conquistas: prontos.filter((g) => g.missao.startsWith("c_")).length, trilha: prontos.filter((g) => ["trilha", "temporada"].includes(g.missao)).length, ponte: mand ? (s.ponte?.pedidos || []).length : 0 };
-  const V = { inicio: t4inicio, desafios: t4desafios, conquistas: t4conquistas, trilha: t4trilha, mercado: t4mercado, baus: t4baus, roda: t4roda, bau: () => vistaPlacar(), ponte: t4ponte }[sub] || t4inicio;
+  const V = { inicio: t4inicio, desafios: t4desafios, conquistas: t4conquistas, trilha: t4trilha, mercado: t4mercado, ranking: t4ranking, baus: t4baus, roda: t4roda, bau: () => vistaPlacar(), ponte: t4ponte }[sub] || t4inicio;
   return `<div class="t4">${t4topo(prontos.length)}
     <nav class="t4abas" aria-label="Rotas do Tesouro">${abas.map(([k, n]) => `<button type="button" class="t4aba" aria-pressed="${sub === k}" data-tsub="${k}"><span>${n}</span>${conta[k] ? `<b class="t4bd">${conta[k] > 99 ? "99+" : conta[k]}</b>` : ""}</button>`).join("")}</nav>
     ${t.lancado !== "todos" && t.eu.papel === "comando" ? `<p class="t4aviso">🔒 Só você está vendo. A equipe continua na tela antiga até você tocar em <b>Lançar para a equipe</b>, na Ponte.</p>` : ""}
@@ -236,6 +236,26 @@ function t4trilha() {
     <div class="t4trh"><b>${t4n(g)} 🪎 conquistados no mês</b><span class="t4muted">${prox ? `próximo marco em ${prox[0]} 🪎` : "trilha completa! 🎉"}</span></div>
     <div class="t4trilha">${marcos.map((m, i) => { const x = st(i), ok = g >= m[0]; return `<div class="t4marco ${x?.estado === "coletada" ? "coletado" : x?.estado === "pronta" ? "pronto" : "bloq"}"><div class="t4med">${x?.estado === "coletada" ? "✓" : t4premio(m[1]).split(" ").pop()}</div><b>${m[0]} 🪎</b><small>${t4premio(m[1])}</small>
       ${x?.estado === "pronta" ? `<button type="button" class="btn ouro9 peq" data-t4coletar="${x.id}">Coletar</button>` : !ok ? `<small class="t4muted">faltam ${t4n(m[0] - g)}</small>` : ""}</div>`; }).join("")}</div></section>`;
+}
+// 🥇 Ranking (23/11, pedido do Miguel): baús, moedas, nível e cada joia, contando da temporada. Moedas e joias = o que a pessoa GANHOU (gastar não derruba).
+const T4_RK = [["nivel", "🎖️ Nível", (x) => x.xp, (x) => `Nível ${x.nivel} · ${t4n(x.xp)} XP`], ["baus", "🪎 Baús", (x) => +x.baus, (x) => `${t4n(x.baus)} 🪎 conquistados`],
+  ["moeda", "🪙 Moedas", (x) => +x.moeda, (x) => `${t4n(x.moeda)} 🪙 ganhas`], ["fogo", "🔥 Foguinho", (x) => +x.fogo, (x) => `${t4n(x.fogo)} 🔥`], ["gota", "💧 Gotinha", (x) => +x.gota, (x) => `${t4n(x.gota)} 💧`],
+  ["raio", "⚡ Ventinho", (x) => +x.raio, (x) => `${t4n(x.raio)} ⚡`], ["broto", "🌱 Brotinho", (x) => +x.broto, (x) => `${t4n(x.broto)} 🌱`], ["diamante", "💎 Diamante", (x) => +x.diamante, (x) => `${t4n(x.diamante)} 💎`],
+  ["medalha", "🎖️ Medalhas", (x) => +x.medalha, (x) => `${t4n(x.medalha)} medalha${+x.medalha === 1 ? "" : "s"} de honra`], ["missoes", "🎯 Missões", (x) => +x.missoes, (x) => `${t4n(x.missoes)} missões cumpridas`],
+  ["rotas", "🗺️ Rotas", (x) => +x.rotas, (x) => `${t4n(x.rotas)} rota${+x.rotas === 1 ? "" : "s"} entregue${+x.rotas === 1 ? "" : "s"}`], ["guardiao", "🛡️ Guardião", (x) => +x.guardiao, (x) => `${t4n(x.guardiao)} diário${+x.guardiao === 1 ? "" : "s"} enviado${+x.guardiao === 1 ? "" : "s"}`]];
+function t4ranking() {
+  const r = s.rank; if (!r) { chamar("alfy_ranking").then((x) => { s.rank = x; renderSeguro(); }).catch(() => {}); return '<p class="t4muted">Carregando o ranking…</p>'; }
+  const k = s.t4rk || "nivel", def = T4_RK.find((x) => x[0] === k) || T4_RK[0], [, rot, val, txt] = def;
+  const com = (r.lista || []).filter((x) => val(x) > 0).sort((a, b) => val(b) - val(a) || a.nome.localeCompare(b.nome)), sem = (r.lista || []).filter((x) => !(val(x) > 0));
+  const max = Math.max(1, ...com.map(val)), md = ["🥇", "🥈", "🥉"];
+  let pos = 0, ant = null;
+  const linhas = com.map((x, i) => { if (val(x) !== ant) { pos = i + 1; ant = val(x); } const eu = x.id === r.eu, pa = x.patente || {};
+    return `<div class="rk7 ${pos <= 3 ? "md" + pos : ""} ${eu ? "t4rkeu" : ""}"><span class="rk6p t4rkpos">${pos <= 3 ? md[pos - 1] : pos + "º"}</span><span class="rk7b"><span class="rk7l"><b>${esc(x.nome)}${eu ? " · você" : ""}</b><small>${pa.ins || ""} ${esc(pa.nome || "")}${x.titulo ? " · " + esc(x.titulo) : ""}</small></span><i class="rk7bar"><i style="width:${Math.max(3, Math.round(100 * val(x) / max))}%"></i></i></span><span class="rk6n">${txt(x)}</span></div>`; }).join("");
+  return `<div class="t4filtros">${T4_RK.map(([c, n]) => `<button type="button" class="chip" aria-pressed="${k === c}" data-t4rk="${c}">${n}</button>`).join("")}</div>
+    <section class="pl6sec t4cx"><h3>${rot} · ${esc(r.temporada || "temporada")}</h3>
+      ${linhas || '<p class="t4muted">Ninguém pontuou aqui ainda nesta temporada. O primeiro a chegar fica no topo.</p>'}
+      ${sem.length ? `<p class="pl6sem">Ainda sem pontos aqui: ${sem.map((x) => esc(x.nome.split(" ")[0])).join(", ")}</p>` : ""}
+      <p class="t4muted" style="margin:8px 0 0">Conta tudo desde o início da temporada. Em moedas e joias vale o que cada um ganhou: gastar no baú, na Roda ou no Mercado não tira ninguém do lugar.</p></section>`;
 }
 function t4falta(preco) { const sd = s.tes.saldo, f = []; Object.entries(preco || {}).forEach(([k, v]) => { const d = +v - (+sd[k] || 0); if (d > 0) f.push(`${t4n(d)} ${T4_JOIA[k][0]}`); }); return f; }
 function t4mercado() {
@@ -414,7 +434,7 @@ function t4lastro() {
 /* ---------- ações ---------- */
 function t4ganhou(pr) { const txt = t4premio(pr); return txt === "sem prêmio" ? "" : txt; }
 async function t4click(d, b) {
-  if (d.tsub) { s.tsub = d.tsub; s.t4saiu = ""; s.t4ult = null; s.t4lote = null; if (d.tsub === "ponte") { s.ponte = await chamar("alfy_ponte").catch(() => s.ponte); if (s.tes?.eu?.papel === "comando") s.lastro = await chamar("alfy_lastro", { p_pessoa: s.lastro?.pessoa?.id || null }).catch(() => s.lastro); } render(); return true; }
+  if (d.tsub) { s.tsub = d.tsub; s.t4saiu = ""; s.t4ult = null; s.t4lote = null; if (d.tsub === "ranking") s.rank = await chamar("alfy_ranking").catch(() => s.rank); if (d.tsub === "ponte") { s.ponte = await chamar("alfy_ponte").catch(() => s.ponte); if (s.tes?.eu?.papel === "comando") s.lastro = await chamar("alfy_lastro", { p_pessoa: s.lastro?.pessoa?.id || null }).catch(() => s.lastro); } render(); return true; }
   if (d.t4fc) { s.t4fc = d.t4fc; render(); return true; }
   if (d.t4mc) { s.t4mc = d.t4mc; render(); return true; }
   if (d.t4mm) { s.t4mm = d.t4mm; if (d.t4mm === "cais") s.cais = await chamar("alfy_cais").catch(() => s.cais); render(); return true; }
@@ -441,6 +461,7 @@ async function t4click(d, b) {
     return true;
   }
   if (d.t4dc) { s.t4dc = d.t4dc; render(); return true; }
+  if (d.t4rk) { s.t4rk = d.t4rk; render(); return true; }
   if (d.t4titulo !== undefined) { try { await chamar("alfy_titulo_usar", { p_titulo: d.t4titulo }); aviso(d.t4titulo ? `🏷️ Agora você é ${d.t4titulo}.` : "Título tirado."); await t4carregar(); render(); } catch (er) { falhou(er); } return true; }
   if (d.t4foto) {
     const inp = document.createElement("input"); inp.type = "file"; inp.accept = "image/*";
