@@ -61,6 +61,11 @@ const T4_NIVSOM = { 0: 0, 1: 1, 2: 2, 3: 3, 4: 4, 5: 2, 6: 6, 7: 2, 8: 4, 9: 5, 
 // presença: 1 vez por carregamento do app (vale XP e o desafio "Bom dia, Guardião")
 (function t4presenca() { if (typeof token !== "undefined" && token) chamar("alfy_presenca").catch(() => {}); else setTimeout(t4presenca, 5000); })();
 
+// enquanto houver print em conferência, recarrega de 20 em 20 s (até 4 min)
+function t4vigiaPrint(n) {
+  if (n > 12 || !(s.tes?.insta_provas || []).some((x) => x.estado === "fila")) return;
+  setTimeout(async () => { const antes = JSON.stringify(s.tes?.insta_provas); await t4carregar(); if (JSON.stringify(s.tes?.insta_provas) !== antes) { const u = s.tes.insta_provas[0]; if (u?.estado === "ok") aviso(`✅ Print conferido: ${u.perfis.map((x) => "@" + x).join(", ")}. Colete em Missões!`); else if (u?.estado === "recusada") aviso("⚠️ " + (u.motivo || "Print não aceito."), true); } renderSeguro(); t4vigiaPrint(n + 1); }, 20000);
+}
 async function t4carregar() {
   const antes = s.tes ? t4nivel(s.tes) : null;
   s.tes = await chamar("alfy_tesouros").catch(() => s.tes);
@@ -145,7 +150,8 @@ function t4slots(pr, tes) {
   const l = []; if (+tes) l.push(["🪎", tes]);
   T4_ORDEM.forEach((k) => { if (pr && +pr[k] && !(k === "tesouro" && +tes)) l.push([T4_JOIA[k][0], pr[k], k]); });
   if (pr && +pr.atividade) l.push(["✦", pr.atividade, "atividade"]);
-  return `<div class="t4slots">${l.map(([e, q, k]) => `<span class="t4slot ${k === "atividade" ? "ativ" : k === "diamante" || k === "medalha" ? "raro" : ""}" title="${k === "atividade" ? "pontos de atividade" : T4_JOIA[k]?.[2] || "baús"}"><i>${e}</i><b>${t4n(q)}</b></span>`).join("")}</div>`;
+  if (pr && +pr.xp) l.push(["✨", pr.xp, "xp"]);
+  return `<div class="t4slots">${l.map(([e, q, k]) => `<span class="t4slot ${k === "atividade" ? "ativ" : k === "diamante" || k === "medalha" ? "raro" : ""}" title="${k === "atividade" ? "pontos de atividade" : k === "xp" ? "pontos de experiência (XP)" : T4_JOIA[k]?.[2] || "baús"}"><i>${e}</i><b>${t4n(q)}</b></span>`).join("")}</div>`;
 }
 const T4_IR = { comentar_dia: "rotas", concluir_dia: "rotas", mesmo_dia: "rotas", concluir_semana: "rotas", prazo_semana: "rotas" };
 function t4linhaDesafio(m) {
@@ -154,9 +160,12 @@ function t4linhaDesafio(m) {
   const feito = e.feito && m.id !== "mesmo_dia" && !e.prontos.length;
   const st = e.prontos.length ? "pronta" : feito ? "feita" : fora || m.em_breve ? "bloq" : "andamento";
   const alvoF = m.id === "carta_embarque" ? 5 : alvo, atF = Math.min(at, alvoF);
+  const pv = m.regra?.tipo === "insta_siga" && !feito && !e.prontos.length ? (s.tes.insta_provas || [])[0] : null;
+  const prv = !pv ? "" : pv.estado === "fila" ? `<span class="t4mst">📸 Seu print está sendo conferido pelo ALFY…</span>` : pv.estado === "recusada" ? `<span class="t4mst ruim">⚠️ Último print: ${esc(pv.motivo || "não deu certo")}</span>` : "";
   const usu = m.id === "perfil_usuario" && s.tes.perfil?.usuario ? ` · @${esc(s.tes.perfil.usuario)}` : m.id === "perfil_insta" && s.tes.perfil?.instagram ? ` · ${esc(s.tes.perfil.instagram)}` : "";
   const acao = e.prontos.length ? `<button type="button" class="btn ouro9 peq t4mbtn" data-t4coletar="${ids}">Coletar</button>`
     : feito ? `<span class="t4mok">✓ Concluído</span>`
+    : m.regra?.tipo === "insta_siga" && !m.em_breve ? `<span class="t4mpilha"><a class="btn peq t4mbtn" href="https://instagram.com/${esc(m.regra.insta)}" target="_blank" rel="noopener">Abrir perfil</a>${s.tes.perfil?.instagram ? `<button type="button" class="btn turq peq t4mbtn" data-t4print="1">📸 Mandar print</button>` : `<button type="button" class="btn turq peq t4mbtn" data-t4insta="1">Pôr meu @</button>`}</span>`
     : m.em_breve && m.regra?.insta ? `<span class="t4mpilha"><a class="btn peq t4mbtn" href="https://instagram.com/${esc(m.regra.insta)}" target="_blank" rel="noopener">Abrir perfil</a><span class="t4mlk">🔒 Em breve</span></span>`
     : m.em_breve ? `<span class="t4mlk">🔒 Em breve</span>`
     : fora ? `<span class="t4mlk">${esc(fora)}</span>`
@@ -167,7 +176,7 @@ function t4linhaDesafio(m) {
     : T4_IR[m.id] ? `<button type="button" class="btn peq t4mbtn" data-aba="rotas">Ir</button>` : `<span class="t4mlk">em andamento</span>`;
   const falta = m.id === "carta_embarque" && (m.falta || []).length ? ` · falta ${esc(m.falta.join(", "))}` : "";
   return `<article class="t4m ${st}"><span class="t4mic" aria-hidden="true">${m.icone || "🎯"}</span>
-    <div class="t4mct"><b>${esc(m.nome)}</b><small>${esc(m.descricao || "")}${falta}${usu}</small>
+    <div class="t4mct"><b>${esc(m.nome)}</b><small>${esc(m.descricao || "")}${falta}${usu}</small>${prv}
       ${m.em_breve ? "" : `<div class="t4mpb" aria-label="${atF} de ${alvoF}"><span><i style="width:${Math.min(100, 100 * atF / Math.max(1, alvoF))}%"></i></span><small>${m.id === "mesmo_dia" ? `${at} hoje (até 5)` : `${atF}/${alvoF}`}</small></div>`}</div>
     ${t4slots(m.premio, m.tesouros)}<div class="t4mac">${acao}</div></article>`;
 }
@@ -465,6 +474,21 @@ async function t4click(d, b) {
   if (d.t4dc) { s.t4dc = d.t4dc; render(); return true; }
   if (d.t4rk) { s.t4rk = d.t4rk; render(); return true; }
   if (d.t4titulo !== undefined) { try { await chamar("alfy_titulo_usar", { p_titulo: d.t4titulo }); aviso(d.t4titulo ? `🏷️ Agora você é ${d.t4titulo}.` : "Título tirado."); await t4carregar(); render(); } catch (er) { falhou(er); } return true; }
+  if (d.t4print) {   // 23/11: print da lista "Seguindo" → o robô do Mac confere com a IA
+    const inp = document.createElement("input"); inp.type = "file"; inp.accept = "image/*";
+    inp.onchange = async () => {
+      const f = inp.files?.[0]; if (!f) return;
+      try {
+        const img = await new Promise((ok, erro) => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => erro(new Error("Não consegui abrir essa imagem. Mande um print (PNG ou JPG).")); i.src = URL.createObjectURL(f); });
+        const k = Math.min(1, 1800 / Math.max(img.width, img.height)), cv = document.createElement("canvas");
+        cv.width = Math.round(img.width * k); cv.height = Math.round(img.height * k); cv.getContext("2d").drawImage(img, 0, 0, cv.width, cv.height);
+        await chamar("alfy_insta_print", { p_base64: cv.toDataURL("image/jpeg", 0.88).split(",")[1], p_tipo: "image/jpeg" });
+        aviso("📸 Print enviado! O ALFY confere em instantes e libera os baús dos perfis que aparecerem.");
+        await t4carregar(); render(); t4vigiaPrint(0);
+      } catch (er) { falhou(er); }
+    };
+    inp.click(); return true;
+  }
   if (d.t4insta) {   // 23/11: o @ do Instagram é preenchido aqui mesmo (a ficha da Nave não tem esse campo)
     const atual = s.tes?.perfil?.instagram || "";
     $("#camada").innerHTML = `<div class="veu" id="veu"><section class="folha" role="dialog" aria-modal="true" aria-label="Seu Instagram">

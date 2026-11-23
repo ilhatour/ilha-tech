@@ -2112,3 +2112,6 @@ a.btn.t4mbtn{display:inline-flex;align-items:center;justify-content:center;text-
 .t4mpilha{display:flex;flex-direction:column;align-items:flex-end;gap:4px}
 .t4mpilha .t4mbtn{white-space:nowrap;padding-left:10px;padding-right:10px}
 .t4mpilha .t4mlk,.t4mlk{white-space:nowrap}
+.t4mst{display:block;margin-top:6px;font-size:12.5px;color:var(--turq)}
+.t4mst.ruim{color:#E8A05B}
+.t4mpilha .t4mbtn{min-width:0}
