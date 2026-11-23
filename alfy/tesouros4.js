@@ -175,7 +175,7 @@ function t4linhaDesafio(m) {
     : m.id === "guardiao" ? `<a class="btn turq peq t4mbtn" href="https://form.jotform.com/261476991113057" target="_blank" rel="noopener">Ir</a>`
     : T4_IR[m.id] ? `<button type="button" class="btn peq t4mbtn" data-aba="rotas">Ir</button>` : `<span class="t4mlk">em andamento</span>`;
   const falta = m.id === "carta_embarque" && (m.falta || []).length ? ` · falta ${esc(m.falta.join(", "))}` : "";
-  return `<article class="t4m ${st}"><span class="t4mic" aria-hidden="true">${m.icone || "🎯"}</span>
+  return `<article class="t4m ${st}${m.regra?.insta ? " insta" : ""}"><span class="t4mic" aria-hidden="true">${m.icone || "🎯"}</span>
     <div class="t4mct"><b>${esc(m.nome)}</b><small>${esc(m.descricao || "")}${falta}${usu}</small>${prv}
       ${m.em_breve ? "" : `<div class="t4mpb" aria-label="${atF} de ${alvoF}"><span><i style="width:${Math.min(100, 100 * atF / Math.max(1, alvoF))}%"></i></span><small>${m.id === "mesmo_dia" ? `${at} hoje (até 5)` : `${atF}/${alvoF}`}</small></div>`}</div>
     ${t4slots(m.premio, m.tesouros)}<div class="t4mac">${acao}</div></article>`;
