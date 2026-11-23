@@ -191,7 +191,7 @@ function t4desafios() {
   return `<div class="t4mis"><nav class="t4mcat" aria-label="Tipos de missão">${CAT.filter(([c]) => de(c).length).map(([c, n]) => `<button type="button" class="t4mcb" aria-pressed="${cat === c}" data-t4dc="${c}">${n}${conta(c) ? ` <b class="t4bd">${conta(c)}</b>` : ""}</button>`).join("")}</nav>
     <div class="t4mpainel">${cat === "diaria" ? t4atividade() : ""}
       <div class="t4mlista">${lista.map((x) => x.h).join("") || '<p class="t4muted">Nada aqui.</p>'}</div>
-      <p class="t4muted" style="margin:10px 2px 0">Tudo aqui o sistema confere sozinho, na hora. Ninguém precisa aprovar nada.${cat === "campanha" ? " Super missão vale 💎, no máximo 1 por pessoa por semestre." : ""}</p></div></div>`;
+      <p class="t4muted" style="margin:10px 2px 0">${cat === "breve" ? "🔜 Missões que já estão combinadas e entram no jogo assim que o ALFY conseguir conferir sozinho (Instagram, vendas na Nave, avaliações e provas). Ainda não valem prêmio." : "Tudo aqui o sistema confere sozinho, na hora. Ninguém precisa aprovar nada."}${cat === "campanha" ? " Super missão vale 💎, no máximo 1 por pessoa por semestre." : ""}</p></div></div>`;
 }
 const T4_ROM = ["I", "II", "III", "IV", "V"];
 function t4conquistas() {
@@ -239,9 +239,8 @@ function t4trilha() {
 }
 function t4falta(preco) { const sd = s.tes.saldo, f = []; Object.entries(preco || {}).forEach(([k, v]) => { const d = +v - (+sd[k] || 0); if (d > 0) f.push(`${t4n(d)} ${T4_JOIA[k][0]}`); }); return f; }
 function t4mercado() {
-  if (!s.tes.loja_aberta) return `<p class="t4aviso">🏪 A Loja da Ilha abre em breve. Por enquanto o comércio é aqui no Cais, entre a tripulação.</p>` + t4cais();
-  const m = s.t4mm || "loja";
-  return `<div class="t4filtros t4mm"><button type="button" class="chip" aria-pressed="${m === "loja"}" data-t4mm="loja">🏪 Loja</button><button type="button" class="chip" aria-pressed="${m === "cais"}" data-t4mm="cais">⚓ Cais da tripulação${(s.cais?.ofertas || []).filter((o) => !o.minha).length ? ` <b class="t4bd2">${s.cais.ofertas.filter((o) => !o.minha).length}</b>` : ""}</button></div>` + (m === "cais" ? t4cais() : t4loja());
+  const m = s.t4mm || "loja";   // 23/11: loja fechada continua mostrando o catálogo, com cadeado "em breve" (pedido do Miguel)
+  return `<div class="t4filtros t4mm"><button type="button" class="chip" aria-pressed="${m === "loja"}" data-t4mm="loja">🏪 Loja</button><button type="button" class="chip" aria-pressed="${m === "cais"}" data-t4mm="cais">⚓ Cais da tripulação${(s.cais?.ofertas || []).filter((o) => !o.minha).length ? ` <b class="t4bd2">${s.cais.ofertas.filter((o) => !o.minha).length}</b>` : ""}</button></div>` + (m === "cais" ? t4cais() : (s.tes.loja_aberta ? "" : `<p class="t4aviso">🔜 A Loja da Ilha abre em breve. Os prêmios já estão aqui para você ir juntando. Por enquanto as trocas acontecem no ⚓ Cais, entre a tripulação.</p>`) + t4loja());
 }
 const t4j = (k, n) => `${t4n(n)} ${T4_JOIA[k][0]}`;
 const t4dia = (d) => new Date(d).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", timeZone: "America/Sao_Paulo" });
@@ -285,7 +284,7 @@ function t4loja() {
       <div class="t4tr t4th" role="row"><span>Item</span><span>Preço</span><span></span></div>
       ${itens.map((i) => { const f = t4falta(i.preco), esg = i.fechado; return `<div class="t4tr" role="row"><span class="t4item"><span class="t4ic" aria-hidden="true">${i.icone}</span><span><b>${esc(i.nome)}</b><small>${esc(i.descricao || "")}${i.so_clt ? " · <b>só CLT</b>" : ""}${i.estoque != null ? ` · ${i.estoque > 0 ? `restam ${i.estoque}` : "esgotado"}` : ""}${i.estoque_mes != null ? ` · ${i.estoque_mes} por mês` : ""}</small></span></span>
         <span class="t4preco">${T4_ORDEM.filter((k) => i.preco[k]).map((k) => `<span class="t4pj">${T4_JOIA[k][0]} ${t4n(i.preco[k])}</span>`).join("")}${i.efeito ? ` <span class="t4muted">→ ${t4premio(i.efeito)}</span>` : Object.keys(i.preco).some((k) => k !== "moeda") ? ` <small class="t4eq">≈ ${t4n(i.em_moedas ?? t4moedas(i.preco))} 🪙</small>` : ""}</span>
-        <span>${esg ? `<button type="button" class="btn peq" disabled>${esc(esg)}</button>` : i.so_clt && !t.eu.clt ? `<button type="button" class="btn peq" disabled>Só CLT</button>` : f.length ? `<button type="button" class="btn peq" disabled title="Faltam ${esc(f.join(", "))}">Faltam ${esc(f.join(" + "))}</button>` : `<button type="button" class="btn ouro9 peq" data-t4comprar="${esc(i.id)}">${i.efeito ? "Trocar" : "Comprar"}</button>`}</span></div>`; }).join("")}
+        <span>${!t.loja_aberta ? `<button type="button" class="btn peq" disabled>🔒 Em breve</button>` : esg ? `<button type="button" class="btn peq" disabled>${esc(esg)}</button>` : i.so_clt && !t.eu.clt ? `<button type="button" class="btn peq" disabled>Só CLT</button>` : f.length ? `<button type="button" class="btn peq" disabled title="Faltam ${esc(f.join(", "))}">Faltam ${esc(f.join(" + "))}</button>` : `<button type="button" class="btn ouro9 peq" data-t4comprar="${esc(i.id)}">${i.efeito ? "Trocar" : "Comprar"}</button>`}</span></div>`; }).join("")}
     </div>
     ${(t.pedidos || []).length ? `<section class="pl6sec t4cx" style="margin-top:14px"><h3>Meus pedidos</h3>${t.pedidos.map((p) => `<div class="t4ped"><span>${p.icone || nome(p.item)?.icone || "🎟️"}</span><b>${esc(p.nome || nome(p.item)?.nome || p.item)}${p.origem && p.origem !== "mercado" ? " · vale de baú" : ""}</b><code>${esc(p.codigo)}</code><small class="${p.estado === "entregue" ? "t4ok" : "t4muted"}">${{ pedido: "aguardando entrega", entregue: "✓ entregue", cancelado: "cancelado, devolvido" }[p.estado]}</small></div>`).join("")}<p class="t4muted" style="margin:8px 0 0">Mostre o código para quem entrega. A data de serviço e folga é combinada com o gerente.</p></section>` : ""}`;
 }
