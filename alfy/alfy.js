@@ -189,7 +189,7 @@ function navItens() {
 function casca() {
   const p = eu();
   $("#nav").innerHTML = navItens().map(([k, n, ic, c]) => `<button type="button" data-aba="${k}" aria-current="${s.aba === k}" title="${n}" aria-label="${n}">${ic}<span class="nl">${n}</span><span class="n">${c}</span></button>`).join("");
-  const fica = comando() ? ["rotas", "rotinas", "agenda", "zap"] : ["rotas", "rotinas", "agenda", "placar"];
+  const fica = comando() ? ["rotas", "rotinas", "agenda", "placar", "zap"] : ["rotas", "rotinas", "agenda", "placar"];   // 22/11: Tesouros na barra do Miguel também
   const bb = [...navItens().filter(([k]) => fica.includes(k)), ["eu", "Mais", svg('<path d="M4 6h16M4 12h16M4 18h16"/>')]];   // no celular o resto fica em Mais
   $("#barra-baixo").innerHTML = bb.map(([k, n, ic]) => `<button type="button" data-aba="${k}" aria-current="${s.aba === k}">${ic}<span>${n}</span></button>`).join("");
   $("#barra-baixo").style.gridTemplateColumns = `repeat(${bb.length},1fr)`;
