@@ -81,9 +81,9 @@ function vistaTesouros() {
   if (!t4ok()) return vistaPlacar();
   const t = s.tes, sub = s.tsub || "inicio", mand = ["comando", "gerente"].includes(t.eu.papel);
   const prontos = (t.ganhos || []).filter((g) => g.estado === "pronta");
-  const abas = [["inicio", "⚓ Início"], ["desafios", "🎯 Missões"], ["conquistas", "🏅 Conquistas"], ["trilha", "🗺️ Trilha"], ["baus", "🪎 Abrir Baús"], ["roda", "☸️ Roda do Leme"], ["mercado", "🏪 Mercado"], ["ranking", "🥇 Ranking"], ["bau", "🏆 Baú da Tripulação"]].concat(mand ? [["ponte", "🎛️ Ponte"]] : []);
+  const abas = [["inicio", "⚓ Início"], ["desafios", "🎯 Missões"], ["conquistas", "🏅 Conquistas"], ["trilha", "🗺️ Trilha"], ["baus", "🪎 Abrir Baús"], ["roda", "☸️ Roda do Leme"], ["mercado", "🏪 Mercado"], ["extrato", "📒 Extrato"], ["ranking", "🥇 Ranking"], ["bau", "🏆 Baú da Tripulação"]].concat(mand ? [["ponte", "🎛️ Ponte"]] : []);
   const conta = { desafios: prontos.filter((g) => !g.missao.startsWith("c_") && !["trilha", "passe", "temporada"].includes(g.missao)).length, conquistas: prontos.filter((g) => g.missao.startsWith("c_")).length, trilha: prontos.filter((g) => ["trilha", "temporada"].includes(g.missao)).length, ponte: mand ? (s.ponte?.pedidos || []).length : 0 };
-  const V = { inicio: t4inicio, desafios: t4desafios, conquistas: t4conquistas, trilha: t4trilha, mercado: t4mercado, ranking: t4ranking, baus: t4baus, roda: t4roda, bau: () => vistaPlacar(), ponte: t4ponte }[sub] || t4inicio;
+  const V = { inicio: t4inicio, desafios: t4desafios, conquistas: t4conquistas, trilha: t4trilha, mercado: t4mercado, extrato: t4extrato, ranking: t4ranking, baus: t4baus, roda: t4roda, bau: () => vistaPlacar(), ponte: t4ponte }[sub] || t4inicio;
   return `<div class="t4">${t4topo(prontos.length)}
     <nav class="t4abas" aria-label="Rotas do Tesouro">${abas.map(([k, n]) => `<button type="button" class="t4aba" aria-pressed="${sub === k}" data-tsub="${k}"><span>${n}</span>${conta[k] ? `<b class="t4bd">${conta[k] > 99 ? "99+" : conta[k]}</b>` : ""}</button>`).join("")}</nav>
     ${t.lancado !== "todos" && t.eu.papel === "comando" ? `<p class="t4aviso">🔒 Só você está vendo. A equipe continua na tela antiga até você tocar em <b>Lançar para a equipe</b>, na Ponte.</p>` : ""}
@@ -249,7 +249,7 @@ function t4trilha() {
       ${x?.estado === "pronta" ? `<button type="button" class="btn ouro9 peq" data-t4coletar="${x.id}">Coletar</button>` : !ok ? `<small class="t4muted">faltam ${t4n(m[0] - g)}</small>` : ""}</div>`; }).join("")}</div></section>`;
 }
 // 🥇 Ranking (23/11, pedido do Miguel): baús, moedas, nível e cada joia, contando da temporada. Moedas e joias = o que a pessoa GANHOU (gastar não derruba).
-const T4_RK = [["nivel", "🎖️ Nível", (x) => x.xp, (x) => `Nível ${x.nivel} · ${t4n(x.xp)} XP`], ["baus", "🪎 Baús", (x) => +x.baus, (x) => `${t4n(x.baus)} 🪎 conquistados`],
+const T4_RK = [["nivel", "🎖️ Nível", (x) => x.xp, (x) => `Nível ${x.nivel} · ${t4n(x.xp)} XP`], ["coleta_mes", "💰 Coleta do mês", (x) => +x.coleta_mes, (x) => `${t4n(x.coleta_mes)} 🪙 coletadas`], ["coleta", "💰 Coleta da temporada", (x) => +x.coleta, (x) => `${t4n(x.coleta)} 🪙 coletadas`], ["baus", "🪎 Baús", (x) => +x.baus, (x) => `${t4n(x.baus)} 🪎 conquistados`],
   ["moeda", "🪙 Moedas", (x) => +x.moeda, (x) => `${t4n(x.moeda)} 🪙 ganhas`], ["fogo", "🔥 Foguinho", (x) => +x.fogo, (x) => `${t4n(x.fogo)} 🔥`], ["gota", "💧 Gotinha", (x) => +x.gota, (x) => `${t4n(x.gota)} 💧`],
   ["raio", "⚡ Ventinho", (x) => +x.raio, (x) => `${t4n(x.raio)} ⚡`], ["broto", "🌱 Brotinho", (x) => +x.broto, (x) => `${t4n(x.broto)} 🌱`], ["diamante", "💎 Diamante", (x) => +x.diamante, (x) => `${t4n(x.diamante)} 💎`],
   ["medalha", "🎖️ Medalhas", (x) => +x.medalha, (x) => `${t4n(x.medalha)} medalha${+x.medalha === 1 ? "" : "s"} de honra`], ["missoes", "🎯 Missões", (x) => +x.missoes, (x) => `${t4n(x.missoes)} missões cumpridas`],
@@ -266,7 +266,7 @@ function t4ranking() {
     <section class="pl6sec t4cx"><h3>${rot} · ${esc(r.temporada || "temporada")}</h3>
       ${linhas || '<p class="t4muted">Ninguém pontuou aqui ainda nesta temporada. O primeiro a chegar fica no topo.</p>'}
       ${sem.length ? `<p class="pl6sem">Ainda sem pontos aqui: ${sem.map((x) => esc(x.nome.split(" ")[0])).join(", ")}</p>` : ""}
-      <p class="t4muted" style="margin:8px 0 0">Conta tudo desde o início da temporada. Em moedas e joias vale o que cada um ganhou: gastar no baú, na Roda ou no Mercado não tira ninguém do lugar.</p></section>`;
+      <p class="t4muted" style="margin:8px 0 0">Conta tudo desde o início da temporada. Em moedas e joias vale o que cada um ganhou: gastar no baú, na Roda ou no Mercado não tira ninguém do lugar.${k.startsWith("coleta") ? " Coleta = tudo que entrou em 🪙 e elementos, somado em 🪙 (🔥 vale 30, 💧 ⚡ 🌱 valem 300); troca no Cais não conta. O detalhe de cada um fica no 📒 Extrato." : ""}</p></section>`;
 }
 function t4falta(preco) { const sd = s.tes.saldo, f = []; Object.entries(preco || {}).forEach(([k, v]) => { const d = +v - (+sd[k] || 0); if (d > 0) f.push(`${t4n(d)} ${T4_JOIA[k][0]}`); }); return f; }
 function t4mercado() {
@@ -409,7 +409,7 @@ function t4ponte() {
   </div>
   <section class="pl6sec t4cx" style="margin-top:14px"><h3>🏪 Catálogo do Mercado</h3><p class="t4muted" style="margin:0 0 8px">Ajuste preço, estoque total, estoque do mês e se o item aparece. Vazio = sem limite. Todo preço mostra o equivalente em 🪙. Custo R$ vazio = o sistema usa o equivalente da parte em 🪙/🪎/elementos (preencha o custo de verdade nos itens pagos em 💎 ou 🎖️).</p>
     <div class="t4cat">${(p.catalogo || []).map((i) => `<form data-t4form="item" data-id="${esc(i.id)}" class="t4catl"><span class="t4ic">${i.icone}</span><b>${esc(i.nome)}</b>${T4_ORDEM.filter((k) => !T4_BREVE.includes(k)).map((k) => `<label class="t4mini">${T4_JOIA[k][0]}<input name="${k}" type="number" min="0" value="${+(i.preco[k] || 0)}"></label>`).join("")}<label class="t4mini">estoque<input name="estoque" type="number" min="0" value="${i.estoque ?? ""}"></label><label class="t4mini">por mês<input name="estoque_mes" type="number" min="0" value="${i.estoque_mes ?? ""}"></label>${i.efeito ? "" : `<label class="t4mini">custo R$<input name="custo_real" type="number" min="0" step="0.01" value="${i.custo_real ?? ""}" placeholder="${t4rs(i.custo_calc)}"></label>`}<small class="t4muted">≈ ${t4n(i.em_moedas ?? t4moedas(i.preco))} 🪙</small><label class="t4chk"><input type="checkbox" name="ativo" ${i.ativo ? "checked" : ""}> à venda</label><button type="submit" class="btn peq">Salvar</button></form>`).join("")}</div></section>` : ""}
-  ${cmd ? t4lastro() : ""}
+  ${cmd ? t4captacao() + t4lastro() : ""}
   ${cmd && (p.guardiao_sem_dono || []).length ? `<section class="pl6sec t4cx" style="margin-top:14px"><h3>🛡️ Guardião sem dono · ${p.guardiao_sem_dono.length}</h3>
     <p class="t4muted" style="margin:0 0 8px">Nomes digitados no Registro do Guardião que o sistema não reconheceu (últimos 30 dias). Ligue cada um à pessoa: os envios antigos e os próximos passam a contar para ela.</p>
     ${p.guardiao_sem_dono.map((x) => `<form data-t4form="guard" data-nome="${esc(x.nome)}" class="t4inl t4gd"><b>${esc(x.nome)}</b><small class="t4muted">${x.envios} envios</small><select name="pessoa" required><option value="">Quem é?</option>${(p.pessoas_todas || p.equipe || []).map((e) => `<option value="${e.id}">${esc(e.nome)}</option>`).join("")}</select><button type="submit" class="btn peq">Ligar</button></form>`).join("")}</section>` : ""}
@@ -420,6 +420,44 @@ function t4ponte() {
     <small class="t4muted" style="display:block;margin-top:6px">Zera moedas, elementos, baús guardados, 💎, títulos e prêmios não coletados de todo mundo. Nível de patente e o histórico ficam. Não dá para desfazer.</small></section>` : ""}
   <section class="pl6sec t4cx" style="margin-top:14px"><h3>👥 Tripulação</h3><p class="t4muted" style="margin:0 0 6px">Em ordem alfabética, de propósito.${cmd ? " Marque quem é CLT: só essas pessoas podem trocar itens de folga." : ""}</p>
     <div class="t4equipe">${(p.equipe || []).map((x) => `<div><b>${esc(x.nome)}</b><small>Nív. ${x.nivel} · ${esc(x.patente)} · ${t4n(x.ganho_mes)} 🪎 no mês</small>${cmd ? `<label class="t4chk t4clt"><input type="checkbox" data-t4clt="${x.id}" ${x.clt ? "checked" : ""}> CLT (pode trocar folga)</label>` : ""}</div>`).join("")}</div></section>`;
+}
+
+// 📒 Extrato (23/11, pedido do Miguel): o que a pessoa coletou no mês e na temporada; gastar não apaga a coleta.
+const T4_GRUPO = { rotas: ["🗺️", "Rotas entregues"], missoes: ["🎯", "Missões e conquistas"], atividade: ["🎁", "Baús de atividade"], trilha: ["🗺️", "Trilha e níveis da temporada"], baus: ["🪎", "Baús abertos"], roda: ["☸️", "Roda do Leme"], reconhecimento: ["🏅", "Reconhecimento"], mercado: ["🏪", "Mercado"], cais: ["⚓", "Cais"], ajuste: ["🛠️", "Ajuste"] };
+function t4coletaResumo(c, quem) {
+  const g = c.ganhou || {}, gs = c.gastou || {}, sd = quem ? (quem.saldo || {}) : null;
+  const ks = T4_ORDEM.filter((k) => +g[k] || +gs[k] || (sd && +sd[k]));
+  return `<div class="t4exnum"><div><b>${t4n(c.valor)} 🪙</b><small>coletado${quem ? "" : "s"} em 🪙 equivalentes</small></div><div><b>${t4n(g.tesouro || 0)} 🪎</b><small>baús recebidos</small></div><div><b>${t4n(c.abertos || 0)}</b><small>baús abertos</small></div><div><b>${t4n(c.giros || 0)}</b><small>giros na Roda</small></div></div>
+    ${ks.length ? `<div class="t4tabela t4exj" role="table"><div class="t4tr t4th" role="row"><span>Joia</span><span>Coletou</span><span>Gastou</span>${sd ? "<span>Tem agora</span>" : ""}</div>
+      ${ks.map((k) => `<div class="t4tr" role="row"><span>${T4_JOIA[k][0]} ${T4_JOIA[k][2]}</span><span class="t4ok">+${t4n(g[k] || 0)}</span><span>${+gs[k] ? "−" + t4n(gs[k]) : "0"}</span>${sd ? `<span><b>${t4n(sd[k] || 0)}</b></span>` : ""}</div>`).join("")}</div>` : '<p class="t4muted">Nada coletado ainda neste período.</p>'}
+    ${Object.keys(c.grupos || {}).length ? `<h4 class="t4exh">De onde veio</h4><div class="t4exg">${Object.entries(c.grupos).sort((a, b) => (+b[1].moeda || 0) - (+a[1].moeda || 0)).map(([gr, m]) => `<div><span>${(T4_GRUPO[gr] || ["•", gr])[0]} ${(T4_GRUPO[gr] || ["", gr])[1]}</span><b>${T4_ORDEM.filter((k) => +m[k]).map((k) => t4j(k, m[k])).join(" · ")}</b></div>`).join("")}</div>` : ""}`;
+}
+function t4extrato() {
+  const x = s.extr;
+  if (s.extrErro) return '<p class="t4muted">Não deu para carregar o extrato agora. <button type="button" class="btn peq" data-t4exde="1">Tentar de novo</button></p>';
+  if (!x) { if (!s.extrPedido) { s.extrPedido = true; chamar("alfy_extrato").then((r) => { s.extr = r; s.extrErro = !r; }).catch(() => { s.extrErro = true; }).finally(() => { s.extrPedido = false; renderSeguro(); }); } return '<p class="t4muted">Carregando o extrato…</p>'; }
+  const per = s.t4ex || "mes", c = x[per] || {}, eu = x.pessoa?.id === s.tes?.eu?.id, manda = ["comando", "gerente"].includes(s.tes?.eu?.papel);
+  const gente = manda ? (s.rank?.lista || []).slice().sort((a, b) => a.nome.localeCompare(b.nome)) : [];
+  return `<div class="t4filtros"><button type="button" class="chip" aria-pressed="${per === "mes"}" data-t4ex="mes">Este mês (${esc(x.mes_nome || "")})</button><button type="button" class="chip" aria-pressed="${per === "temporada"}" data-t4ex="temporada">Temporada inteira</button>
+      ${gente.length ? `<select data-t4expessoa aria-label="Ver o extrato de">${gente.map((p) => `<option value="${p.id}" ${p.id === x.pessoa?.id ? "selected" : ""}>${esc(p.nome)}${p.id === s.tes.eu.id ? " (você)" : ""}</option>`).join("")}</select>` : ""}</div>
+    <div class="t4g2">
+      <section class="pl6sec t4cx"><h3>📒 ${eu ? "Sua coleta" : "Coleta de " + esc(x.pessoa?.nome || "")} · ${per === "mes" ? "este mês" : "temporada"}</h3>
+        ${t4coletaResumo(c, x)}
+        <p class="t4muted" style="margin:8px 0 0">Coletado é tudo que entrou${per === "mes" ? " neste mês" : " desde o início da temporada"}. Gastar no baú, na Roda ou no Mercado não apaga a coleta: o "tem agora" é o que sobrou. Troca no Cais não conta como coleta.</p></section>
+      <section class="pl6sec t4cx"><h3>🧾 Movimentos da temporada</h3>
+        <div class="t4ext">${(x.movimentos || []).map((m) => `<div><span class="${+m.qtd > 0 ? "t4ok" : "t4muted"}">${+m.qtd > 0 ? "+" : "−"}${t4j(m.moeda, Math.abs(m.qtd))}</span><b>${esc(m.txt)}</b><small>${t4dia(m.em)} · ${new Date(m.em).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" })}</small></div>`).join("") || '<p class="t4muted">Nenhum movimento ainda nesta temporada.</p>'}</div></section>
+    </div>`;
+}
+function t4captacao() {
+  const c = s.capt; if (!c) return "";
+  const per = s.t4cp || "temporada", d = c[per] || {}, rs = (+d.valor || 0) / 100 + (+(d.ganhou || {}).diamante || 0) * (+c.diamante_reais || 0);
+  const dias = (c.dias || []).filter((x) => per === "temporada" || !d.ini || x.dia >= String(d.ini).slice(0, 10)), mx = Math.max(1, ...dias.map((x) => +x.valor));
+  return `<section class="pl6sec t4cx" style="margin-top:14px"><h3>💰 Captação do jogo</h3>
+    <div class="t4filtros"><button type="button" class="chip" aria-pressed="${per === "mes"}" data-t4cp="mes">Este mês</button><button type="button" class="chip" aria-pressed="${per === "temporada"}" data-t4cp="temporada">Temporada</button></div>
+    <p style="margin:0 0 8px">A tripulação coletou <b>${t4n(d.valor)} 🪙</b> em moedas e elementos, o que equivale a <b>R$ ${t4rs(rs)}</b>${+(d.ganhou || {}).diamante ? ` (com ${t4n(d.ganhou.diamante)} 💎 a R$ ${t4rs(c.diamante_reais)})` : ""}.</p>
+    ${t4coletaResumo(d, null)}
+    ${dias.length ? `<h4 class="t4exh">Dia a dia (🪙 coletadas, mais recente primeiro)</h4><div class="t4exd">${dias.slice().reverse().map((x) => `<div title="${t4dia(x.dia + "T12:00:00")}: ${t4n(x.valor)} 🪙 por ${x.pessoas} pessoa${x.pessoas > 1 ? "s" : ""}"><i style="height:${Math.max(4, Math.round(100 * x.valor / mx))}%"></i><small>${x.dia.slice(8, 10)}/${x.dia.slice(5, 7)}</small><b>${t4n(x.valor)}</b></div>`).join("")}</div>` : ""}
+    <small class="t4muted">1 🪙 = R$ 0,01 (mesma régua do orçamento do Mercado). 🪎 não entra no valor: ele vira 🪙 quando é aberto. Quem coletou quanto: 🥇 Ranking, filtro 💰 Coleta.</small></section>`;
 }
 
 function t4lastro() {
@@ -445,7 +483,7 @@ function t4lastro() {
 /* ---------- ações ---------- */
 function t4ganhou(pr) { const txt = t4premio(pr); return txt === "sem prêmio" ? "" : txt; }
 async function t4click(d, b) {
-  if (d.tsub) { s.tsub = d.tsub; s.t4saiu = ""; s.t4ult = null; s.t4lote = null; if (d.tsub === "ranking") s.rank = await chamar("alfy_ranking").catch(() => s.rank); if (d.tsub === "ponte") { s.ponte = await chamar("alfy_ponte").catch(() => s.ponte); if (s.tes?.eu?.papel === "comando") s.lastro = await chamar("alfy_lastro", { p_pessoa: s.lastro?.pessoa?.id || null }).catch(() => s.lastro); } render(); return true; }
+  if (d.tsub) { s.tsub = d.tsub; s.t4saiu = ""; s.t4ult = null; s.t4lote = null; if (d.tsub === "ranking") s.rank = await chamar("alfy_ranking").catch(() => s.rank); if (d.tsub === "extrato") { s.extr = await chamar("alfy_extrato", { p_pessoa: s.extr?.pessoa?.id || null }).catch(() => s.extr); if (["comando", "gerente"].includes(s.tes?.eu?.papel) && !s.rank) s.rank = await chamar("alfy_ranking").catch(() => null); } if (d.tsub === "ponte") { s.ponte = await chamar("alfy_ponte").catch(() => s.ponte); if (s.tes?.eu?.papel === "comando") { s.lastro = await chamar("alfy_lastro", { p_pessoa: s.lastro?.pessoa?.id || null }).catch(() => s.lastro); s.capt = await chamar("alfy_captacao").catch(() => s.capt); } } render(); return true; }
   if (d.t4fc) { s.t4fc = d.t4fc; render(); return true; }
   if (d.t4mc) { s.t4mc = d.t4mc; render(); return true; }
   if (d.t4mm) { s.t4mm = d.t4mm; if (d.t4mm === "cais") s.cais = await chamar("alfy_cais").catch(() => s.cais); render(); return true; }
@@ -473,6 +511,9 @@ async function t4click(d, b) {
   }
   if (d.t4dc) { s.t4dc = d.t4dc; render(); return true; }
   if (d.t4rk) { s.t4rk = d.t4rk; render(); return true; }
+  if (d.t4ex) { s.t4ex = d.t4ex; render(); return true; }
+  if (d.t4exde) { s.extrErro = false; s.extr = null; render(); return true; }
+  if (d.t4cp) { s.t4cp = d.t4cp; render(); return true; }
   if (d.t4titulo !== undefined) { try { await chamar("alfy_titulo_usar", { p_titulo: d.t4titulo }); aviso(d.t4titulo ? `🏷️ Agora você é ${d.t4titulo}.` : "Título tirado."); await t4carregar(); render(); } catch (er) { falhou(er); } return true; }
   if (d.t4print) {   // 23/11: print da lista "Seguindo" → o robô do Mac confere com a IA
     const inp = document.createElement("input"); inp.type = "file"; inp.accept = "image/*";
@@ -631,6 +672,8 @@ document.addEventListener("submit", async (e) => {
 document.addEventListener("input", (e) => { const f = e.target.closest?.("form[data-t4form=cais]"); if (f) t4caisDica(f); });
 document.addEventListener("change", async (e) => {
   const fc = e.target.closest?.("form[data-t4form=cais]"); if (fc) { t4caisDica(fc); return; }
+  const xp = e.target.closest?.("[data-t4expessoa]");
+  if (xp) { s.extr = await chamar("alfy_extrato", { p_pessoa: xp.value || null }).catch(() => s.extr); render(); return; }
   const r = e.target.closest?.("[data-t4rastrear]");
   if (r) { s.lastro = await chamar("alfy_lastro", { p_pessoa: r.value || null }).catch(() => s.lastro); render(); return; }
   const g = e.target.closest?.("[data-t4congelar]");

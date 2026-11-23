@@ -2120,3 +2120,20 @@ a.btn.t4mbtn{display:inline-flex;align-items:center;justify-content:center;text-
 .t4m.insta .t4mpilha{align-items:stretch;width:100%}
 .t4m.insta .t4mpilha .t4mbtn{width:100%;justify-content:center;white-space:nowrap}
 @media (max-width:760px){.t4m.insta{grid-template-columns:46px minmax(0,1fr);grid-template-areas:"ic ct" "ic sl" "ic ac"}.t4m.insta .t4mac{justify-self:start;justify-content:flex-start}.t4m.insta .t4mpilha{width:auto;flex-direction:row;gap:6px}.t4m.insta .t4mpilha .t4mbtn{width:auto;padding-left:10px;padding-right:10px}}
+
+/* 📒 Extrato de coleta e 💰 Captação (23/11) */
+.t4exnum{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-bottom:10px}
+.t4exnum div{display:flex;flex-direction:column;gap:2px;padding:8px 10px;border-radius:10px;background:var(--ferro-0);min-width:0}
+.t4exnum b{color:var(--foam);font-size:16px;font-variant-numeric:tabular-nums}
+.t4exnum small{color:var(--aco);font-size:12px}
+.t4exj .t4tr{grid-template-columns:minmax(0,1.4fr) repeat(3,minmax(0,1fr));font-size:13.5px;font-variant-numeric:tabular-nums}
+.t4exh{margin:14px 0 6px;font-size:13px;color:var(--aco-2);font-weight:600;letter-spacing:.02em}
+.t4exg{display:flex;flex-direction:column}
+.t4exg div{display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-top:1px solid var(--linha);font-size:13.5px}
+.t4exg b{text-align:right;font-variant-numeric:tabular-nums}
+.t4exd{display:flex;align-items:flex-end;gap:6px;height:130px;overflow-x:auto;padding-bottom:2px;margin-bottom:8px}
+.t4exd div{flex:0 0 44px;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:2px}
+.t4exd i{display:block;width:70%;border-radius:4px 4px 0 0;background:var(--foam);opacity:.8}
+.t4exd small{color:var(--aco);font-size:11px}.t4exd b{font-size:11px;font-variant-numeric:tabular-nums}
+[data-t4expessoa]{background:var(--ferro-0);color:var(--texto);border:1px solid var(--linha);border-radius:8px;padding:5px 8px;max-width:100%}
+@media (max-width:640px){.t4exnum{grid-template-columns:repeat(2,minmax(0,1fr))}.t4exj .t4th{display:grid}.t4exj .t4tr{gap:8px;font-size:13px;grid-template-columns:minmax(0,1.2fr) repeat(3,minmax(0,1fr))}.t4exj .t4th span{letter-spacing:0;font-size:10.5px;overflow-wrap:anywhere}}
