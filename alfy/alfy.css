@@ -2255,3 +2255,28 @@ button.t4jogo{cursor:pointer}button.t4jogo:hover{border-color:var(--turq)}
 .t4corpo .t4mcb{width:auto;min-height:38px;padding:0 14px;border-radius:999px;font-size:14px;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
 .t4corpo .t4mcb[aria-pressed="true"]{background:linear-gradient(180deg,#F2CE6B,#D9A93E);color:#2B2005;border-color:#C9962E}
 @media (max-width:760px){.t4corpo .t4mcat{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;-webkit-mask-image:linear-gradient(90deg,#000 88%,transparent)}.t4corpo .t4mcat::-webkit-scrollbar{display:none}}
+/* 25/11 🎮 Jogos · Expedição do Tesouro Perdido */
+.t4jtit{font-family:var(--fd);font-size:20px;margin:0 0 12px}
+.t4exg{grid-template-columns:minmax(0,1.5fr) minmax(0,1fr)}
+.t4exbar{height:10px;border-radius:6px;background:var(--ferro-3);overflow:hidden;margin:-4px 0 14px}.t4exbar i{display:block;height:100%;background:linear-gradient(90deg,#2BAFA6,#F2CE6B)}
+.t4exmapa{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:0;position:relative}
+.t4exn{display:grid;grid-template-columns:52px minmax(0,1fr);gap:12px;position:relative;padding-bottom:16px}
+.t4exn:not(:last-child)::before{content:"";position:absolute;left:25px;top:52px;bottom:0;border-left:3px dashed var(--ferro-4)}
+.t4exn.feita:not(:last-child)::before{border-left-style:solid;border-color:#2BAFA6}
+.t4exi{width:52px;height:52px;border-radius:50%;display:grid;place-items:center;font-size:24px;background:var(--ferro-2);border:2px solid var(--ferro-4);position:relative;z-index:1}
+.t4exn.feita .t4exi{background:#1E7F79;border-color:#2BAFA6;color:#fff;font-weight:800}
+.t4exn.prox .t4exi{border-color:#E8C468;box-shadow:0 0 0 5px rgba(232,196,104,.15),0 0 22px rgba(232,196,104,.35)}
+.t4exn.bloq{opacity:.55}.t4exn.bloq .t4exi{filter:grayscale(.6)}
+.t4exc{display:flex;flex-direction:column;gap:4px;min-width:0;padding-top:4px}
+.t4exc>b{font-family:var(--fd);font-size:16px}.t4exc>small{color:var(--aco-2);font-size:13.5px}
+.t4exl{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:13px;color:var(--aco)}.t4exl b{color:var(--texto);font-weight:600}
+.t4exn.prox .t4exc{background:linear-gradient(180deg,rgba(232,196,104,.10),rgba(232,196,104,.03));border:1px solid #5C4A1E;border-radius:12px;padding:10px 12px}
+.t4exb{margin-top:6px;align-self:flex-start}
+.t4exr{display:grid;grid-template-columns:34px minmax(0,1fr) auto;gap:8px;align-items:center;padding:7px 0;border-top:1px solid var(--linha);font-size:14px}.t4exr em{font-style:normal;color:var(--aco)}
+@media (max-width:900px){.t4exg{grid-template-columns:minmax(0,1fr)}}
+.t4exmapa .t4exc{text-align:left;align-items:stretch}
+.t4exmapa .t4exc>*{border:0!important;justify-content:flex-start;text-align:left;width:auto}
+.t4exmapa .t4exc>b{display:block}
+.t4exmapa .t4exl{display:flex;justify-content:flex-start}
+.t4exmapa .t4exb{align-self:flex-start;width:auto}
+.t4exbar>i{display:block!important;height:10px!important;border-radius:6px}.t4exmapa>li{border-top:0!important}
