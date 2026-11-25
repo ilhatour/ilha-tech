@@ -213,7 +213,7 @@ function t4atividade() {
 }
 // 25/11 (Miguel): missões por ASSUNTO; cada uma diz se renova todo dia, toda semana, todo mês ou vale uma vez
 const T4_MCAT = [["rotas", "🗺️ Rotas"], ["rotinas", "🔁 Rotinas"], ["barco", "⛵ Nosso Barco"], ["mimos", "💚 Mimos e Carinhos"], ["viver", "🌴 Viver"], ["redes", "📱 Redes"],
-  ["elogios", "⭐ Elogios"], ["vendas", "💰 Vendas"], ["batalhas", "⚔️ Batalhas"], ["passos", "👤 Primeiros Passos"], ["campanha", "🚩 Campanhas"]];
+  ["elogios", "⭐ Elogios"], ["vendas", "💰 Vendas"], ["passos", "👤 Primeiros Passos"], ["campanha", "🚩 Campanhas"]];
 const T4_MDICA = { viver: "🌴 Viva a ilha e o Rio: faça a experiência, tire uma foto e toque em Comprovar. A foto vira postagem no Nosso Barco, onde a tripulação curte, comenta e vota. Com 5 ✅ valeu o prêmio fica pronto; cada 🚫 não valeu pede mais 2 valeu, e com 3 não valeu a foto é recusada.",
   vendas: "💰 Missões de venda entram assim que a Nave registrar quem lançou cada venda.", batalhas: "⚔️ Desafios entre tripulantes e frentes. Em breve.",
   elogios: "⭐ Elogio de cliente com o seu nome vale 💧. Entra assim que o ALFY conseguir conferir sozinho.", redes: "📱 Siga os perfis do Grupo Ilha: ponha o seu @, siga e mande um print da sua lista \"Seguindo\". Um print vale para todos os perfis que aparecerem nele.",
@@ -257,12 +257,12 @@ function t4desafios() {
   const ms = (s.tes.missoes || []).filter((m) => m.cat !== "conquista");
   const de = (c) => c === "campanha" ? ms.filter((m) => m.cat === "campanha") : ms.filter((m) => m.categoria === c);
   const conta = (c) => de(c).reduce((n, m) => n + t4estadoDesafio(m).prontos.length, 0);
-  const tem = (c) => de(c).length || c === "batalhas";
+  const tem = (c) => de(c).length;
   let cat = s.t4dc || "rotas"; if (!tem(cat)) cat = T4_MCAT.find(([c]) => tem(c))?.[0] || "rotas";
   const ordem = { pronta: 0, andamento: 1, bloq: 2, feita: 3 };
   const lista = de(cat).map((m) => ({ m, h: t4linhaDesafio(m) })).sort((x, y) => ordem[x.h.match(/class="t4m (\w+)/)[1]] - ordem[y.h.match(/class="t4m (\w+)/)[1]]);
   return `<div class="t4mis"><nav class="t4mcat" aria-label="Assuntos das missões">${T4_MCAT.filter(([c]) => tem(c)).map(([c, n]) => `<button type="button" class="t4mcb" aria-pressed="${cat === c}" data-t4dc="${c}">${n}${conta(c) ? ` <b class="t4bd">${conta(c)}</b>` : ""}</button>`).join("")}</nav>
-    <div class="t4mpainel">${cat === "batalhas" ? t4batalhas() : `${t4atividade()}
+    <div class="t4mpainel">${`${t4atividade()}
       ${T4_MDICA[cat] ? `<p class="t4mdica">${T4_MDICA[cat]}</p>` : ""}
       <div class="t4mlista">${lista.map((x) => x.h).join("") || '<p class="t4muted">Nada aqui.</p>'}</div>
       <p class="t4muted" style="margin:10px 2px 0">${cat === "viver" ? "Cada experiência vale uma vez na temporada." : "O sistema confere sozinho, na hora."}${cat === "campanha" ? " Super missão vale 💎, no máximo 1 por pessoa por semestre." : ""}</p>`}</div></div>`;
@@ -422,9 +422,11 @@ function t4baus() {
 function t4ilha() {
   if (s.t4ilha === "roda") return `<button type="button" class="cvvolta" data-t4ilha="mapa">← Jogos</button>${t4roda()}`;
   if (s.t4ilha === "exped") return `<button type="button" class="cvvolta" data-t4ilha="mapa">← Jogos</button>${t4exped()}`;
+  if (s.t4ilha === "batalhas") return `<button type="button" class="cvvolta" data-t4ilha="mapa">← Jogos</button><h2 class="t4jtit">⚔️ Batalhas</h2>${t4batalhas()}`;
   const ex = s.exped?.minha ?? null;
   return `<h2 class="t4jtit">🎮 Jogos da Ilha</h2><div class="t4ilhag">
     <button type="button" class="t4jogo" data-t4ilha="exped"><span class="t4jogoi">🗺️</span><b>Volta à Ilha</b><small>10 paradas pela Ilha Grande. Cada parada se abre pagando joias, cada vez mais caras. Quem chega ao fim leva 1 💎 e o título Lenda da Ilha.</small><em>${ex ? `Você está na parada ${ex} de 10 · Continuar` : "Começar a expedição"}</em></button>
+    <button type="button" class="t4jogo" data-t4ilha="batalhas"><span class="t4jogoi">⚔️</span><b>Batalhas</b><small>Corridas em salas de 5 a 10: quem ganha primeiro o elemento ou o 💎 leva todos os baús e foguinhos do pote, mais uma joia extra.</small><em>Ver as salas</em></button>
     <button type="button" class="t4jogo" data-t4ilha="roda"><span class="t4jogoi">☸️</span><b>Roda do Leme</b><small>Gire com 🪙 e 🔥 e tente a sorte. Pode sair 💎.</small><em>Jogar</em></button>
     <div class="t4jogo breve"><span class="t4jogoi">⛵</span><b>Faça o Barco Navegar</b><small>Suba os 4 pilares do seu barco com 🔥 💧 ⚡ 🌱. Mimos dos colegas dão vento a favor. Só quem leva o barco ao fim ganha 💎.</small><em>🔒 Em breve</em></div>
   </div>`;
@@ -627,7 +629,7 @@ async function t4click(d, b) {
     b.disabled = true; try { await chamar("alfy_batalha_sair", { p_sala: +d.t4batsair }); aviso("Você saiu da sala. O depósito voltou."); await t4batCarregar(); render(); } catch (er) { b.disabled = false; falhou(er); } return true;
   }
   if (d.t4gk) { s.t4gk = d.t4gk; render(); return true; }
-  if (d.t4ilha) { s.t4ilha = d.t4ilha === "mapa" ? null : d.t4ilha; if (d.t4ilha === "exped" || d.t4ilha === "mapa") s.exped = await chamar("alfy_expedicao").catch(() => s.exped); render(); return true; }
+  if (d.t4ilha) { s.t4ilha = d.t4ilha === "mapa" ? null : d.t4ilha; if (d.t4ilha === "exped" || d.t4ilha === "mapa") s.exped = await chamar("alfy_expedicao").catch(() => s.exped); if (d.t4ilha === "batalhas") await t4batCarregar(); render(); return true; }
   if (d.t4exavancar) {
     const p = (s.exped?.paradas || [])[s.exped?.minha || 0]; if (!p) return true;
     if (!confirmaT4(`Pagar ${t4premio(p.custo)} para chegar a ${p.nome}? As joias somem do jogo.`, b)) return true;
