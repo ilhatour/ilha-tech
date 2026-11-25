@@ -1590,6 +1590,32 @@ button.cobr-l{cursor:pointer}button.cobr-l:hover{color:var(--texto)}
 .fv-c p{margin:3px 0 0;font-size:14px;color:var(--texto);white-space:pre-line;overflow-wrap:anywhere}
 .fv-rota{margin-top:6px;background:none;border:0;padding:0;color:var(--turq);font:inherit;font-size:13px;cursor:pointer}
 .fv-ac{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+/* 👥 Entrou / saiu da equipe (sensor, 25/11) */
+.eqs{margin:0 0 14px;border-bottom:1px solid var(--linha)}
+.eqs-cab{font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--aco-2);padding:4px 10px 6px}
+.eqs-cab span{color:var(--amber);margin-left:4px}
+.eq{padding:12px 10px 14px;border-top:1px solid var(--linha);border-left:2px solid transparent}
+.eq.aberto{border-left-color:var(--amber)}
+.eq-t{display:flex;gap:10px;align-items:baseline;justify-content:space-between}
+.eq-t b{font-size:15px;color:var(--texto);overflow-wrap:anywhere}
+.eq-t time{font-size:12px;color:var(--aco-2);flex:none}
+.eq-sin{list-style:none;margin:8px 0 0;padding:0;display:grid;gap:6px}
+.eq-sin li{display:flex;flex-wrap:wrap;gap:4px 8px;align-items:baseline;font-size:14px;color:var(--texto)}
+.eq-sin time{font-size:12px;color:var(--aco-2);min-width:38px}
+.eq-sin span{font-size:13px;color:var(--aco-2)}
+.eq-sin q{flex-basis:100%;margin-left:46px;font-size:13px;color:var(--aco-2);quotes:"“" "”";overflow-wrap:anywhere}
+.eq-sin .fv-rota{margin:0}
+.eq-nota{margin:10px 0 0;font-size:13px;color:var(--aco-2)}
+.eq-ok{margin:10px 0 0;font-size:14px;color:var(--turq);font-weight:600}
+.eq-ac{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px}
+.eq-ac a.mini{text-decoration:none}
+.eq-ac select{max-width:240px}
+.btn-eq{border:1px solid var(--ferro-4);background:var(--ferro-3);border-radius:8px;padding:7px 12px;font-size:14px;font-weight:600;color:var(--texto);cursor:pointer}
+.btn-eq.sim{border-color:#2B5753;background:#10201E;color:#9ED9D2}
+.eq-form{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.eq-form input{flex:1 1 180px;min-width:0}
+.eq-rotas{margin:6px 0 0;padding-left:0;list-style:none;display:grid;gap:4px;font-size:14px;color:var(--texto)}
+@media (max-width:640px){.eq-sin q{margin-left:0}.eq-ac select{max-width:100%;flex:1 1 100%}}
 @media (max-width:640px){.fv{grid-template-columns:28px minmax(0,1fr)}.fv-ic{width:28px;height:28px}.fv-ac{grid-column:2;justify-content:flex-start}}
 /* 2.47 ✨ Melhorar */
 textarea.melhorando{opacity:.6;border-color:var(--lilas)!important}

@@ -948,10 +948,11 @@ function vistaFeed() {
 // ---------------------------------------------------------------- 📡 Feed ao vivo (só comando, v2.46 · 15/11): postagens de tudo o que acontece, ✓ Já vi / 🙈 Não preciso
 s.posts = null; s.fvF = "novas"; s.feedAntigo = false;
 const feedVivo = () => comando() && !s.feedAntigo;
-const POST_IC = { comentario: "💬", whatsapp: "📱", grupo: "👥", conversa: "👤", mm: "➕", sugestao: "🗺️", nova: "✨", status: "🔁", parece: "🏁", rastreio: "📡", resumo: "📰" };
+const POST_IC = { comentario: "💬", whatsapp: "📱", grupo: "👥", conversa: "👤", mm: "➕", sugestao: "🗺️", nova: "✨", status: "🔁", parece: "🏁", rastreio: "📡", resumo: "📰", equipe: "👥" };
 async function carregarPosts() {
   if (!comando()) return false;
-  const x = await chamar("alfy_posts", { p_vistos: s.fvF === "vistas" }).catch(() => null);
+  const [x, eq] = await Promise.all([chamar("alfy_posts", { p_vistos: s.fvF === "vistas" }).catch(() => null), chamar("alfy_equipe_alertas").catch(() => null)]);
+  if (eq) s.eq = eq;
   s.postsEm = Date.now();
   if (!x) return false;
   const antes = s.posts, ja = new Set((antes?.posts || []).map((p) => p.id));
@@ -965,11 +966,12 @@ function vistaFeedVivo() {
   const x = s.posts;
   if (!x) return `<div class="carregando">Carregando o feed…</div>`;
   const b = (s.busca || "").toLowerCase();
-  const l = x.posts.filter((p) => (s.fvF === "vistas" ? p.visto_em || p.ignorado_em : !p.visto_em && !p.ignorado_em) && (s.fvF !== "imp" || p.importante)
+  const l = x.posts.filter((p) => p.tipo !== "equipe" && (s.fvF === "vistas" ? p.visto_em || p.ignorado_em : !p.visto_em && !p.ignorado_em) && (s.fvF !== "imp" || p.importante)
     && (!b || [p.titulo, p.texto, p.onde, p.quem].join(" ").toLowerCase().includes(b)));
-  if (!l.length) return `<div class="vazio">${s.fvF === "vistas" ? "Nada visto nos últimos 14 dias." : "✓ Você está em dia. O que acontecer no WhatsApp, nos grupos e nas rotas aparece aqui na hora."}</div>`;
+  const eqb = blocoEquipe();
+  if (!l.length) return eqb + `<div class="vazio">${s.fvF === "vistas" ? "Nada visto nos últimos 14 dias." : "✓ Você está em dia. O que acontecer no WhatsApp, nos grupos e nas rotas aparece aqui na hora."}</div>`;
   let d0 = "";
-  return `<div class="fv-lista">${l.map((p) => {
+  return eqb + `<div class="fv-lista">${l.map((p) => {
     const d = dia(p.criado_em), cab = d !== d0 ? ((d0 = d), `<div class="dia">${d === hojeDia() ? "Hoje" : ddmm(p.criado_em)}</div>`) : "";
     const feito = p.visto_em || p.ignorado_em;
     return cab + `<article class="fv${p.importante ? " imp" : ""}${feito ? " feito" : ""}" data-post="${p.id}">
@@ -981,6 +983,63 @@ function vistaFeedVivo() {
         : `<button type="button" class="mini" data-fv="visto" data-pid="${p.id}" title="Já vi">✓ Já vi</button><button type="button" class="mini" data-fv="ignorar" data-pid="${p.id}" title="Não preciso me preocupar com isso: o ALFY aprende">🙈 Não preciso</button>`}</div>
     </article>`;
   }).join("")}</div>`;
+}
+
+// ---------------------------------------------------------------- 👥 Entrou / saiu da equipe (sensor, 25/11 · migr 0115)
+// O robô junta os sinais (FGTS, rescisão, devolução de uniforme, saiu do tático, boas-vindas, número novo no grupo...) e abre um alerta.
+// Nada muda até o Miguel tocar: Confirmar saída inativa na Nave e no ALFY e lista as rotas abertas; Cadastrar cria pela porta da Nave ID e gera a ficha.
+s.eq = [];
+const EQ_SINAL = { fgts: "FGTS", rescisao: "rescisão", desligamento: "desligamento", aviso_previo: "aviso prévio", ultimo_dia: "último dia", demissao: "pediu demissão",
+  acerto: "acerto rescisório", devolucao: "devolução de uniforme", saiu_empresa: "saiu da empresa", saiu_tatico: "saiu do tático", saiu_grupo: "saiu de grupo",
+  tatico_parado: "tático parado", boas_vindas: "boas-vindas", comeca: "começa", contratado: "contratado", admissao: "admissão", primeiro_dia: "primeiro dia",
+  entrou_grupo: "entrou em grupo", fala_sem_cadastro: "fala nos grupos sem cadastro" };
+const foneBonito = (f) => { let d = String(f || "").replace(/\D/g, ""); if (d.startsWith("55") && d.length >= 12) d = d.slice(2); return d.length >= 10 ? `(${d.slice(0, 2)}) ${d.slice(2, -4)}-${d.slice(-4)}` : d; };
+function blocoEquipe() {
+  const l = (s.eq || []).filter((a) => a.status === "aberto" || (a.decidido_em && Date.now() - new Date(a.decidido_em) < 864e5));
+  if (!l.length) return "";
+  return `<section class="eqs" aria-label="Entrou ou saiu da equipe"><div class="eqs-cab">👥 Equipe <span>${l.filter((a) => a.status === "aberto").length || ""}</span></div>${l.map(cartaoEquipe).join("")}</section>`;
+}
+function cartaoEquipe(a) {
+  const sai = a.tipo === "saida", r = a.resultado || {};
+  const pre = a.status === "confirmado" ? (sai ? "Saída" : "Entrada") : (sai ? "Possível saída" : "Possível entrada");
+  const tit = sai ? `${pre}: ${a.curto || a.nome}` : `${pre}: ${a.nome || "número novo"}${a.fone ? " · " + foneBonito(a.fone) : ""}`;
+  const sinais = a.sinais.map((x) => `<li><time>${ddmm(x.quando)}</time><b>${esc(EQ_SINAL[x.sinal] || x.sinal)}</b>${x.rt ? `<button type="button" class="fv-rota" data-rt="${x.rt}">${esc(nomeRota(x.rt))} ›</button>` : x.onde ? `<span>${esc(x.onde)}</span>` : ""}${x.trecho ? `<q>${esc(x.trecho)}</q>` : ""}</li>`).join("");
+  let pe = "";
+  if (a.status === "aberto") {
+    pe = sai ? `<p class="eq-nota">Nada mudou ainda. Confirmar deixa ${esc(curto(a.nome))} inativo na Nave e no ALFY e mostra as rotas abertas para trocar de dono.</p>
+        <div class="eq-ac"><button type="button" class="btn-eq sim" data-eq="confirmar" data-eid="${a.id}">✓ Confirmar saída</button><button type="button" class="mini" data-eq="descartar" data-eid="${a.id}">✕ Não saiu</button></div>`
+      : `<p class="eq-nota">Nada mudou ainda. Cadastrar cria a pessoa na Nave ID e na equipe e gera a ficha de cadastro.</p>
+        <div class="eq-form"><input id="eqn-${a.id}" class="busca" value="${esc(a.nome || "")}" placeholder="Nome e sobrenome" aria-label="Nome e sobrenome"><input id="eqf-${a.id}" class="busca" inputmode="tel" value="${esc(foneBonito(a.fone))}" placeholder="WhatsApp" aria-label="WhatsApp"></div>
+        <div class="eq-ac"><button type="button" class="btn-eq sim" data-eq="confirmar" data-eid="${a.id}">✓ Cadastrar na equipe</button><button type="button" class="mini" data-eq="descartar" data-eid="${a.id}">✕ Não é da equipe</button></div>`;
+  } else if (a.status === "descartado") pe = `<p class="eq-nota">✕ Descartado. Nada mudou.</p>`;
+  else if (sai) {
+    const rs = a.rotas || [];
+    pe = `<p class="eq-ok">✓ Saída confirmada: inativo na Nave e no ALFY.</p>` + (rs.length
+      ? `<p class="eq-nota">${rs.length} rota${rs.length > 1 ? "s" : ""} aberta${rs.length > 1 ? "s" : ""} para trocar de dono:</p><ul class="eq-rotas">${rs.map((x) => `<li><button type="button" class="fv-rota" data-rt="${x.rt}">${esc(nomeRota(x.rt))} ›</button> ${esc(x.titulo)}${x.junto ? " <small>(junto)</small>" : ""}</li>`).join("")}</ul>
+        <div class="eq-ac"><select id="eqp-${a.id}" class="busca" aria-label="Passar as rotas para">${genteOpc("", "Passar todas para…")}</select><button type="button" class="mini" data-eq="passar" data-eid="${a.id}">Passar</button></div>`
+      : `<p class="eq-nota">Nenhuma rota aberta no nome dele.</p>`);
+  } else {
+    const msg = `🐙 Alfy\n\nOi, ${(r.nome || a.nome || "").split(" ")[0]}! Boas-vindas à equipe! Preenche a sua ficha de cadastro por este link: ${r.ficha}`;
+    pe = `<p class="eq-ok">✓ Na equipe: Nave ID, equipe da Nave e ALFY.</p><div class="eq-ac"><button type="button" class="mini" data-eqcopia="${esc(r.ficha || "")}">📋 Copiar o link da ficha</button>${r.whatsapp ? `<a class="mini" target="_blank" rel="noopener" href="https://wa.me/${esc(String(r.whatsapp).replace(/\D/g, ""))}?text=${encodeURIComponent(msg)}">💬 Abrir no WhatsApp</a>` : ""}</div>`;
+  }
+  return `<article class="eq${a.status === "aberto" ? " aberto" : ""}"><div class="eq-t"><b>${esc(tit)}</b><time>${quandoPost(a.atualizado_em)}</time></div><ul class="eq-sin">${sinais}</ul>${pe}</article>`;
+}
+async function acaoEquipe(d) {
+  const id = +d.eid, a = (s.eq || []).find((x) => x.id === id);
+  if (!a) return;
+  if (d.eq === "passar") {
+    const para = $("#eqp-" + id)?.value;
+    if (!para) { aviso("Escolha para quem passar as rotas"); return; }
+    for (const x of a.rotas || []) await chamar("alfy_editar", { p_rt: x.rt, p_campos: x.junto ? { co_responsavel_id: para } : { responsavel_id: para } });
+    aviso(`✓ ${(a.rotas || []).length} rota(s) passada(s) para ${curto(nomeDe(para))}`);
+    await recarregar(); await carregarPosts(); render(); return;
+  }
+  const args = { p_id: id, p_acao: d.eq };
+  if (d.eq === "confirmar" && a.tipo === "entrada") { args.p_nome = ($("#eqn-" + id)?.value || "").trim(); args.p_fone = ($("#eqf-" + id)?.value || "").replace(/\D/g, "") || null; }
+  const x = await chamar("alfy_equipe_decidir", args).catch(() => null);
+  if (!x?.ok) { aviso(x?.erro || "Não consegui agora. Tente de novo.", true); return; }
+  aviso(d.eq === "descartar" ? "✕ Descartado. Nada mudou." : a.tipo === "saida" ? `✓ ${curto(a.nome)} saiu da equipe` : "✓ Cadastrado na equipe. Mande a ficha.");
+  await carregarPosts(); if (a.tipo === "saida" && d.eq === "confirmar") await recarregar(); render();
 }
 
 // ---------------------------------------------------------------- pautas e reuniões
@@ -2513,6 +2572,8 @@ document.addEventListener("click", (e) => {
 }, true);
 document.addEventListener("click", async (e) => {
   if (e.target.id === "veu") { fechar(); return; }
+  const eqb = e.target.closest("[data-eq],[data-eqcopia]");
+  if (eqb) { e.stopPropagation(); if (eqb.dataset.eqcopia !== undefined) { copiar(eqb.dataset.eqcopia); return; } eqb.disabled = true; try { await acaoEquipe(eqb.dataset); } finally { eqb.disabled = false; } return; }
   const fvb = e.target.closest("[data-fv],[data-fvf],[data-fvtodos],[data-fvantigo]");
   if (fvb) {
     e.stopPropagation();
