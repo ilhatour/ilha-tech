@@ -238,12 +238,14 @@ function t4batalhas() {
       const st = x.estado === "andamento" ? `<b class="t4batst on">🏁 Corrida valendo</b>`
         : n >= cfg.min ? `<b class="t4batst">⏳ Começa ${new Date(new Date(x.cheia_em).getTime() + cfg.janela_horas * 3600e3).toLocaleString("pt-BR", { weekday: "short", hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" })} (ou quando lotar)</b>`
         : `<b class="t4batst">Faltam ${cfg.min - n} para começar</b>`;
+      const pote = { tesouro: n * (+ent.tesouro || 0), fogo: n * (+ent.fogo || 0) }; Object.entries(tp.extra || {}).forEach(([k, v]) => { pote[k] = (pote[k] || 0) + +v; });
       return `<div class="t4sala"><div class="t4salah">${st}<small>${n}/${cfg.max} na sala</small></div>
+        <div class="t4pote"><span>💰 Pote acumulado</span><b>${t4premio(pote)} + ${cfg.xp} ✨ XP</b></div>
         <div class="t4bolas">${(x.gente || []).map(t4bola).join("")}${Array.from({ length: Math.max(0, cfg.max - n) }, () => '<span class="t4bola vazia"></span>').join("")}</div>
         ${x.estado === "andamento" ? `<div class="t4placar">${(x.gente || []).map((g) => `<div><span>${esc(g.nome.split(" ")[0])}${g.id === eu ? " (você)" : ""}</span><i><b style="width:${Math.min(100, 100 * (+g.qtd || 0) / tp.alvo)}%"></b></i><em>${t4n(g.qtd || 0)}/${tp.alvo} ${tp.icone}</em></div>`).join("")}</div>` : ""}
         ${minha && x.estado === "aberta" ? `<button type="button" class="btn peq" data-t4batsair="${x.id}">Sair e pegar de volta</button>` : ""}</div>`; };
     return `<article class="t4bat"><div class="t4bath"><span class="t4batic">${tp.icone}</span><div><b>${esc(tp.nome)}</b><small>Quem ganhar primeiro ${tp.alvo} ${tp.alvo > 1 ? T4_JOIA[tp.moeda][2] : T4_JOIA[tp.moeda][1]} ${tp.icone} depois da largada</small></div></div>
-      <div class="t4batp">Campeão leva: os 🪎 e 🔥 da sala + <b>${t4premio(tp.extra)}</b> + ${cfg.xp} ✨ XP</div>
+      <div class="t4batp">Campeão leva o pote: ${t4premio(ent)} de cada um que entrar + <b>${t4premio(tp.extra)}</b> + ${cfg.xp} ✨ XP. Sala cheia (10) = <b>${t4premio({ tesouro: cfg.max * (+ent.tesouro || 0), fogo: cfg.max * (+ent.fogo || 0) })}</b> + o extra.</div>
       ${salas.map(sala).join("") || '<p class="t4muted" style="margin:0">Nenhuma sala aberta. Entre e abra a primeira.</p>'}
       ${estou ? "" : `<button type="button" class="btn ouro9 t4batbtn" data-t4batentrar="${tp.id}" ${falta.length || b.minhas >= cfg.por_pessoa ? "disabled" : ""}>${b.minhas >= cfg.por_pessoa ? `Você já está em ${cfg.por_pessoa} batalhas` : falta.length ? `Faltam ${falta.join(" + ")}` : `Entrar · ${t4premio(ent)}`}</button>`}</article>`; };
   const fim = (b.salas || []).filter((x) => x.estado === "encerrada" && x.vencedor).slice(0, 5);
