@@ -292,8 +292,8 @@ function t4cais() {
         ${c.congelado ? '<p class="t4muted">Suas trocas estão pausadas pelo comando.</p>' : !opt.length ? '<p class="t4muted">Você ainda não tem joia fora da carência para vender.</p>' : `<form data-t4form="cais" class="t4form">
           <label>Vender<select name="moeda">${opt.map((k) => `<option value="${k}">${T4_JOIA[k][0]} ${T4_JOIA[k][2]} (até ${t4n(c.vendavel[k])})</option>`).join("")}</select></label>
           <label>Quantidade<input name="qtd" type="number" min="1" step="1" value="1" required></label>
-          <label>Quero receber em<select name="quer"><option value="tesouro">🪎 baús</option><option value="moeda">🪙 moedas</option></select></label>
-          <label>Preço<input name="preco" type="number" min="1" step="0.5" required></label>
+          <label>Quero receber em<select name="quer">${["moeda", "tesouro", "fogo", "gota", "raio", "broto"].map((k) => `<option value="${k}">${T4_JOIA[k][0]} ${T4_JOIA[k][2]}</option>`).join("")}</select></label>
+          <label>Preço (quantos você quer receber)<input name="preco" type="number" min="0.5" step="0.5" required></label>
           <small class="t4muted" data-t4caisdica></small>
           <button type="submit" class="btn ouro9">Pôr no Cais</button></form>`}
         ${minhas.length ? `<h3 style="margin-top:14px">À venda agora</h3><div class="t4tabela">${minhas.map(linha).join("")}</div>` : ""}
@@ -307,7 +307,7 @@ function t4caisDica(f) {
   const fd = new FormData(f), m = fd.get("moeda"), q = fd.get("quer"), n = +fd.get("qtd") || 0, pr = +fd.get("preco") || 0, ref = cfg.valor_ref || T4_VALOR, fx = cfg.faixa || [0.5, 1.5];
   if (!m || !n) { el.textContent = ""; return; }
   if (m === q) { el.textContent = "Escolha receber em outra joia."; return; }
-  const base = n * ref[m] / ref[q], lo = Math.ceil(base * fx[0] * 10) / 10, hi = Math.floor(base * fx[1] * 10) / 10, tx = Math.round(pr * cfg.taxa_pct / 10) / 10;
+  const base = n * ref[m] / ref[q], lo = Math.ceil(base * fx[0] * 10) / 10, hi = Math.floor(base * fx[1] * 10) / 10, tx = q === "tesouro" ? Math.round(pr * cfg.taxa_pct / 10) / 10 : Math.round(pr * cfg.taxa_pct / 100);
   el.textContent = `Faixa do Cais: de ${t4n(lo)} a ${t4n(hi)} ${T4_JOIA[q][0]}.` + (pr ? ` Se vender por ${t4n(pr)}, você recebe ${t4n(pr - tx)} ${T4_JOIA[q][0]} (taxa ${t4n(tx)}).` : "");
 }
 function t4loja() {
