@@ -68,17 +68,20 @@ function t4vigiaPrint(n) {
 }
 async function t4carregar() {
   const antes = s.tes ? t4nivel(s.tes) : null;
-  s.tes = await chamar("alfy_tesouros").catch(() => s.tes);
+  // 24/11: se o banco demorar, tenta de novo (até 3 vezes) em vez de cair na tela antiga
+  let r = null;
+  for (let i = 0; i < 3 && !r; i++) { r = await chamar("alfy_tesouros").catch(() => null); if (!r && i < 2) await new Promise((ok) => setTimeout(ok, 700 * (i + 1))); }
+  s.t4erro = !r && !s.tes; s.tes = r || s.tes;
   const dep = s.tes ? t4nivel(s.tes) : null;
   if (antes && dep && dep.xp > antes.xp) { s.t4xpGanho = dep.xp - antes.xp; s.t4xpEm = Date.now(); }
   if (antes && dep && dep.nivel > antes.nivel) { s.t4subiu = dep.nivel; setTimeout(() => { T4SOM.vitoria(4); aviso(`🎉 Subiu para o nível ${dep.nivel}!${dep.patente?.nome !== antes.patente?.nome ? ` Nova patente: ${dep.patente.ins} ${dep.patente.nome}.` : ""}`); }, 400); }
-  if (t4ok()) s.cais = await chamar("alfy_cais").catch(() => s.cais);
-  if (t4ok() && ["comando", "gerente"].includes(s.tes.eu?.papel)) s.ponte = await chamar("alfy_ponte").catch(() => s.ponte);
+  if (t4ok()) await Promise.all([chamar("alfy_cais").then((x) => { s.cais = x; }).catch(() => {}),
+    ["comando", "gerente"].includes(s.tes.eu?.papel) ? chamar("alfy_ponte").then((x) => { s.ponte = x; }).catch(() => {}) : null]);
 }
 
 /* ---------- tela ---------- */
 function vistaTesouros() {
-  if (!t4ok()) return vistaPlacar();
+  if (!t4ok()) return s.t4erro ? '<section class="pl6sec t4cx"><h3>🪎 Rotas do Tesouro</h3><p class="t4muted">O jogo demorou para responder. <button type="button" class="btn ouro9 peq" data-t4recarregar="1">Tentar de novo</button></p></section>' : vistaPlacar();
   const t = s.tes, sub = s.tsub || "inicio", mand = ["comando", "gerente"].includes(t.eu.papel);
   const prontos = (t.ganhos || []).filter((g) => g.estado === "pronta");
   const abas = [["inicio", "⚓ Início"], ["desafios", "🎯 Missões"], ["conquistas", "🏅 Conquistas"], ["trilha", "🗺️ Trilha"], ["baus", "🪎 Abrir Baús"], ["roda", "☸️ Roda do Leme"], ["mercado", "🏪 Mercado"], ["extrato", "📒 Extrato"], ["ranking", "🥇 Ranking"], ["bau", "🏆 Baú da Tripulação"]].concat(mand ? [["ponte", "🎛️ Ponte"]] : []);
@@ -512,6 +515,7 @@ async function t4click(d, b) {
   if (d.t4dc) { s.t4dc = d.t4dc; render(); return true; }
   if (d.t4rk) { s.t4rk = d.t4rk; render(); return true; }
   if (d.t4ex) { s.t4ex = d.t4ex; render(); return true; }
+  if (d.t4recarregar) { s.t4erro = false; await t4carregar(); render(); return true; }
   if (d.t4exde) { s.extrErro = false; s.extr = null; render(); return true; }
   if (d.t4cp) { s.t4cp = d.t4cp; render(); return true; }
   if (d.t4titulo !== undefined) { try { await chamar("alfy_titulo_usar", { p_titulo: d.t4titulo }); aviso(d.t4titulo ? `🏷️ Agora você é ${d.t4titulo}.` : "Título tirado."); await t4carregar(); render(); } catch (er) { falhou(er); } return true; }
