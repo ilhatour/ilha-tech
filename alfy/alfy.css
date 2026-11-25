@@ -2291,3 +2291,19 @@ button.t4jogo{cursor:pointer}button.t4jogo:hover{border-color:var(--turq)}
 .t4gcb>div{flex:1 0 26px;max-width:56px;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:3px}
 .t4gcb i{display:block;width:72%;border-radius:5px 5px 0 0;background:linear-gradient(180deg,#F2CE6B,#B8913A)}
 .t4gcb b{font-size:11.5px;color:var(--aco-2);font-variant-numeric:tabular-nums}.t4gcb small{font-size:11px;color:var(--aco)}
+/* 25/11 ⚔️ Batalhas */
+.t4bats{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+.t4bat{background:linear-gradient(180deg,#24201C,#1B1F23);border:1px solid #4A3A22;border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.t4bath{display:flex;gap:10px;align-items:center}.t4batic{font-size:32px}.t4bath b{font-family:var(--fd);font-size:17px;display:block}.t4bath small{color:var(--aco-2);font-size:13px}
+.t4batp{font-size:13.5px;color:var(--aco-2);background:rgba(232,196,104,.08);border-radius:10px;padding:7px 10px}.t4batp b{color:#E8C468}
+.t4sala{background:var(--ferro-1);border:1px solid var(--linha);border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:8px}
+.t4salah{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;font-size:13px}.t4salah small{color:var(--aco)}
+.t4batst{color:var(--aco-2)}.t4batst.on{color:#7FCBA0}
+.t4bolas{display:flex;flex-wrap:wrap;gap:6px}
+.t4bola{width:34px;height:34px;border-radius:50%;display:inline-grid;place-items:center;overflow:hidden;background:var(--mint);color:#0F3B43;font-family:var(--fd);font-weight:700;font-size:12px;border:2px solid #B8913A}
+.t4bola img{width:100%;height:100%;object-fit:cover}.t4bola.vazia{background:transparent;border:2px dashed var(--ferro-4)}
+.t4placar{display:flex;flex-direction:column;gap:5px}
+.t4placar>div{display:grid;grid-template-columns:90px minmax(0,1fr) 70px;gap:8px;align-items:center;font-size:13px}
+.t4placar i{display:block;height:7px;border-radius:5px;background:var(--ferro-3);overflow:hidden}.t4placar i b{display:block;height:100%;background:linear-gradient(90deg,#2BAFA6,#F2CE6B)}
+.t4placar em{font-style:normal;text-align:right;color:var(--aco-2)}
+.t4batbtn{width:100%;min-height:42px}

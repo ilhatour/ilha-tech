@@ -218,18 +218,54 @@ const T4_MDICA = { viver: "🌴 Viva a ilha e o Rio: faça a experiência, tire 
   vendas: "💰 Missões de venda entram assim que a Nave registrar quem lançou cada venda.", batalhas: "⚔️ Desafios entre tripulantes e frentes. Em breve.",
   elogios: "⭐ Elogio de cliente com o seu nome vale 💧. Entra assim que o ALFY conseguir conferir sozinho.", redes: "📱 Siga os perfis do Grupo Ilha: ponha o seu @, siga e mande um print da sua lista \"Seguindo\". Um print vale para todos os perfis que aparecerem nele.",
   mimos: "💚 Gestos de gratidão e apoio à tripulação. Homenagear gasta 1 💚 mimo (você ganha 1 por dia ao entrar).", barco: "⛵ Participe do Nosso Barco: poste, comente e curta os colegas." };
+// ⚔️ Batalhas (25/11, Miguel): corridas em salas de 5 a 10. Entrar = 1 🔥 + 20 🪎; campeão leva tudo + joia extra + 10 XP.
+function t4ini(nome) { const p = String(nome || "?").trim().split(/\s+/); return ((p[0] || "?")[0] + (p[1] ? p[1][0] : "")).toUpperCase(); }
+function t4bola(x) { const f = (s.fotos || {})[x.id]; return `<span class="t4bola" title="${esc(x.nome)}">${f ? `<img src="${f}" alt="">` : esc(t4ini(x.nome))}</span>`; }
+async function t4batCarregar() {
+  s.bat = await chamar("alfy_batalhas").catch(() => s.bat); if (!s.bat) return;
+  if (s.tes && s.bat.saldo) s.tes.saldo = s.bat.saldo;
+  const falta = [...new Set((s.bat.salas || []).flatMap((x) => (x.gente || []).filter((g) => g.foto && !(s.fotos || {})[g.id]).map((g) => g.id)))];
+  if (falta.length) { const f = await chamar("alfy_fotos", { p_ids: falta }).catch(() => null); s.fotos = { ...(s.fotos || {}), ...(f || {}) }; }
+}
+function t4batalhas() {
+  const b = s.bat; if (!b) { if (!s.batPed) { s.batPed = true; t4batCarregar().finally(() => { s.batPed = false; renderSeguro(); }); } return '<p class="t4muted">Abrindo as batalhas…</p>'; }
+  const cfg = b.cfg || {}, sd = s.tes?.saldo || b.saldo || {}, ent = cfg.entrada || {}, eu = b.eu;
+  const falta = Object.entries(ent).filter(([k, v]) => (+sd[k] || 0) < +v).map(([k, v]) => `${t4n(+v - (+sd[k] || 0))} ${T4_JOIA[k][0]}`);
+  const cartao = (tp) => {
+    const salas = (b.salas || []).filter((x) => x.tipo === tp.id && ["aberta", "andamento"].includes(x.estado));
+    const estou = salas.find((x) => (x.gente || []).some((g) => g.id === eu));
+    const sala = (x) => { const n = (x.gente || []).length, minha = (x.gente || []).some((g) => g.id === eu);
+      const st = x.estado === "andamento" ? `<b class="t4batst on">🏁 Corrida valendo</b>`
+        : n >= cfg.min ? `<b class="t4batst">⏳ Começa ${new Date(new Date(x.cheia_em).getTime() + cfg.janela_horas * 3600e3).toLocaleString("pt-BR", { weekday: "short", hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" })} (ou quando lotar)</b>`
+        : `<b class="t4batst">Faltam ${cfg.min - n} para começar</b>`;
+      return `<div class="t4sala"><div class="t4salah">${st}<small>${n}/${cfg.max} na sala</small></div>
+        <div class="t4bolas">${(x.gente || []).map(t4bola).join("")}${Array.from({ length: Math.max(0, cfg.max - n) }, () => '<span class="t4bola vazia"></span>').join("")}</div>
+        ${x.estado === "andamento" ? `<div class="t4placar">${(x.gente || []).map((g) => `<div><span>${esc(g.nome.split(" ")[0])}${g.id === eu ? " (você)" : ""}</span><i><b style="width:${Math.min(100, 100 * (+g.qtd || 0) / tp.alvo)}%"></b></i><em>${t4n(g.qtd || 0)}/${tp.alvo} ${tp.icone}</em></div>`).join("")}</div>` : ""}
+        ${minha && x.estado === "aberta" ? `<button type="button" class="btn peq" data-t4batsair="${x.id}">Sair e pegar de volta</button>` : ""}</div>`; };
+    return `<article class="t4bat"><div class="t4bath"><span class="t4batic">${tp.icone}</span><div><b>${esc(tp.nome)}</b><small>Quem ganhar primeiro ${tp.alvo} ${tp.alvo > 1 ? T4_JOIA[tp.moeda][2] : T4_JOIA[tp.moeda][1]} ${tp.icone} depois da largada</small></div></div>
+      <div class="t4batp">Campeão leva: os 🪎 e 🔥 da sala + <b>${t4premio(tp.extra)}</b> + ${cfg.xp} ✨ XP</div>
+      ${salas.map(sala).join("") || '<p class="t4muted" style="margin:0">Nenhuma sala aberta. Entre e abra a primeira.</p>'}
+      ${estou ? "" : `<button type="button" class="btn ouro9 t4batbtn" data-t4batentrar="${tp.id}" ${falta.length || b.minhas >= cfg.por_pessoa ? "disabled" : ""}>${b.minhas >= cfg.por_pessoa ? `Você já está em ${cfg.por_pessoa} batalhas` : falta.length ? `Faltam ${falta.join(" + ")}` : `Entrar · ${t4premio(ent)}`}</button>`}</article>`; };
+  const fim = (b.salas || []).filter((x) => x.estado === "encerrada" && x.vencedor).slice(0, 5);
+  const nome = (id) => (b.salas || []).flatMap((x) => x.gente || []).find((g) => g.id === id)?.nome || "Alguém";
+  return `<p class="t4mdica">⚔️ Corridas entre a tripulação. Para entrar: <b>${t4premio(ent)}</b> (o 🔥 e os 🪎 vão para o pote). A sala precisa de ${cfg.min} a ${cfg.max} pessoas; quando chega a ${cfg.min}, ainda dá ${cfg.janela_horas} h para mais gente entrar e a corrida começa. Vale só o que você <b>ganhar</b> depois da largada (missões, baús, Roda, conquistas); compra na Doca e presente não contam. Você está em <b>${b.minhas} de ${cfg.por_pessoa}</b> batalhas.</p>
+    <div class="t4bats">${(cfg.tipos || []).map(cartao).join("")}</div>
+    ${fim.length ? `<section class="pl6sec t4cx" style="margin-top:14px"><h3>🏆 Últimos campeões</h3>${fim.map((x) => `<div class="t4exr"><span>🏆</span><span>${esc(nome(x.vencedor))} · ${(cfg.tipos || []).find((y) => y.id === x.tipo)?.icone || ""}</span><em>${t4premio(x.premio)}</em></div>`).join("")}</section>` : ""}
+    <small class="t4muted">Sala que não junta ${cfg.min} pessoas em ${cfg.expira_dias} dias devolve tudo. Corrida sem campeão até o fim da temporada também devolve.</small>`;
+}
 function t4desafios() {
   const ms = (s.tes.missoes || []).filter((m) => m.cat !== "conquista");
   const de = (c) => c === "campanha" ? ms.filter((m) => m.cat === "campanha") : ms.filter((m) => m.categoria === c);
   const conta = (c) => de(c).reduce((n, m) => n + t4estadoDesafio(m).prontos.length, 0);
-  let cat = s.t4dc || "rotas"; if (!de(cat).length) cat = T4_MCAT.find(([c]) => de(c).length)?.[0] || "rotas";
+  const tem = (c) => de(c).length || c === "batalhas";
+  let cat = s.t4dc || "rotas"; if (!tem(cat)) cat = T4_MCAT.find(([c]) => tem(c))?.[0] || "rotas";
   const ordem = { pronta: 0, andamento: 1, bloq: 2, feita: 3 };
   const lista = de(cat).map((m) => ({ m, h: t4linhaDesafio(m) })).sort((x, y) => ordem[x.h.match(/class="t4m (\w+)/)[1]] - ordem[y.h.match(/class="t4m (\w+)/)[1]]);
-  return `<div class="t4mis"><nav class="t4mcat" aria-label="Assuntos das missões">${T4_MCAT.filter(([c]) => de(c).length).map(([c, n]) => `<button type="button" class="t4mcb" aria-pressed="${cat === c}" data-t4dc="${c}">${n}${conta(c) ? ` <b class="t4bd">${conta(c)}</b>` : ""}</button>`).join("")}</nav>
-    <div class="t4mpainel">${t4atividade()}
+  return `<div class="t4mis"><nav class="t4mcat" aria-label="Assuntos das missões">${T4_MCAT.filter(([c]) => tem(c)).map(([c, n]) => `<button type="button" class="t4mcb" aria-pressed="${cat === c}" data-t4dc="${c}">${n}${conta(c) ? ` <b class="t4bd">${conta(c)}</b>` : ""}</button>`).join("")}</nav>
+    <div class="t4mpainel">${cat === "batalhas" ? t4batalhas() : `${t4atividade()}
       ${T4_MDICA[cat] ? `<p class="t4mdica">${T4_MDICA[cat]}</p>` : ""}
       <div class="t4mlista">${lista.map((x) => x.h).join("") || '<p class="t4muted">Nada aqui.</p>'}</div>
-      <p class="t4muted" style="margin:10px 2px 0">${cat === "viver" ? "Cada experiência vale uma vez na temporada." : "O sistema confere sozinho, na hora."}${cat === "campanha" ? " Super missão vale 💎, no máximo 1 por pessoa por semestre." : ""}</p></div></div>`;
+      <p class="t4muted" style="margin:10px 2px 0">${cat === "viver" ? "Cada experiência vale uma vez na temporada." : "O sistema confere sozinho, na hora."}${cat === "campanha" ? " Super missão vale 💎, no máximo 1 por pessoa por semestre." : ""}</p>`}</div></div>`;
 }
 const T4_ROM = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"];
 function t4conquistas() {
@@ -382,13 +418,13 @@ function t4baus() {
     <section class="pl6sec t4cx"><h3>O que pode vir de 1 baú</h3><p class="t4muted" style="margin:0 0 8px">🔁 Nova rodada = abre outro baú na hora, de graça.</p>${t4tabelaPremios(a.tabela || [])}
       <p class="t4muted" style="margin:10px 0 0">Cada baú é sorteado sozinho, mesmo abrindo 10 ou 20 de uma vez. Em 100 baús vêm, em média, uns 500 🪙, 4 🔥, 40 ✨ XP e de vez em quando 💧, ⚡ ou 🌱.</p></section></div>`;
 }
-// 🎮 Jogos (25/11): os jogos do Rotas do Tesouro. Expedição do Tesouro Perdido, Roda do Leme e, em breve, Faça o Barco Navegar.
+// 🎮 Jogos (25/11): os jogos do Rotas do Tesouro. Volta à Ilha (antes Expedição do Tesouro Perdido), Roda do Leme e, em breve, Faça o Barco Navegar.
 function t4ilha() {
   if (s.t4ilha === "roda") return `<button type="button" class="cvvolta" data-t4ilha="mapa">← Jogos</button>${t4roda()}`;
   if (s.t4ilha === "exped") return `<button type="button" class="cvvolta" data-t4ilha="mapa">← Jogos</button>${t4exped()}`;
   const ex = s.exped?.minha ?? null;
   return `<h2 class="t4jtit">🎮 Jogos da Ilha</h2><div class="t4ilhag">
-    <button type="button" class="t4jogo" data-t4ilha="exped"><span class="t4jogoi">🗺️</span><b>Expedição do Tesouro Perdido</b><small>10 paradas pela Ilha Grande. Cada parada se abre pagando joias, cada vez mais caras. Quem chega ao fim leva 1 💎 e o título Lenda da Ilha.</small><em>${ex ? `Você está na parada ${ex} de 10 · Continuar` : "Começar a expedição"}</em></button>
+    <button type="button" class="t4jogo" data-t4ilha="exped"><span class="t4jogoi">🗺️</span><b>Volta à Ilha</b><small>10 paradas pela Ilha Grande. Cada parada se abre pagando joias, cada vez mais caras. Quem chega ao fim leva 1 💎 e o título Lenda da Ilha.</small><em>${ex ? `Você está na parada ${ex} de 10 · Continuar` : "Começar a expedição"}</em></button>
     <button type="button" class="t4jogo" data-t4ilha="roda"><span class="t4jogoi">☸️</span><b>Roda do Leme</b><small>Gire com 🪙 e 🔥 e tente a sorte. Pode sair 💎.</small><em>Jogar</em></button>
     <div class="t4jogo breve"><span class="t4jogoi">⛵</span><b>Faça o Barco Navegar</b><small>Suba os 4 pilares do seu barco com 🔥 💧 ⚡ 🌱. Mimos dos colegas dão vento a favor. Só quem leva o barco ao fim ganha 💎.</small><em>🔒 Em breve</em></div>
   </div>`;
@@ -403,7 +439,7 @@ function t4exped() {
       <div class="t4exl"><span>Custa <b>${t4premio(p.custo)}</b></span><span>Ganha <b>${[p.premio?.xp ? `${p.premio.xp} ✨ XP` : "", p.premio?.diamante ? `${p.premio.diamante} 💎` : "", p.premio?.titulo ? `título ${esc(p.premio.titulo)}` : ""].filter(Boolean).join(" + ")}</b></span></div>
       ${st === "prox" ? `<button type="button" class="btn ouro9 t4exb" data-t4exavancar="1" ${f.length ? "disabled" : ""}>${f.length ? `Faltam ${f.join(" + ")}` : `Avançar para ${esc(p.nome)}`}</button>` : ""}</div></li>`; }).join("");
   const rk = (e.ranking || []).slice(0, 10);
-  return `<div class="t4g2 t4exg"><section class="pl6sec t4cx"><h3>🗺️ Expedição do Tesouro Perdido · parada ${e.minha} de 10</h3>
+  return `<div class="t4g2 t4exg"><section class="pl6sec t4cx"><h3>🗺️ Volta à Ilha · parada ${e.minha} de 10</h3>
       <div class="t4exbar"><i style="width:${e.minha * 10}%"></i></div>
       <ol class="t4exmapa">${nos}</ol></section>
     <aside class="cvcol"><section class="pl6sec t4cx"><h3>Como funciona</h3><div class="t4muted cvregras">
@@ -577,9 +613,19 @@ async function t4click(d, b) {
     } catch (er) { falhou(er); }
     return true;
   }
+  if (d.t4dc === "batalhas") { s.t4dc = "batalhas"; await t4batCarregar(); render(); return true; }
   if (d.t4dc) { s.t4dc = d.t4dc; render(); return true; }
   if (d.t4rk) { s.t4rk = d.t4rk; render(); return true; }
   if (d.t4ex) { s.t4ex = d.t4ex; render(); return true; }
+  if (d.t4batentrar) {
+    const tp = (s.bat?.cfg?.tipos || []).find((x) => x.id === d.t4batentrar); if (!tp) return true;
+    if (!confirmaT4(`Entrar na ${tp.nome}? Vão ${t4premio(s.bat.cfg.entrada)} para o pote.`, b)) return true;
+    b.disabled = true; try { const x = await chamar("alfy_batalha_entrar", { p_tipo: tp.id }); aviso(`⚔️ Você entrou! Sala com ${x.gente} de ${s.bat.cfg.max}.`); await t4batCarregar(); render(); } catch (er) { b.disabled = false; falhou(er); } return true;
+  }
+  if (d.t4batsair) {
+    if (!confirmaT4("Sair da sala? O 🔥 e os 🪎 voltam para você.", b)) return true;
+    b.disabled = true; try { await chamar("alfy_batalha_sair", { p_sala: +d.t4batsair }); aviso("Você saiu da sala. O depósito voltou."); await t4batCarregar(); render(); } catch (er) { b.disabled = false; falhou(er); } return true;
+  }
   if (d.t4gk) { s.t4gk = d.t4gk; render(); return true; }
   if (d.t4ilha) { s.t4ilha = d.t4ilha === "mapa" ? null : d.t4ilha; if (d.t4ilha === "exped" || d.t4ilha === "mapa") s.exped = await chamar("alfy_expedicao").catch(() => s.exped); render(); return true; }
   if (d.t4exavancar) {
