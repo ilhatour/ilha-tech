@@ -118,6 +118,16 @@ function cvPerfil() {
       <aside class="cvcol"><section class="pl6sec t4cx"><h3>💛 Ganhou em curtidas</h3><div class="cvlikes">${T4_ORDEM.filter((k) => +rec[k]).map((k) => `<span class="cvlk">${T4_JOIA[k][0]} ${t4n(rec[k])}</span>`).join("") || '<span class="t4muted">Nada ainda.</span>'}</div></section>
         <section class="pl6sec t4cx"><h3>🏅 Conquistas</h3><div class="cvconqs">${conqs}</div></section></aside></div>`;
 }
+// 💱 25/11: a mesma régua para toda joia (referência pela raridade; Doca 0,5× a 1,5×; loja vende 3×, compra 0,5×)
+function cvTabelaValores() {
+  const c = s.cais, ref = c?.cfg?.valor_ref || {}, fx = c?.cfg?.faixa || [0.5, 1.5], merc = s.tes?.mercado || [];
+  const loja = (k) => merc.find((i) => i.id === "joia_" + k)?.preco?.moeda, venda = (k) => merc.find((i) => i.id === "cambio_" + k)?.efeito?.moeda;
+  const ks = ["tesouro", "fogo", "gota", "raio", "broto"].filter((k) => ref[k]);
+  return `<section class="pl6sec t4cx" style="margin-top:14px"><h3>💱 Quanto vale cada joia</h3>
+    <div class="t4tabela cvval" role="table"><div class="t4tr t4th" role="row"><span>Joia</span><span>Valor</span><span>Na Doca</span><span>Loja vende</span><span>Loja compra</span></div>
+    ${ks.map((k) => `<div class="t4tr" role="row"><span>${T4_JOIA[k][0]} ${T4_JOIA[k][1]}</span><span><b>${t4n(ref[k])} 🪙</b></span><span>${t4n(ref[k] * fx[0])} a ${t4n(ref[k] * fx[1])} 🪙</span><span>${loja(k) ? t4n(loja(k)) + " 🪙" : "·"}</span><span>${venda(k) ? t4n(venda(k)) + " 🪙" : "·"}</span></div>`).join("")}</div>
+    <small class="t4muted">O valor vem da raridade de cada joia. Na Doca vale negociar entre metade e uma vez e meia o valor, sempre melhor que a loja: a loja vende por 3× e compra pela metade. 💎 e 🎖️ não se trocam.</small></section>`;
+}
 function cvLoja() {
   const c = s.cais; if (!c) { chamar("alfy_cais").then((x) => { s.cais = x; renderSeguro(); }); return '<p class="t4muted">Abrindo a Doca…</p>'; }
   const sd = s.tes?.saldo || {}, of = (c.ofertas || []).slice().sort((a, b) => (b.minha ? 1 : 0) - (a.minha ? 1 : 0));
@@ -126,7 +136,7 @@ function cvLoja() {
     <div class="cvvitrine">${of.map((o) => { const falta = (+sd[o.quer] || 0) < +o.preco;
       return `<div class="cvof ${o.minha ? "minha" : ""}">${o.minha ? '<span class="cvselo">sua oferta</span>' : ""}<div class="cvbig">${T4_JOIA[o.moeda][0]} ${t4n(o.qtd)}</div>
         <div class="cvpor">por <b>${t4j(o.quer, o.preco)}</b></div><div class="cvvend">${o.minha ? "Você" : esc(o.vendedor)} · sai em ${t4dia(o.vence_em)}</div>
-        ${o.minha ? `<button type="button" class="btn peq" data-t4retirar="${o.id}">Retirar</button>` : c.congelado ? `<button type="button" class="btn peq" disabled>Pausado</button>` : falta ? `<button type="button" class="btn peq" disabled>Faltam ${t4j(o.quer, o.preco - (+sd[o.quer] || 0))}</button>` : `<button type="button" class="btn turq peq" data-t4caiscomprar="${o.id}">Comprar</button>`}</div>`; }).join("") || '<p class="t4muted">Ninguém está vendendo agora. Que tal abrir a sua barraca?</p>'}</div></section>`;
+        ${o.minha ? `<button type="button" class="btn peq" data-t4retirar="${o.id}">Retirar</button>` : c.congelado ? `<button type="button" class="btn peq" disabled>Pausado</button>` : falta ? `<button type="button" class="btn peq" disabled>Faltam ${t4j(o.quer, o.preco - (+sd[o.quer] || 0))}</button>` : `<button type="button" class="btn turq peq" data-t4caiscomprar="${o.id}">Comprar</button>`}</div>`; }).join("") || '<p class="t4muted">Ninguém está vendendo agora. Que tal abrir a sua barraca?</p>'}</div></section>${cvTabelaValores()}`;
 }
 function t4conves() {
   const sub = s.cv.sub, saldo = s.tes?.saldo || {};
