@@ -238,14 +238,14 @@ function t4batalhas() {
       const st = x.estado === "andamento" ? `<b class="t4batst on">🏁 Corrida valendo</b>`
         : n >= cfg.min ? `<b class="t4batst">⏳ Começa ${new Date(new Date(x.cheia_em).getTime() + cfg.janela_horas * 3600e3).toLocaleString("pt-BR", { weekday: "short", hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" })} (ou quando lotar)</b>`
         : `<b class="t4batst">Faltam ${cfg.min - n} para começar</b>`;
-      const pote = { tesouro: n * (+ent.tesouro || 0), fogo: n * (+ent.fogo || 0) }; Object.entries(tp.extra || {}).forEach(([k, v]) => { pote[k] = (pote[k] || 0) + +v; });
+      const pote = Object.fromEntries(Object.entries(ent).map(([k, v]) => [k, n * +v])); Object.entries(tp.extra || {}).forEach(([k, v]) => { pote[k] = (pote[k] || 0) + +v; });
       return `<div class="t4sala"><div class="t4salah">${st}<small>${n}/${cfg.max} na sala</small></div>
         <div class="t4pote"><span>💰 Prêmio acumulado</span><b>${t4premio(pote)} + ${cfg.xp} ✨ XP</b></div>
         <div class="t4bolas">${(x.gente || []).map(t4bola).join("")}</div>
         ${x.estado === "andamento" ? `<div class="t4placar">${(x.gente || []).map((g) => `<div><span>${esc(g.nome.split(" ")[0])}${g.id === eu ? " (você)" : ""}</span><i><b style="width:${Math.min(100, 100 * (+g.qtd || 0) / tp.alvo)}%"></b></i><em>${t4n(g.qtd || 0)}/${tp.alvo} ${tp.icone}</em></div>`).join("")}</div>` : ""}
         ${minha && x.estado === "aberta" ? `<button type="button" class="btn peq" data-t4batsair="${x.id}">Sair e pegar de volta</button>` : ""}</div>`; };
     return `<article class="t4bat"><div class="t4bath"><span class="t4batic">${tp.icone}</span><div><b>${esc(tp.nome)}</b><small>Quem ganhar primeiro ${tp.alvo} ${tp.alvo > 1 ? T4_JOIA[tp.moeda][2] : T4_JOIA[tp.moeda][1]} ${tp.icone} depois da largada</small></div></div>
-      <div class="t4batp">Campeão leva o prêmio acumulado: ${t4premio(ent)} de cada um que entrar + <b>${t4premio(tp.extra)}</b> + ${cfg.xp} ✨ XP. Sala cheia (10) = <b>${t4premio({ tesouro: cfg.max * (+ent.tesouro || 0), fogo: cfg.max * (+ent.fogo || 0) })}</b> + o extra.</div>
+      <div class="t4batp">Campeão leva o prêmio acumulado: ${t4premio(ent)} de cada um que entrar${Object.keys(tp.extra || {}).length ? ` + <b>${t4premio(tp.extra)}</b> extra` : ""} + ${cfg.xp} ✨ XP. Sala cheia (${cfg.max}) = <b>${t4premio(Object.fromEntries(Object.entries(ent).map(([k, v]) => [k, cfg.max * +v])))}</b>${Object.keys(tp.extra || {}).length ? " + o extra" : ""}.</div>
       ${salas.map(sala).join("") || '<p class="t4muted" style="margin:0">Nenhuma sala aberta. Entre e abra a primeira.</p>'}
       ${estou ? "" : `<button type="button" class="btn ouro9 t4batbtn" data-t4batentrar="${tp.id}" ${falta.length || b.minhas >= cfg.por_pessoa ? "disabled" : ""}>${b.minhas >= cfg.por_pessoa ? `Você já está em ${cfg.por_pessoa} batalhas` : falta.length ? `Faltam ${falta.join(" + ")}` : `Entrar · ${t4premio(ent)}`}</button>`}</article>`; };
   const fim = (b.salas || []).filter((x) => x.estado === "encerrada" && x.vencedor).slice(0, 5);
@@ -410,8 +410,9 @@ function t4baus() {
   const btn = (n) => `<button type="button" class="btn ${n === 1 ? "ouro9" : "ouro9 t4lt"}" data-t4abrir="${n}" ${ab >= n * c && !s.t4abrindo ? "" : "disabled"}>Abrir ${n}</button>`;
   return `<div class="t4g2"><section class="pl6sec t4cx t4bauw">
       <div class="t4bauv ${s.t4abrindo ? "abrindo" : ""} ${s.t4estoura ? "estoura" : ""} ${u && !s.t4abrindo ? "r" + t4rar(u.premio, u.nome) : ""}" aria-hidden="true"><span class="t4raios"></span><span class="t4bau">🪎</span>${Array.from({ length: 10 }, (_, i) => `<i class="t4fai" style="--a:${i * 36}deg"></i>`).join("")}</div>
-      <div class="t4abriu" aria-live="polite">${s.t4abrindo ? "Abrindo…" : lote ? `<b>${lote.length} baús abertos</b>${lote.some((x) => x.sorteado?.gratis) ? `<small class="t4rod">🔁 ${lote.filter((x) => x.sorteado?.gratis).length} nova${lote.filter((x) => x.sorteado?.gratis).length > 1 ? "s rodadas" : " rodada"}: cada uma abriu outro baú de graça</small>` : ""}` : u ? `<span class="t4rarp r${t4rar(u.premio, u.nome)}">${esc(t4rarNome(u))}</span><b>${u.sorteado?.gratis ? "🔁 Nova rodada: abre outro grátis" : esc(t4premio(u.premio))}</b>` : "Escolha quantos baús abrir"}</div>
+      <div class="t4abriu" aria-live="polite">${s.t4abrindo ? "Abrindo…" : lote ? `<b>${lote.length} baús abertos</b>${lote.some((x) => x.sorteado?.gratis) ? `<small class="t4rod">🔁 ${lote.filter((x) => x.sorteado?.gratis).length} nova${lote.filter((x) => x.sorteado?.gratis).length > 1 ? "s rodadas" : " rodada"}: cada uma abriu outro baú de graça</small>` : ""}` : u ? `<span class="t4rarp r${t4rar(u.premio, u.nome)}">${esc(t4rarNome(u))}</span><b>${u.sorteado?.gratis ? "🔁 Nova rodada! Toque em Abrir rodada grátis" : esc(t4premio(u.premio))}</b>` : "Escolha quantos baús abrir"}</div>
       <div class="t4tri">${btn(1)}${btn(10)}${btn(20)}</div>
+      ${+a.gratis > 0 ? `<button type="button" class="btn turq t4btnL t4grat" data-t4abrir="1" data-gratis="1" ${s.t4abrindo ? "disabled" : ""}>🔁 Abrir rodada grátis${+a.gratis > 1 ? ` (${a.gratis})` : ""}</button>` : ""}
       ${lote ? `<div class="t4lote">${lote.map((x, i) => `<span class="t4lc r${t4rar(x.premio, x.nome)}" style="animation-delay:${i * 90}ms"><i>${t4ico(x.sorteado?.gratis ? { gratis: 1 } : x.premio)}</i><small>${x.sorteado?.gratis ? "+1" : x.premio.moeda || Object.values(x.premio).find((v) => typeof v === "number") || ""}</small></span>`).join("")}</div>
         <p class="t4lotet">Total: <b>${esc(t4premio(lote.reduce((o, x) => { Object.entries(x.premio || {}).forEach(([k, v]) => { if (typeof v === "number" && k !== "gratis") o[k] = (o[k] || 0) + v; }); return o; }, {})))}</b>${lote.some((x) => x.sorteado?.gratis) ? ` · ${lote.filter((x) => x.sorteado?.gratis).length} nova rodada` : ""}</p>` : ""}
       <div class="t4bauinfo"><span><b>${t4n(g)}</b> 🪎 baús do tesouro</span>${ab < g ? `<span>${t4n(g - ab)} de rotas de hoje abrem amanhã</span>` : ""}</div>
@@ -705,7 +706,7 @@ async function t4click(d, b) {
     const n = +d.t4abrir || 1, reduz = matchMedia("(prefers-reduced-motion: reduce)").matches, dur = reduz ? 0 : n === 1 ? 1700 : 2300;
     s.t4abrindo = true; s.t4lote = null; s.t4ult = null; s.t4estoura = false; render(); T4SOM.suspense(dur / 1000);
     try {
-      const [x] = await Promise.all([chamar("alfy_abrir_baus", { p_vezes: n }), new Promise((r) => setTimeout(r, dur))]);
+      const [x] = await Promise.all([chamar("alfy_abrir_baus", { p_vezes: n, p_gratis: d.gratis === "1" }), new Promise((r) => setTimeout(r, dur))]);
       const tab = s.tes.abrir?.tabela || [], nm = (pr) => tab.find((y) => JSON.stringify(y.premio) === JSON.stringify(pr))?.nome;
       const lista = (x.aberturas || []).map((ab) => ({ ...ab, nome: nm(ab.sorteado) }));
       s.t4abrindo = false; s.t4estoura = true;

@@ -2315,3 +2315,4 @@ button.t4jogo{cursor:pointer}button.t4jogo:hover{border-color:var(--turq)}
 /* bolinhas menores e sobrepostas (25/11) */
 .t4bolas{gap:0;padding-left:8px}
 .t4bolas .t4bola{width:30px;height:30px;font-size:10.5px;margin-left:-5px;letter-spacing:-.02em;border-width:2px;border-color:#1B1F23;box-shadow:0 0 0 1.5px #B8913A}
+.t4grat{margin-top:8px;animation:t4pulsa 1.6s ease-in-out infinite}
