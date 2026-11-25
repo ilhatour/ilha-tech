@@ -173,7 +173,7 @@ function t4linhaDesafio(m) {
     : m.em_breve && m.regra?.insta ? `<span class="t4mpilha"><a class="btn peq t4mbtn" href="https://instagram.com/${esc(m.regra.insta)}" target="_blank" rel="noopener">Abrir perfil</a><span class="t4mlk">🔒 Em breve</span></span>`
     : m.em_breve ? `<span class="t4mlk">🔒 Em breve</span>`
     : m.regra?.tipo === "viver" ? (() => { const v = (s.tes.viver || {})[m.id];
-        return v?.estado === "conferir" ? `<span class="t4mlk">⏳ Aguardando o gerente</span>` : `<button type="button" class="btn turq peq t4mbtn" data-t4viver="${m.id}">📸 ${v?.estado === "recusada" ? "Mandar de novo" : "Comprovar"}</button>`; })()
+        return v?.estado === "conferir" ? `<span class="t4mlk">⏳ Aguardando os colegas</span>` : `<button type="button" class="btn turq peq t4mbtn" data-t4viver="${m.id}">📸 ${v?.estado === "recusada" ? "Mandar de novo" : "Comprovar"}</button>`; })()
     : ["barco", "mimos"].includes(m.categoria) ? `<button type="button" class="btn peq t4mbtn" data-tsub="conves">Ir</button>`
     : fora ? `<span class="t4mlk">${esc(fora)}</span>`
     : m.id === "carta_embarque" ? `<button type="button" class="btn turq peq t4mbtn" data-fichalink="1">Ir</button>`
@@ -201,7 +201,7 @@ function t4atividade() {
 // 25/11 (Miguel): missões por ASSUNTO; cada uma diz se renova todo dia, toda semana, todo mês ou vale uma vez
 const T4_MCAT = [["rotas", "🗺️ Rotas"], ["rotinas", "🔁 Rotinas"], ["barco", "⛵ Nosso Barco"], ["mimos", "💚 Mimos e Carinhos"], ["viver", "🌴 Viver"], ["redes", "📱 Redes"],
   ["elogios", "⭐ Elogios"], ["vendas", "💰 Vendas"], ["batalhas", "⚔️ Batalhas"], ["passos", "👤 Primeiros Passos"], ["campanha", "🚩 Campanhas"]];
-const T4_MDICA = { viver: "🌴 Viva a ilha e o Rio: faça a experiência, tire uma foto e toque em Comprovar. A foto vai para o Nosso Barco e o seu gerente confirma. Prêmio: baús + um elemento (água 💧, trilha 🌱, comida 🔥, Rio ⚡).",
+const T4_MDICA = { viver: "🌴 Viva a ilha e o Rio: faça a experiência, tire uma foto e toque em Comprovar. A foto vira postagem no Nosso Barco e, quando 5 colegas tocarem ✅ Vale, o prêmio fica pronto. Você também confirma as experiências dos colegas lá.",
   vendas: "💰 Missões de venda entram assim que a Nave registrar quem lançou cada venda.", batalhas: "⚔️ Desafios entre tripulantes e frentes. Em breve.",
   elogios: "⭐ Elogio de cliente com o seu nome vale 💧. Entra assim que o ALFY conseguir conferir sozinho.", redes: "📱 Siga os perfis do Grupo Ilha: ponha o seu @, siga e mande um print da sua lista \"Seguindo\". Um print vale para todos os perfis que aparecerem nele.",
   mimos: "💚 Gestos de gratidão e apoio à tripulação. Homenagear gasta 1 💚 mimo (você ganha 1 por dia ao entrar).", barco: "⛵ Participe do Nosso Barco: poste, comente e curta os colegas." };
@@ -349,7 +349,7 @@ const t4rarNome = (x) => x.nome || T4_RAR[t4rar(x.premio)]?.[1] || "";
 const t4ico = (pr) => pr.diamante ? "💎" : pr.gratis ? "🔁" : pr.xp ? "✨" : pr.fogo ? "🔥" : pr.gota ? "💧" : pr.raio ? "⚡" : pr.broto ? "🌱" : pr.tesouro ? "🪎" : "🪙";
 function t4tabelaPremios(tab, roda) {
   const tot = tab.reduce((a, x) => a + +x.p, 0);
-  return `<div class="t4chs">${tab.map((x) => `<div class="t4chl r${t4rar(x.premio, x.nome)}"><span class="t4chi">${t4ico(x.premio)}</span><b>${esc(t4rarNome(x))}</b><span class="t4chp">${x.premio.gratis ? (roda ? "gira de novo grátis" : "abre outro grátis") : t4premio(x.premio)}</span><span class="t4chc">${(100 * x.p / tot).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%</span></div>`).join("")}</div>`;
+  return `<div class="t4chs">${tab.map((x) => `<div class="t4chl r${t4rar(x.premio, x.nome)}"><span class="t4chi">${t4ico(x.premio)}</span><b>${esc(t4rarNome(x))}</b><span class="t4chp">${x.premio.gratis ? (roda ? "gira de novo grátis" : "abre outro grátis") : t4premio(x.premio)}</span><span class="t4chc"><i style="width:${Math.max(4, Math.round(70 * x.p / Math.max(...tab.map((y) => +y.p))))}px"></i><em>${(100 * x.p / tot).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%</em></span></div>`).join("")}</div>`;
 }
 function t4baus() {
   const a = s.tes.abrir || {}, g = +s.tes.saldo.tesouro || 0, ab = +a.abrivel || 0, c = +(a.custo || 1), u = s.t4ult, lote = s.t4lote;
@@ -382,9 +382,9 @@ function t4roda() {
     x._a0 = a0 + 90; x._a1 = a1 + 90; a0 = a1; return p; }).join("");
   const raios = Array.from({ length: 8 }, (_, i) => { const a = i * Math.PI / 4; return `<line x1="${(cx + (R + 2) * Math.cos(a)).toFixed(1)}" y1="${(cy + (R + 2) * Math.sin(a)).toFixed(1)}" x2="${(cx + (R + 16) * Math.cos(a)).toFixed(1)}" y2="${(cy + (R + 16) * Math.sin(a)).toFixed(1)}" stroke="#8C6A2A" stroke-width="8" stroke-linecap="round"/><circle cx="${(cx + (R + 18) * Math.cos(a)).toFixed(1)}" cy="${(cy + (R + 18) * Math.sin(a)).toFixed(1)}" r="7" fill="#B8913A"/>`; }).join("");
   const falta = Object.entries(cu).filter(([k, v]) => (+sd[k] || 0) < +v).map(([k, v]) => `${t4n(+v - (+sd[k] || 0))} ${T4_JOIA[k][0]}`);
-  return `<div class="t4g2"><section class="pl6sec t4cx t4rodabox">
+  return `<div class="t4g2 t4rodag2"><section class="pl6sec t4cx t4rodabox">
       <div class="t4rodaw ${s.t4ganhou != null ? "ganhou r" + s.t4ganhou : ""}"><span class="t4pont" aria-hidden="true"></span><span class="t4rodag" aria-hidden="true"></span><svg id="t4roda" viewBox="-25 -25 350 350" role="img" aria-label="Roda do Leme" style="transform:rotate(${s.t4rot || 0}deg)"><g>${raios}<circle cx="${cx}" cy="${cy}" r="${R + 3}" fill="none" stroke="#B8913A" stroke-width="5"/>${fat}<circle cx="${cx}" cy="${cy}" r="24" fill="#2C3238" stroke="#B8913A" stroke-width="4"/><text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="central" font-size="20">⚓</text></g></svg></div>
-      <div class="t4abriu" aria-live="polite">${s.t4saiu || `Cada giro custa <b>${t4premio(cu)}</b>`}</div>
+      <div class="t4abriu" aria-live="polite">${s.t4saiu || `<small class="t4rodac">Cada giro custa</small><b>${t4premio(cu)}</b>`}</div>
       <button type="button" class="btn ouro9 t4btnL" data-t4girar="1" ${!falta.length && !s.t4girando ? "" : "disabled"}>${s.t4girando ? "Girando…" : falta.length ? `Faltam ${falta.join(" + ")}` : `Girar · ${t4premio(cu)}`}</button>
       <div class="t4bauinfo"><span>💎 este mês: <b>${t4n(r.diamante_mes || 0)} de ${t4n(r.diamante_max || 1)}</b></span></div></section>
     <section class="pl6sec t4cx"><h3>O que pode sair</h3>${t4tabelaPremios(tab, true)}
@@ -392,7 +392,7 @@ function t4roda() {
 }
 function t4viverPonte(p) {
   const l = p.viver || []; if (!l.length) return "";
-  return `<section class="pl6sec t4cx" style="margin-bottom:14px"><h3>🌴 Viver para conferir · ${l.length}</h3>
+  return `<section class="pl6sec t4cx" style="margin-bottom:14px"><h3>🌴 Viver esperando confirmação · ${l.length}</h3><p class="t4muted" style="margin:0 0 6px">Os colegas confirmam no Nosso Barco (5 votos). Aqui você só confirma se quiser adiantar.</p>
     ${l.map((x) => `<div class="t4vconf">${window.cvFoto ? window.cvFoto({ id: x.id, foto: true }) : ""}<div><b>${esc(x.quem)} · ${x.icone} ${esc(x.missao)}</b><small class="t4muted">${esc(x.texto)} · ${t4dia(x.em)}</small>
       <div class="t4row"><button type="button" class="btn turq peq" data-t4vok="${x.id}">✓ Confirmar</button>
       <form data-t4form="vrec" data-id="${x.id}" class="t4inl"><input name="motivo" placeholder="Motivo para não aceitar" minlength="5" required><button type="submit" class="btn peq">Não aceitar</button></form></div></div></div>`).join("")}</section>`;
@@ -550,7 +550,7 @@ async function t4click(d, b) {
       <form data-t4form="viver" data-missao="${m.id}" class="t4form" style="padding:4px 2px 8px">
         <label>Foto da experiência<input name="foto" type="file" accept="image/*" required></label>
         <label>Conte como foi (vai junto no Nosso Barco)<textarea name="texto" rows="2" maxlength="400" placeholder="Ex.: que dia no Poção!"></textarea></label>
-        <small class="t4muted">${esc(m.descricao || "")} A foto vira postagem no Nosso Barco e o seu gerente confirma. Prêmio: ${esc(t4premio(m.premio, m.tesouros))}.</small>
+        <small class="t4muted">${esc(m.descricao || "")} A foto vira postagem no Nosso Barco e 5 colegas confirmam. Prêmio: ${esc(t4premio(m.premio, m.tesouros))}.</small>
         <button type="submit" class="btn ouro9">Mandar</button></form></section></div>`;
     return true;
   }
@@ -682,7 +682,7 @@ document.addEventListener("submit", async (e) => {
       const arq = f.querySelector("input[type=file]")?.files?.[0]; if (!arq) throw new Error("Escolha a foto.");
       const foto = await window.cvReduzir(arq);
       await chamar("alfy_viver_enviar", { p_missao: f.dataset.missao, p_texto: String(fd.get("texto") || "").trim(), p_foto: foto.split(",")[1], p_foto_tipo: "image/jpeg" });
-      fechar(); aviso("🌴 Enviado! Já está no Nosso Barco e o seu gerente vai confirmar."); s.cvFeed = null; await t4carregar(); render(); return;
+      fechar(); aviso("🌴 Enviado! Está no Nosso Barco: quando 5 colegas confirmarem, o prêmio fica pronto."); s.cvFeed = null; await t4carregar(); render(); return;
     } else if (f.dataset.t4form === "vrec") {
       await chamar("alfy_viver_conferir", { p_post: +f.dataset.id, p_ok: false, p_motivo: String(fd.get("motivo") || "").trim() });
       aviso("Comprovação não aceita. A pessoa vê o motivo e pode mandar de novo."); s.ponte = await chamar("alfy_ponte").catch(() => s.ponte); render(); return;

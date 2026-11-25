@@ -2220,3 +2220,21 @@ button.t4jogo{cursor:pointer}button.t4jogo:hover{border-color:var(--turq)}
 .t4vconf{display:grid;grid-template-columns:120px minmax(0,1fr);gap:12px;padding:10px 0;border-top:1px solid var(--linha)}
 .t4vconf .cvfoto{max-height:120px;height:120px}.t4vconf b{display:block}
 @media (max-width:640px){.t4vconf{grid-template-columns:minmax(0,1fr)}.t4vconf .cvfoto{height:180px;max-height:180px}}
+/* 25/11 Roda do Leme no computador: palco iluminado, roda maior, tabela com barra de chance */
+.t4rodag2{grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);align-items:stretch}
+.t4rodabox{justify-content:center;padding-block:28px;background:radial-gradient(circle at 50% 38%,rgba(232,196,104,.16),rgba(43,175,166,.08) 38%,transparent 66%),linear-gradient(180deg,#1C2226,#15191C);border-color:#3A3222}
+.t4rodabox .t4rodaw{width:min(380px,80vw)}
+.t4rodabox .t4abriu{min-height:0;gap:0}
+.t4rodac{font-family:var(--fb);font-size:13px;color:var(--aco);letter-spacing:.08em;text-transform:uppercase}
+.t4rodabox .t4btnL{max-width:360px}
+.t4rodabox .t4bauinfo{justify-content:center}
+.t4chl{grid-template-columns:30px 100px minmax(0,1fr) 128px;padding:9px 4px}
+.t4chc{display:flex;align-items:center;gap:8px;justify-content:flex-end}
+.t4chc i{display:block;height:6px;border-radius:4px;background:var(--rc,#8C979F);opacity:.8;flex:none}
+.t4chc em{font-style:normal;min-width:44px;text-align:right}
+.t4chl:hover{background:rgba(255,255,255,.025)}
+@media (max-width:900px){.t4rodag2{grid-template-columns:minmax(0,1fr)}.t4chl{grid-template-columns:24px 84px minmax(0,1fr) 96px}.t4chc i{max-width:40px}}
+
+/* 25/11 Viver confirmado pelos colegas */
+.cvvoto{display:flex;flex-wrap:wrap;gap:8px;align-items:center;background:rgba(43,175,166,.08);border:1px solid #2E5E5A;border-radius:12px;padding:8px 10px;font-size:14px}
+.cvvoto span{flex:1 1 220px;color:var(--aco-2)}.cvvoto small{color:var(--aco)}
