@@ -428,9 +428,9 @@ function t4ilha() {
   if (s.t4ilha === "batalhas") return `<button type="button" class="cvvolta" data-t4ilha="mapa">← Jogos</button><h2 class="t4jtit">⚔️ Batalhas</h2>${t4batalhas()}`;
   const ex = s.exped?.minha ?? null;
   return `<h2 class="t4jtit">🎮 Jogos da Ilha</h2><div class="t4ilhag">
+    <button type="button" class="t4jogo t4jogo1" data-t4ilha="roda"><span class="t4jogoi">☸️</span><b>Roda do Leme</b><small>Gire com 🪙 e 🔥 e tente a sorte. Pode sair 💎.</small><em>Jogar agora ☸️</em></button>
     <button type="button" class="t4jogo" data-t4ilha="exped"><span class="t4jogoi">🗺️</span><b>Volta à Ilha</b><small>10 paradas pela Ilha Grande. Cada parada se abre pagando joias, cada vez mais caras. Quem chega ao fim leva 1 💎 e o título Lenda da Ilha.</small><em>${ex ? `Você está na parada ${ex} de 10 · Continuar` : "Começar a expedição"}</em></button>
     <button type="button" class="t4jogo" data-t4ilha="batalhas"><span class="t4jogoi">⚔️</span><b>Batalhas</b><small>Corridas em salas de 5 a 10: quem ganha primeiro o elemento ou o 💎 leva todos os baús e foguinhos do pote, mais uma joia extra.</small><em>Ver as salas</em></button>
-    <button type="button" class="t4jogo" data-t4ilha="roda"><span class="t4jogoi">☸️</span><b>Roda do Leme</b><small>Gire com 🪙 e 🔥 e tente a sorte. Pode sair 💎.</small><em>Jogar</em></button>
     <div class="t4jogo breve"><span class="t4jogoi">⛵</span><b>Faça o Barco Navegar</b><small>Suba os 4 pilares do seu barco com 🔥 💧 ⚡ 🌱. Mimos dos colegas dão vento a favor. Só quem leva o barco ao fim ganha 💎.</small><em>🔒 Em breve</em></div>
   </div>`;
 }
