@@ -2204,3 +2204,6 @@ a.btn.t4mbtn{display:inline-flex;align-items:center;justify-content:center;text-
 .cvvend{font-size:13px;color:var(--aco)}
 .cvof .btn{margin-top:auto}
 @media (max-width:760px){.cvg2{grid-template-columns:minmax(0,1fr)}.cvlado{order:-1}.cvlado section:first-child{display:none}.cvnums{grid-template-columns:repeat(2,minmax(0,1fr))}.cvsaldo{margin-left:0;width:100%}.cvavg{width:80px;height:80px;font-size:27px}.cvhn{font-size:21px}}
+/* 💚 ❤️ corações (24/11): 10 joias no topo = 5 por linha */
+.t4joias8{grid-template-columns:repeat(5,minmax(58px,1fr))}
+@media (max-width:640px){.t4joias8{grid-template-columns:repeat(5,minmax(0,1fr))}}

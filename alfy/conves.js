@@ -4,7 +4,7 @@
 /* global s, chamar, esc, aviso, falhou, render, renderSeguro, T4_JOIA, T4_ORDEM, t4n, t4j, t4dia, confirmaT4 */
 
 const CV_JOIAS = [["moeda", 20], ["moeda", 50], ["fogo", 1], ["gota", 1], ["raio", 1], ["broto", 1], ["diamante", 1]];
-const CV_TIPO = { apoio: "📣 Pedindo apoio", boa: "🌟 Boa ação", auto: "🏆 Conquista" };
+const CV_TIPO = { apoio: "📣 Pedindo apoio", boa: "❤️ Homenagem", auto: "🏆 Conquista" };
 s.cv = s.cv || { sub: "feed", filtro: "tudo", tipo: "post", fotos: {}, pedindo: {} };
 
 function cvIni(nome) { return String(nome || "?").split(/\s+/).filter(Boolean).slice(0, 2).map((x) => x[0]).join("").toUpperCase(); }
@@ -71,30 +71,30 @@ function cvPost(p) {
 function cvCompor() {
   const t = s.cv.tipo, gente = (s.rank?.lista || []).filter((x) => x.id !== s.tes?.eu?.id).sort((a, b) => a.nome.localeCompare(b.nome));
   return `<section class="pl6sec t4cx cvcompor"><form data-cvform="post">
-    <div class="t4filtros">${[["post", "📝 Postagem"], ["apoio", "📣 Pedir apoio"], ["boa", "🌟 Boa ação"]].map(([k, n]) => `<button type="button" class="chip" aria-pressed="${t === k}" data-cvtipo="${k}">${n}</button>`).join("")}</div>
-    ${t === "boa" ? `<label class="cvlab">Quem fez a boa ação<select name="rec" required><option value="">Escolha</option>${gente.map((x) => `<option value="${x.id}">${esc(x.nome)}</option>`).join("")}</select></label>` : ""}
-    <textarea name="t" maxlength="400" rows="3" required placeholder="${t === "apoio" ? "Conte para que você está juntando (ex.: girar a Roda do Leme)" : t === "boa" ? "Conte a boa ação que você viu" : "Conta para a tripulação o que rolou hoje"}"></textarea>
+    <div class="t4filtros">${[["post", "📝 Postagem"], ["apoio", "📣 Pedir apoio"], ["boa", "❤️ Homenagem"]].map(([k, n]) => `<button type="button" class="chip" aria-pressed="${t === k}" data-cvtipo="${k}">${n}</button>`).join("")}</div>
+    ${t === "boa" ? `<label class="cvlab">Quem você quer homenagear<select name="rec" required><option value="">Escolha</option>${gente.map((x) => `<option value="${x.id}">${esc(x.nome)}</option>`).join("")}</select></label>` : ""}
+    <textarea name="t" maxlength="400" rows="3" required placeholder="${t === "apoio" ? "Conte para que você está juntando (ex.: girar a Roda do Leme)" : t === "boa" ? "Conte o que essa pessoa fez de bom" : "Conta para a tripulação o que rolou hoje"}"></textarea>
     ${t === "apoio" ? `<div class="cvlinha"><label class="cvlab">Quero juntar<input name="mq" type="number" min="1" value="2" required></label><label class="cvlab">de<select name="mj">${["fogo", "moeda", "gota", "raio", "broto", "diamante"].map((k) => `<option value="${k}">${T4_JOIA[k][0]} ${T4_JOIA[k][2]}</option>`).join("")}</select></label></div>` : ""}
-    ${t === "boa" ? `<small class="t4muted">Cada curtida nesta postagem vai 75% para quem fez a boa ação e 25% para você, que divulgou.</small>` : ""}
+    ${t === "boa" ? `<small class="t4muted">Homenagear gasta 1 💚 (você tem ${t4n(s.tes?.saldo?.verde || 0)}; ganha 1 por dia ao entrar no ALFY). A pessoa recebe 1 ❤️, e cada curtida nesta postagem vai 75% para ela e 25% para você.</small>` : ""}
     <div class="cvlinha">
       <label class="btn peq cvfotobtn">📷 ${s.cv.prev ? "Trocar foto" : "Foto"}<input type="file" accept="image/*" data-cvfoto hidden></label>
       ${s.cv.prev ? `<img class="cvprev" src="${s.cv.prev}" alt="Prévia"><button type="button" class="cvmais" data-cvsemfoto="1">Tirar foto</button>` : ""}
-      <button type="submit" class="btn turq" style="margin-left:auto">Postar</button></div></form></section>`;
+      <button type="submit" class="btn turq" style="margin-left:auto" ${t === "boa" && !(+s.tes?.saldo?.verde > 0) ? "disabled title=\"Você está sem 💚. Volte amanhã.\"" : ""}>${t === "boa" ? "Homenagear (1 💚)" : "Postar"}</button></div></form></section>`;
 }
 function cvFeed() {
   const f = s.cvFeed; if (!f) { cvCarregar().then(renderSeguro); return '<p class="t4muted">Carregando o Convés…</p>'; }
   const l = f.posts.filter((p) => s.cv.filtro === "tudo" || p.tipo === s.cv.filtro);
   const ofertas = (s.cais?.ofertas || []).filter((o) => !o.minha).slice(0, 4);
   return `<div class="cvg2"><div class="cvcol">${cvCompor()}
-      <div class="t4filtros">${[["tudo", "Tudo"], ["apoio", "📣 Pedidos de apoio"], ["boa", "🌟 Boas ações"], ["post", "📝 Postagens"]].map(([k, n]) => `<button type="button" class="chip" aria-pressed="${s.cv.filtro === k}" data-cvfiltro="${k}">${n}</button>`).join("")}</div>
+      <div class="t4filtros">${[["tudo", "Tudo"], ["boa", "❤️ Homenagens"], ["apoio", "📣 Pedidos de apoio"], ["post", "📝 Postagens"]].map(([k, n]) => `<button type="button" class="chip" aria-pressed="${s.cv.filtro === k}" data-cvfiltro="${k}">${n}</button>`).join("")}</div>
       ${l.map(cvPost).join("") || '<p class="t4muted">Nada por aqui ainda. Faça a primeira postagem.</p>'}
       ${!f.fim && f.posts.length ? `<button type="button" class="btn" data-cvmais="1">Ver mais antigas</button>` : ""}</div>
     <aside class="cvcol cvlado"><section class="pl6sec t4cx"><h3>Como funciona</h3><div class="t4muted cvregras">
       <span>💛 <b>Curtir com joia</b>: escolha 🪙 20 ou 50, ou 1 🔥 💧 ⚡ 🌱, ou 1 💎. A joia vai para quem postou.</span>
       <span>Uma curtida e um comentário curto por postagem.</span>
       <span>📣 <b>Pedir apoio</b> mostra uma meta que enche com as curtidas.</span>
-      <span>🌟 <b>Boa ação</b>: 75% das curtidas para quem fez, 25% para quem divulgou.</span>
-      <span>Presente não conta como coleta, mas tem ranking próprio: 🥇 Ranking › 💛 Curtidas.</span></div></section>
+      <span>❤️ <b>Homenagem</b> gasta 1 💚 (você ganha 1 por dia ao entrar, até 30 no mês). Quem é homenageado recebe 1 ❤️ e 75% das curtidas do post; 25% ficam com quem homenageou.</span>
+      <span>Comentário é livre: um por postagem. Presente não conta como coleta, mas tem ranking próprio: 🥇 Ranking › 💛 Curtidas e ❤️ Corações.</span></div></section>
       <section class="pl6sec t4cx"><h3>🛒 Na lojinha agora</h3>${ofertas.map((o) => `<div class="cvloja1">${esc(o.vendedor)} vende <b>${t4j(o.moeda, o.qtd)}</b> por <b>${t4j(o.quer, o.preco)}</b></div>`).join("") || '<p class="t4muted" style="margin:0">Ninguém vendendo agora.</p>'}
         <button type="button" class="btn peq" style="margin-top:8px" data-cvsub="loja">Abrir a lojinha</button></section></aside></div>`;
 }
@@ -111,7 +111,7 @@ function cvPerfil() {
   return `<button type="button" class="cvvolta" data-cvsub="trip">← Tripulação</button>
     <section class="pl6sec t4cx"><div class="cvhero"><span class="cvavg">${p.foto ? `<img src="${p.foto}" alt="">` : esc(cvIni(p.nome))}<i>${p.patente?.ni || "🚣"}</i></span>
       <div><div class="cvhn">${esc(p.nome)} <span class="cvnvl">Nível ${p.nivel}</span></div><div class="t4muted">${p.patente?.ins || ""} ${esc(p.patente?.nome || "")}${(p.frentes || []).length ? " · " + esc(p.frentes.join(", ")) : ""}</div>${p.titulo ? `<span class="t4titulo">${esc(p.titulo)}</span>` : ""}</div></div>
-      <div class="cvnums"><div><b>${t4n(p.baus)}</b><small>🪎 baús conquistados</small></div><div><b>${p.rotas}</b><small>🗺️ rotas entregues</small></div><div><b>${p.missoes}</b><small>🎯 missões</small></div><div><b>${p.curtidas_n}</b><small>💛 curtidas recebidas</small></div></div></section>
+      <div class="cvnums"><div><b>${t4n(p.baus)}</b><small>🪎 baús conquistados</small></div><div><b>${p.rotas}</b><small>🗺️ rotas entregues</small></div><div><b>${t4n(p.coracoes)}</b><small>❤️ corações recebidos</small></div><div><b>${p.curtidas_n}</b><small>💛 curtidas recebidas</small></div></div></section>
     <div class="cvg2"><div class="cvcol"><h3 class="cvh">Postagens</h3>${(p.posts || []).map(cvPost).join("") || '<p class="t4muted">Ainda não postou nada.</p>'}</div>
       <aside class="cvcol"><section class="pl6sec t4cx"><h3>💛 Ganhou em curtidas</h3><div class="cvlikes">${T4_ORDEM.filter((k) => +rec[k]).map((k) => `<span class="cvlk">${T4_JOIA[k][0]} ${t4n(rec[k])}</span>`).join("") || '<span class="t4muted">Nada ainda.</span>'}</div></section>
         <section class="pl6sec t4cx"><h3>🏅 Conquistas</h3><div class="cvconqs">${conqs}</div></section></aside></div>`;
@@ -129,7 +129,7 @@ function cvLoja() {
 function t4conves() {
   const sub = s.cv.sub, saldo = s.tes?.saldo || {};
   return `<div class="cvtopo"><div class="t4filtros">${[["feed", "📰 Feed"], ["trip", "👥 Tripulação"], ["loja", "🛒 Lojinha da galera"]].map(([k, n]) => `<button type="button" class="chip" aria-pressed="${sub === k || (k === "trip" && sub === "perfil")}" data-cvsub="${k}">${n}</button>`).join("")}</div>
-    <div class="cvsaldo">${["moeda", "fogo", "gota", "raio", "broto", "diamante"].map((k) => `<span>${T4_JOIA[k][0]} ${t4n(saldo[k] || 0)}</span>`).join("")}</div></div>
+    <div class="cvsaldo">${["verde", "vermelho", "moeda", "fogo", "gota", "raio", "broto", "diamante"].map((k) => `<span title="${T4_JOIA[k][2]}">${T4_JOIA[k][0]} ${t4n(saldo[k] || 0)}</span>`).join("")}</div></div>
     ${sub === "trip" ? cvTrip() : sub === "perfil" ? cvPerfil() : sub === "loja" ? cvLoja() : cvFeed()}`;
 }
 
