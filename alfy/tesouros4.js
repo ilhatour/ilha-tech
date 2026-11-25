@@ -250,7 +250,7 @@ function t4batalhas() {
       ${estou ? "" : `<button type="button" class="btn ouro9 t4batbtn" data-t4batentrar="${tp.id}" ${falta.length || b.minhas >= cfg.por_pessoa ? "disabled" : ""}>${b.minhas >= cfg.por_pessoa ? `Você já está em ${cfg.por_pessoa} batalhas` : falta.length ? `Faltam ${falta.join(" + ")}` : `Entrar · ${t4premio(ent)}`}</button>`}</article>`; };
   const fim = (b.salas || []).filter((x) => x.estado === "encerrada" && x.vencedor).slice(0, 5);
   const nome = (id) => (b.salas || []).flatMap((x) => x.gente || []).find((g) => g.id === id)?.nome || "Alguém";
-  return `<p class="t4mdica">⚔️ Corridas entre a tripulação. Para entrar: <b>${t4premio(ent)}</b> (o 🔥 e os 🪎 vão para o prêmio acumulado). A sala precisa de ${cfg.min} a ${cfg.max} pessoas; quando chega a ${cfg.min}, ainda dá ${cfg.janela_horas} h para mais gente entrar e a corrida começa. Vale só o que você <b>ganhar</b> depois da largada (missões, baús, Roda, conquistas); compra na Doca e presente não contam. Você está em <b>${b.minhas} de ${cfg.por_pessoa}</b> batalhas.</p>
+  return `<p class="t4mdica">⚔️ Corridas entre a tripulação. Para entrar: <b>${t4premio(ent)}</b> (vai tudo para o prêmio acumulado). A sala precisa de ${cfg.min} a ${cfg.max} pessoas; quando chega a ${cfg.min}, ainda dá ${cfg.janela_horas} h para mais gente entrar e a corrida começa. Vale só o que você <b>ganhar</b> depois da largada (missões, baús, Roda, conquistas); compra na Doca e presente não contam. Você está em <b>${b.minhas} de ${cfg.por_pessoa}</b> batalhas.</p>
     <div class="t4bats">${(cfg.tipos || []).map(cartao).join("")}</div>
     ${fim.length ? `<section class="pl6sec t4cx" style="margin-top:14px"><h3>🏆 Últimos campeões</h3>${fim.map((x) => `<div class="t4exr"><span>🏆</span><span>${esc(nome(x.vencedor))} · ${(cfg.tipos || []).find((y) => y.id === x.tipo)?.icone || ""}</span><em>${t4premio(x.premio)}</em></div>`).join("")}</section>` : ""}
     <small class="t4muted">Sala que não junta ${cfg.min} pessoas em ${cfg.expira_dias} dias devolve tudo. Corrida sem campeão até o fim da temporada também devolve.</small>`;
@@ -419,7 +419,7 @@ function t4baus() {
       ${!lote && (s.t4hist || []).length ? `<div class="t4hist" aria-label="Últimos prêmios">${s.t4hist.map((x) => `<span class="t4hi r${t4rar(x.premio, x.nome)}" title="${esc(t4rarNome(x))}">${t4ico(x.premio)}${x.premio.moeda ? `<small>${x.premio.moeda}</small>` : ""}</span>`).join("")}</div>` : ""}
       <small class="t4muted">Abrir não mexe nos baús conquistados: sua patente e sua parte no prêmio da tripulação continuam iguais.</small></section>
     <section class="pl6sec t4cx"><h3>O que pode vir de 1 baú</h3><p class="t4muted" style="margin:0 0 8px">🔁 Nova rodada = abre outro baú na hora, de graça.</p>${t4tabelaPremios(a.tabela || [])}
-      <p class="t4muted" style="margin:10px 0 0">Cada baú é sorteado sozinho, mesmo abrindo 10 ou 20 de uma vez. Em 100 baús vêm, em média, uns 500 🪙 e 8 🔥 e de vez em quando 💧, ⚡ ou 🌱.</p></section></div>`;
+      <p class="t4muted" style="margin:10px 0 0">Cada baú é sorteado sozinho, mesmo abrindo 10 ou 20 de uma vez. Em 100 baús vêm, em média, uns 480 🪙, 8 🔥 e 10 ✨ XP e de vez em quando 💧, ⚡ ou 🌱.</p></section></div>`;
 }
 // 🎮 Jogos (25/11): os jogos do Rotas do Tesouro. Volta à Ilha (antes Expedição do Tesouro Perdido), Roda do Leme e, em breve, Faça o Barco Navegar.
 function t4ilha() {
