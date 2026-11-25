@@ -63,8 +63,8 @@ function cvPost(p) {
     ${m ? `<div class="cvmeta"><div class="cvbar"><i style="width:${Math.min(100, 100 * (+m.tem || 0) / m.qtd)}%"></i></div><small class="t4muted">${t4n(m.tem)} de ${t4n(m.qtd)} ${T4_JOIA[m.joia][0]} recebidos</small></div>` : ""}
     ${cvCurtidas(p)}
     ${coment.length ? `<div class="cvcoms">${coment.map((c) => `<div>${cvLk(c.p)} ${esc(c.texto)}</div>`).join("")}</div>` : ""}
-    ${p.tipo === "viver" && p.viver_estado === "conferir" ? `<div class="cvvoto"><span>🌴 ${p.votos?.sim || 0} de ${p.votos?.precisa || 5} colegas confirmaram${p.votos?.nao ? ` · ${p.votos.nao} disseram que não vale` : ""}</span>
-      ${p.meu ? "" : p.votos?.meu != null ? `<small>Você votou: ${p.votos.meu ? "vale ✅" : "não vale 🚫"}</small>` : `<button type="button" class="btn turq peq" data-cvvoto="${p.id}" data-v="1">✅ Vale</button><button type="button" class="btn peq" data-cvvoto="${p.id}" data-v="0">🚫 Não vale</button>`}</div>` : ""}
+    ${p.tipo === "viver" && p.viver_estado === "conferir" ? `<div class="cvvoto"><span>🌴 ${p.votos?.sim || 0} de ${p.votos?.precisa || 5} "valeu"${p.votos?.nao ? ` · ${p.votos.nao} "não valeu" (cada um pede +2)` : ""}</span>
+      ${p.meu ? "" : p.votos?.meu != null ? `<small>Você marcou: ${p.votos.meu ? "✅ valeu" : "🚫 não valeu"}</small>` : `<button type="button" class="btn turq peq" data-cvvoto="${p.id}" data-v="1">✅ Valeu</button><button type="button" class="btn peq" data-cvvoto="${p.id}" data-v="0">🚫 Não valeu</button>`}</div>` : ""}
     <footer class="cvacoes">
       ${p.minha ? `<span class="cvfeito">💛 Você curtiu com ${t4j(p.minha.joia, p.minha.qtd)}</span>` : p.meu || souRec ? "" : s.cv.paleta === p.id ? cvPaleta(p) : `<button type="button" class="btn ouro9 peq" data-cvpaleta="${p.id}">💛 Curtir com joia</button>`}
       ${!jaComentei ? `<form data-cvform="com" data-id="${p.id}" class="cvcom"><input name="t" maxlength="140" placeholder="Comentário curto" aria-label="Comentário"><button type="submit" class="btn peq">Enviar</button></form>` : ""}
@@ -154,7 +154,7 @@ document.addEventListener("click", async (e) => {
   try {
     if (d.cvvoto) {
       b.disabled = true; const x = await chamar("alfy_viver_votar", { p_post: +d.cvvoto, p_vale: d.v === "1" }); cvTrocaPost(x.post);
-      aviso(x.post.viver_estado === "ok" ? "🌴 Confirmada! A experiência valeu." : "Voto registrado. Obrigado por conferir."); return render();
+      aviso(x.post.viver_estado === "ok" ? "🌴 Validada pela tripulação! A missão valeu." : "Voto registrado. Obrigado por conferir."); return render();
     }
     if (d.cvsub) { s.cv.sub = d.cvsub; s.cv.paleta = null; if (d.cvsub === "loja") s.cais = await chamar("alfy_cais").catch(() => s.cais); render(); return; }
     if (d.cvperfil) { if (s.tsub !== "conves") { s.tsub = "conves"; } return cvAbrirPerfil(d.cvperfil); }

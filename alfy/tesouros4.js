@@ -201,7 +201,7 @@ function t4atividade() {
 // 25/11 (Miguel): missões por ASSUNTO; cada uma diz se renova todo dia, toda semana, todo mês ou vale uma vez
 const T4_MCAT = [["rotas", "🗺️ Rotas"], ["rotinas", "🔁 Rotinas"], ["barco", "⛵ Nosso Barco"], ["mimos", "💚 Mimos e Carinhos"], ["viver", "🌴 Viver"], ["redes", "📱 Redes"],
   ["elogios", "⭐ Elogios"], ["vendas", "💰 Vendas"], ["batalhas", "⚔️ Batalhas"], ["passos", "👤 Primeiros Passos"], ["campanha", "🚩 Campanhas"]];
-const T4_MDICA = { viver: "🌴 Viva a ilha e o Rio: faça a experiência, tire uma foto e toque em Comprovar. A foto vira postagem no Nosso Barco e, quando 5 colegas tocarem ✅ Vale, o prêmio fica pronto. Você também confirma as experiências dos colegas lá.",
+const T4_MDICA = { viver: "🌴 Viva a ilha e o Rio: faça a experiência, tire uma foto e toque em Comprovar. A foto vira postagem no Nosso Barco, onde a tripulação curte, comenta e vota. Com 5 ✅ valeu o prêmio fica pronto; cada 🚫 não valeu pede mais 2 valeu, e com 3 não valeu a foto é recusada.",
   vendas: "💰 Missões de venda entram assim que a Nave registrar quem lançou cada venda.", batalhas: "⚔️ Desafios entre tripulantes e frentes. Em breve.",
   elogios: "⭐ Elogio de cliente com o seu nome vale 💧. Entra assim que o ALFY conseguir conferir sozinho.", redes: "📱 Siga os perfis do Grupo Ilha: ponha o seu @, siga e mande um print da sua lista \"Seguindo\". Um print vale para todos os perfis que aparecerem nele.",
   mimos: "💚 Gestos de gratidão e apoio à tripulação. Homenagear gasta 1 💚 mimo (você ganha 1 por dia ao entrar).", barco: "⛵ Participe do Nosso Barco: poste, comente e curta os colegas." };
@@ -581,7 +581,7 @@ async function t4click(d, b) {
       <form data-t4form="viver" data-missao="${m.id}" class="t4form" style="padding:4px 2px 8px">
         <label>Foto da experiência<input name="foto" type="file" accept="image/*" required></label>
         <label>Conte como foi (vai junto no Nosso Barco)<textarea name="texto" rows="2" maxlength="400" placeholder="Ex.: que dia no Poção!"></textarea></label>
-        <small class="t4muted">${esc(m.descricao || "")} A foto vira postagem no Nosso Barco e 5 colegas confirmam. Prêmio: ${esc(t4premio(m.premio, m.tesouros))}.</small>
+        <small class="t4muted">${esc(m.descricao || "")} A foto vira postagem no Nosso Barco e a tripulação valida (5 valeu). Prêmio: ${esc(t4premio(m.premio, m.tesouros))}.</small>
         <button type="submit" class="btn ouro9">Mandar</button></form></section></div>`;
     return true;
   }
@@ -713,7 +713,7 @@ document.addEventListener("submit", async (e) => {
       const arq = f.querySelector("input[type=file]")?.files?.[0]; if (!arq) throw new Error("Escolha a foto.");
       const foto = await window.cvReduzir(arq);
       await chamar("alfy_viver_enviar", { p_missao: f.dataset.missao, p_texto: String(fd.get("texto") || "").trim(), p_foto: foto.split(",")[1], p_foto_tipo: "image/jpeg" });
-      fechar(); aviso("🌴 Enviado! Está no Nosso Barco: quando 5 colegas confirmarem, o prêmio fica pronto."); s.cvFeed = null; await t4carregar(); render(); return;
+      fechar(); aviso("🌴 Enviado! Está no Nosso Barco: com 5 \"valeu\" da tripulação o prêmio fica pronto."); s.cvFeed = null; await t4carregar(); render(); return;
     } else if (f.dataset.t4form === "vrec") {
       await chamar("alfy_viver_conferir", { p_post: +f.dataset.id, p_ok: false, p_motivo: String(fd.get("motivo") || "").trim() });
       aviso("Comprovação não aceita. A pessoa vê o motivo e pode mandar de novo."); s.ponte = await chamar("alfy_ponte").catch(() => s.ponte); render(); return;
