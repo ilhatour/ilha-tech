@@ -2312,3 +2312,6 @@ button.t4jogo{cursor:pointer}button.t4jogo:hover{border-color:var(--turq)}
 .t4mm{margin-bottom:12px}
 .t4pote{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;background:linear-gradient(90deg,rgba(232,196,104,.16),rgba(232,196,104,.04));border:1px solid #6B5524;border-radius:10px;padding:8px 10px}
 .t4pote span{font-size:12.5px;letter-spacing:.06em;text-transform:uppercase;color:#E8C468;font-weight:700}.t4pote b{font-family:var(--fd);font-size:16px}
+/* bolinhas menores e sobrepostas (25/11) */
+.t4bolas{gap:0;padding-left:8px}
+.t4bolas .t4bola{width:30px;height:30px;font-size:10.5px;margin-left:-5px;letter-spacing:-.02em;border-width:2px;border-color:#1B1F23;box-shadow:0 0 0 1.5px #B8913A}
