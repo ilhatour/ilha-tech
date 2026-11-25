@@ -2238,3 +2238,20 @@ button.t4jogo{cursor:pointer}button.t4jogo:hover{border-color:var(--turq)}
 /* 25/11 Viver confirmado pelos colegas */
 .cvvoto{display:flex;flex-wrap:wrap;gap:8px;align-items:center;background:rgba(43,175,166,.08);border:1px solid #2E5E5A;border-radius:12px;padding:8px 10px;font-size:14px}
 .cvvoto span{flex:1 1 220px;color:var(--aco-2)}.cvvoto small{color:var(--aco)}
+/* 25/11 menu dos Tesouros na lateral (computador) e numa faixa que rola (celular) */
+.t4corpo{display:grid;grid-template-columns:minmax(0,1fr);gap:14px;align-items:start}
+.t4corpo>.t4abas{display:flex;flex-wrap:nowrap;overflow-x:auto;gap:6px;scrollbar-width:none;padding:2px 0 6px;margin:0;-webkit-mask-image:linear-gradient(90deg,#000 88%,transparent)}
+.t4corpo>.t4abas .t4aba{flex:none;white-space:nowrap;padding:0 14px;border-radius:999px}
+.t4corpo>.t4tela{min-width:0}
+@media (min-width:1000px){
+  .t4corpo{grid-template-columns:212px minmax(0,1fr);gap:18px}
+  .t4corpo>.t4abas{flex-direction:column;overflow:visible;padding:0;position:sticky;top:76px;-webkit-mask-image:none}
+  .t4corpo>.t4abas .t4aba{width:100%;justify-content:space-between;text-align:left;border-radius:10px;padding:10px 12px}
+  .t4corpo>.t4abas .t4aba[aria-pressed="true"]{box-shadow:inset 3px 0 0 var(--turq)}
+}
+/* 25/11 assuntos das missões numa faixa em cima (sem segunda coluna de menu) */
+.t4corpo .t4mis{display:block}
+.t4corpo .t4mcat{display:flex;flex-direction:row;flex-wrap:wrap;gap:6px;margin:0 0 12px;position:static}
+.t4corpo .t4mcb{width:auto;min-height:38px;padding:0 14px;border-radius:999px;font-size:14px;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.t4corpo .t4mcb[aria-pressed="true"]{background:linear-gradient(180deg,#F2CE6B,#D9A93E);color:#2B2005;border-color:#C9962E}
+@media (max-width:760px){.t4corpo .t4mcat{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;-webkit-mask-image:linear-gradient(90deg,#000 88%,transparent)}.t4corpo .t4mcat::-webkit-scrollbar{display:none}}
