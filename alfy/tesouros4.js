@@ -84,9 +84,9 @@ function vistaTesouros() {
   if (!t4ok()) return s.t4erro ? '<section class="pl6sec t4cx"><h3>🪎 Rotas do Tesouro</h3><p class="t4muted">O jogo demorou para responder. <button type="button" class="btn ouro9 peq" data-t4recarregar="1">Tentar de novo</button></p></section>' : vistaPlacar();
   const t = s.tes, sub = s.tsub || "inicio", mand = ["comando", "gerente"].includes(t.eu.papel);
   const prontos = (t.ganhos || []).filter((g) => g.estado === "pronta");
-  const abas = [["inicio", "⚓ Início"], ["conves", "🛳️ Convés"], ["desafios", "🎯 Missões"], ["conquistas", "🏅 Conquistas"], ["trilha", "🗺️ Trilha"], ["baus", "🪎 Abrir Baús"], ["roda", "☸️ Roda do Leme"], ["mercado", "🏪 Mercado"], ["extrato", "📒 Extrato"], ["ranking", "🥇 Ranking"], ["bau", "🏆 Baú da Tripulação"]].concat(mand ? [["ponte", "🎛️ Ponte"]] : []);
-  const conta = { desafios: prontos.filter((g) => !g.missao.startsWith("c_") && !["trilha", "passe", "temporada"].includes(g.missao)).length, conquistas: prontos.filter((g) => g.missao.startsWith("c_")).length, trilha: prontos.filter((g) => ["trilha", "temporada"].includes(g.missao)).length, ponte: mand ? (s.ponte?.pedidos || []).length : 0 };
-  const V = { inicio: t4inicio, conves: () => (window.t4conves ? window.t4conves() : ""), desafios: t4desafios, conquistas: t4conquistas, trilha: t4trilha, mercado: t4mercado, extrato: t4extrato, ranking: t4ranking, baus: t4baus, roda: t4roda, bau: () => vistaPlacar(), ponte: t4ponte }[sub] || t4inicio;
+  const abas = [["inicio", "⚓ Início"], ["conves", "⛵ Nosso Barco"], ["desafios", "🎯 Missões"], ["conquistas", "🏅 Conquistas"], ["trilha", "🗺️ Trilha"], ["baus", "🪎 Abrir Baús"], ["ilha", "🏝️ Ilha do Tesouro"], ["mercado", "🏪 Mercado"], ["extrato", "📒 Extrato"], ["ranking", "🥇 Ranking"], ["bau", "🏆 Baú da Tripulação"]].concat(mand ? [["ponte", "🎛️ Ponte"]] : []);
+  const conta = { desafios: prontos.filter((g) => !g.missao.startsWith("c_") && !["trilha", "passe", "temporada"].includes(g.missao)).length, conquistas: prontos.filter((g) => g.missao.startsWith("c_")).length, trilha: prontos.filter((g) => ["trilha", "temporada"].includes(g.missao)).length, ponte: mand ? (s.ponte?.pedidos || []).length + (s.ponte?.viver || []).length : 0 };
+  const V = { inicio: t4inicio, conves: () => (window.t4conves ? window.t4conves() : ""), desafios: t4desafios, conquistas: t4conquistas, trilha: t4trilha, mercado: t4mercado, extrato: t4extrato, ranking: t4ranking, baus: t4baus, roda: t4ilha, ilha: t4ilha, bau: () => vistaPlacar(), ponte: t4ponte }[sub] || t4inicio;
   return `<div class="t4">${t4topo(prontos.length)}
     <nav class="t4abas" aria-label="Rotas do Tesouro">${abas.map(([k, n]) => `<button type="button" class="t4aba" aria-pressed="${sub === k}" data-tsub="${k}"><span>${n}</span>${conta[k] ? `<b class="t4bd">${conta[k] > 99 ? "99+" : conta[k]}</b>` : ""}</button>`).join("")}</nav>
     ${t.lancado !== "todos" && t.eu.papel === "comando" ? `<p class="t4aviso">🔒 Só você está vendo. A equipe continua na tela antiga até você tocar em <b>Lançar para a equipe</b>, na Ponte.</p>` : ""}
@@ -156,7 +156,8 @@ function t4slots(pr, tes) {
   if (pr && +pr.xp) l.push(["✨", pr.xp, "xp"]);
   return `<div class="t4slots">${l.map(([e, q, k]) => `<span class="t4slot ${k === "atividade" ? "ativ" : k === "diamante" || k === "medalha" ? "raro" : ""}" title="${k === "atividade" ? "pontos de atividade" : k === "xp" ? "pontos de experiência (XP)" : T4_JOIA[k]?.[2] || "baús"}"><i>${e}</i><b>${t4n(q)}</b></span>`).join("")}</div>`;
 }
-const T4_IR = { comentar_dia: "rotas", concluir_dia: "rotas", mesmo_dia: "rotas", concluir_semana: "rotas", prazo_semana: "rotas" };
+const T4_IR = { comentar_dia: "rotas", concluir_dia: "rotas", mesmo_dia: "rotas", concluir_semana: "rotas", prazo_semana: "rotas", rt_p1_semana: "rotas", rt_rotina_dia: "rotas", rt_rotina_semana: "rotas" };
+const T4_FREQ = { diaria: "todo dia", semanal: "toda semana", mensal: "todo mês", jornada: "uma vez", perfil: "uma vez", campanha: "campanha" };
 function t4linhaDesafio(m) {
   const e = t4estadoDesafio(m), ids = e.prontos.map((x) => x.id).join(","), alvo = +(m.regra?.n || 1), at = +((s.tes.progresso || {})[m.id] ?? (e.feito ? alvo : 0));
   const agora = new Date(), fora = m.cat === "campanha" ? (m.fim && new Date(m.fim) <= agora ? "encerrada" : m.inicio && new Date(m.inicio) > agora ? "começa em " + new Date(m.inicio).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit" }) : "") : "";
@@ -171,6 +172,9 @@ function t4linhaDesafio(m) {
     : m.regra?.tipo === "insta_siga" && !m.em_breve ? `<span class="t4mpilha"><a class="btn peq t4mbtn" href="https://instagram.com/${esc(m.regra.insta)}" target="_blank" rel="noopener">Abrir perfil</a>${s.tes.perfil?.instagram ? `<button type="button" class="btn turq peq t4mbtn" data-t4print="1">📸 Mandar print</button>` : `<button type="button" class="btn turq peq t4mbtn" data-t4insta="1">Pôr meu @</button>`}</span>`
     : m.em_breve && m.regra?.insta ? `<span class="t4mpilha"><a class="btn peq t4mbtn" href="https://instagram.com/${esc(m.regra.insta)}" target="_blank" rel="noopener">Abrir perfil</a><span class="t4mlk">🔒 Em breve</span></span>`
     : m.em_breve ? `<span class="t4mlk">🔒 Em breve</span>`
+    : m.regra?.tipo === "viver" ? (() => { const v = (s.tes.viver || {})[m.id];
+        return v?.estado === "conferir" ? `<span class="t4mlk">⏳ Aguardando o gerente</span>` : `<button type="button" class="btn turq peq t4mbtn" data-t4viver="${m.id}">📸 ${v?.estado === "recusada" ? "Mandar de novo" : "Comprovar"}</button>`; })()
+    : ["barco", "mimos"].includes(m.categoria) ? `<button type="button" class="btn peq t4mbtn" data-tsub="conves">Ir</button>`
     : fora ? `<span class="t4mlk">${esc(fora)}</span>`
     : m.id === "carta_embarque" ? `<button type="button" class="btn turq peq t4mbtn" data-fichalink="1">Ir</button>`
     : m.id === "perfil_insta" ? `<button type="button" class="btn turq peq t4mbtn" data-t4insta="1">Pôr meu @</button>`
@@ -179,7 +183,7 @@ function t4linhaDesafio(m) {
     : T4_IR[m.id] ? `<button type="button" class="btn peq t4mbtn" data-aba="rotas">Ir</button>` : `<span class="t4mlk">em andamento</span>`;
   const falta = m.id === "carta_embarque" && (m.falta || []).length ? ` · falta ${esc(m.falta.join(", "))}` : "";
   return `<article class="t4m ${st}${m.regra?.insta ? " insta" : ""}"><span class="t4mic" aria-hidden="true">${m.icone || "🎯"}</span>
-    <div class="t4mct"><b>${esc(m.nome)}</b><small>${esc(m.descricao || "")}${falta}${usu}</small>${prv}
+    <div class="t4mct"><b>${esc(m.nome)}${T4_FREQ[m.cat] ? ` <em class="t4freq">${T4_FREQ[m.cat]}</em>` : ""}</b><small>${esc(m.descricao || "")}${falta}${usu}</small>${prv}${m.regra?.tipo === "viver" && (s.tes.viver || {})[m.id]?.estado === "recusada" ? `<span class="t4mst ruim">⚠️ ${esc(s.tes.viver[m.id].motivo || "Não foi aceita.")}</span>` : ""}
       ${m.em_breve ? "" : `<div class="t4mpb" aria-label="${atF} de ${alvoF}"><span><i style="width:${Math.min(100, 100 * atF / Math.max(1, alvoF))}%"></i></span><small>${m.id === "mesmo_dia" ? `${at} hoje (até 5)` : `${atF}/${alvoF}`}</small></div>`}</div>
     ${t4slots(m.premio, m.tesouros)}<div class="t4mac">${acao}</div></article>`;
 }
@@ -194,18 +198,25 @@ function t4atividade() {
     ${(() => { const old = (s.tes.ganhos || []).filter((g) => g.missao === "atividade" && g.estado === "pronta" && !String(g.ref).startsWith("d:" + a.dia + ":")); return old.length ? `<div class="t4ativold">🎁 ${old.length} baú${old.length > 1 ? "s" : ""} de atividade de dias anteriores <button type="button" class="btn ouro9 peq" data-t4coletar="${old.map((g) => g.id).join(",")}">Coletar ${esc(t4premio(old.reduce((x, g) => { Object.entries(g.premio || {}).forEach(([k, v]) => { x[k] = (x[k] || 0) + +v; }); return x; }, {})))}</button></div>` : ""; })()}
     <small class="t4muted">Cada missão do dia coletada soma ✦ pontos de atividade. Ao chegar em ${(a.marcos || []).map((m) => m[0]).join(", ")}, um baú de atividade se abre (${(a.marcos || []).map((m) => t4premio(m[1])).join(" · ")}).</small></section>`;
 }
+// 25/11 (Miguel): missões por ASSUNTO; cada uma diz se renova todo dia, toda semana, todo mês ou vale uma vez
+const T4_MCAT = [["rotas", "🗺️ Rotas"], ["rotinas", "🔁 Rotinas"], ["barco", "⛵ Nosso Barco"], ["mimos", "💚 Mimos e Carinhos"], ["viver", "🌴 Viver"], ["redes", "📱 Redes"],
+  ["elogios", "⭐ Elogios"], ["vendas", "💰 Vendas"], ["batalhas", "⚔️ Batalhas"], ["passos", "👤 Primeiros Passos"], ["campanha", "🚩 Campanhas"]];
+const T4_MDICA = { viver: "🌴 Viva a ilha e o Rio: faça a experiência, tire uma foto e toque em Comprovar. A foto vai para o Nosso Barco e o seu gerente confirma. Prêmio: baús + um elemento (água 💧, trilha 🌱, comida 🔥, Rio ⚡).",
+  vendas: "💰 Missões de venda entram assim que a Nave registrar quem lançou cada venda.", batalhas: "⚔️ Desafios entre tripulantes e frentes. Em breve.",
+  elogios: "⭐ Elogio de cliente com o seu nome vale 💧. Entra assim que o ALFY conseguir conferir sozinho.", redes: "📱 Siga os perfis do Grupo Ilha: ponha o seu @, siga e mande um print da sua lista \"Seguindo\". Um print vale para todos os perfis que aparecerem nele.",
+  mimos: "💚 Gestos de gratidão e apoio à tripulação. Homenagear gasta 1 💚 mimo (você ganha 1 por dia ao entrar).", barco: "⛵ Participe do Nosso Barco: poste, comente e curta os colegas." };
 function t4desafios() {
   const ms = (s.tes.missoes || []).filter((m) => m.cat !== "conquista");
-  const CAT = [["diaria", "🌅 Diários"], ["semanal", "🧭 Semanais"], ["perfil", "👤 Perfil"], ["jornada", "⚓ Jornada"], ["campanha", "🗺️ Campanhas"], ["breve", "🔜 Em breve"]];
-  const de = (c) => c === "breve" ? ms.filter((m) => m.em_breve) : ms.filter((m) => !m.em_breve && (m.cat === c || (c === "jornada" && m.cat === "mensal")));
+  const de = (c) => c === "campanha" ? ms.filter((m) => m.cat === "campanha") : ms.filter((m) => m.categoria === c);
   const conta = (c) => de(c).reduce((n, m) => n + t4estadoDesafio(m).prontos.length, 0);
-  let cat = s.t4dc || "diaria"; if (!de(cat).length) cat = CAT.find(([c]) => de(c).length)?.[0] || "diaria";
+  let cat = s.t4dc || "rotas"; if (!de(cat).length) cat = T4_MCAT.find(([c]) => de(c).length)?.[0] || "rotas";
   const ordem = { pronta: 0, andamento: 1, bloq: 2, feita: 3 };
-  const lista = de(cat).map((m) => ({ m, h: t4linhaDesafio(m) })).sort((x, y) => ordem[x.h.match(/class="t4m (\w+)"/)[1]] - ordem[y.h.match(/class="t4m (\w+)"/)[1]]);
-  return `<div class="t4mis"><nav class="t4mcat" aria-label="Tipos de missão">${CAT.filter(([c]) => de(c).length).map(([c, n]) => `<button type="button" class="t4mcb" aria-pressed="${cat === c}" data-t4dc="${c}">${n}${conta(c) ? ` <b class="t4bd">${conta(c)}</b>` : ""}</button>`).join("")}</nav>
-    <div class="t4mpainel">${cat === "diaria" ? t4atividade() : ""}
+  const lista = de(cat).map((m) => ({ m, h: t4linhaDesafio(m) })).sort((x, y) => ordem[x.h.match(/class="t4m (\w+)/)[1]] - ordem[y.h.match(/class="t4m (\w+)/)[1]]);
+  return `<div class="t4mis"><nav class="t4mcat" aria-label="Assuntos das missões">${T4_MCAT.filter(([c]) => de(c).length).map(([c, n]) => `<button type="button" class="t4mcb" aria-pressed="${cat === c}" data-t4dc="${c}">${n}${conta(c) ? ` <b class="t4bd">${conta(c)}</b>` : ""}</button>`).join("")}</nav>
+    <div class="t4mpainel">${t4atividade()}
+      ${T4_MDICA[cat] ? `<p class="t4mdica">${T4_MDICA[cat]}</p>` : ""}
       <div class="t4mlista">${lista.map((x) => x.h).join("") || '<p class="t4muted">Nada aqui.</p>'}</div>
-      <p class="t4muted" style="margin:10px 2px 0">${cat === "breve" ? "🔜 Missões que já estão combinadas e entram no jogo assim que o ALFY conseguir conferir sozinho (Instagram, vendas na Nave, avaliações e provas). Ainda não valem prêmio." : "Tudo aqui o sistema confere sozinho, na hora. Ninguém precisa aprovar nada."}${cat === "campanha" ? " Super missão vale 💎, no máximo 1 por pessoa por semestre." : ""}</p></div></div>`;
+      <p class="t4muted" style="margin:10px 2px 0">${cat === "viver" ? "Cada experiência vale uma vez na temporada." : "O sistema confere sozinho, na hora."}${cat === "campanha" ? " Super missão vale 💎, no máximo 1 por pessoa por semestre." : ""}</p></div></div>`;
 }
 const T4_ROM = ["I", "II", "III", "IV", "V"];
 function t4conquistas() {
@@ -355,6 +366,14 @@ function t4baus() {
     <section class="pl6sec t4cx"><h3>O que pode vir de 1 baú</h3><p class="t4muted" style="margin:0 0 8px">🔁 Nova rodada = abre outro baú na hora, de graça.</p>${t4tabelaPremios(a.tabela || [])}
       <p class="t4muted" style="margin:10px 0 0">Cada baú é sorteado sozinho, mesmo abrindo 10 ou 20 de uma vez. Em 100 baús vêm, em média, uns 500 🪙, 4 🔥, 40 ✨ XP e de vez em quando 💧, ⚡ ou 🌱.</p></section></div>`;
 }
+// 🏝️ Ilha do Tesouro (25/11): os jogos do Rotas do Tesouro. Roda do Leme e, em breve, a Expedição.
+function t4ilha() {
+  if (s.t4ilha === "roda") return `<button type="button" class="cvvolta" data-t4ilha="mapa">← Ilha do Tesouro</button>${t4roda()}`;
+  return `<div class="t4ilhag">
+    <button type="button" class="t4jogo" data-t4ilha="roda"><span class="t4jogoi">☸️</span><b>Roda do Leme</b><small>Gire com 🪙 e 🔥 e tente a sorte. A única roda que pode soltar 💎.</small><em>Jogar</em></button>
+    <div class="t4jogo breve"><span class="t4jogoi">🗺️</span><b>Expedição do Tesouro Perdido</b><small>Um mapa com 10 paradas pela Ilha Grande. Cada parada se abre pagando joias (cada vez mais caras). Quem chegar ao fim leva o grande prêmio e o título de Lenda da Ilha.</small><em>🔒 Em breve</em></div>
+  </div>`;
+}
 function t4roda() {
   const r = s.tes.roda || {}, tab = r.tabela || [], tot = tab.reduce((a, x) => a + +x.p, 0), sd = s.tes.saldo, cu = r.custo || {};
   let a0 = -90; const cx = 150, cy = 150, R = 136, cor = ["#2C3238", "#23282D", "#1E7F79", "#2C3238", "#5B3FA8", "#23282D", "#B4532A", "#2B6CB0", "#8C7A1E", "#2F7D45", "#A9B4F5"];
@@ -371,12 +390,19 @@ function t4roda() {
     <section class="pl6sec t4cx"><h3>O que pode sair</h3>${t4tabelaPremios(tab, true)}
       <p class="t4muted" style="margin:10px 0 0">A Roda é o único lugar onde sai 💎, e é bem difícil: no máximo 1 💎 por pessoa por mês (se sair outro no mesmo mês, vira 500 🪙). Nova rodada devolve o giro.</p></section></div>`;
 }
+function t4viverPonte(p) {
+  const l = p.viver || []; if (!l.length) return "";
+  return `<section class="pl6sec t4cx" style="margin-bottom:14px"><h3>🌴 Viver para conferir · ${l.length}</h3>
+    ${l.map((x) => `<div class="t4vconf">${window.cvFoto ? window.cvFoto({ id: x.id, foto: true }) : ""}<div><b>${esc(x.quem)} · ${x.icone} ${esc(x.missao)}</b><small class="t4muted">${esc(x.texto)} · ${t4dia(x.em)}</small>
+      <div class="t4row"><button type="button" class="btn turq peq" data-t4vok="${x.id}">✓ Confirmar</button>
+      <form data-t4form="vrec" data-id="${x.id}" class="t4inl"><input name="motivo" placeholder="Motivo para não aceitar" minlength="5" required><button type="submit" class="btn peq">Não aceitar</button></form></div></div></div>`).join("")}</section>`;
+}
 function t4ponte() {
   const p = s.ponte; if (!p) return '<p class="t4muted">Carregando a Ponte…</p>';
   const cmd = p.eu === "comando", pessoas = (p.equipe || []).filter((x) => x.id !== s.tes.eu.id && (cmd || x.papel === "colaborador"));
   const orc = p.orcamento || {}, usado = p.usado || {};
   const frentes = (typeof FRENTES !== "undefined" ? FRENTES : []).filter((f) => !String(f).includes("Pessoal"));
-  return `<div class="t4g2">
+  return `${t4viverPonte(p)}<div class="t4g2">
     <section class="pl6sec t4cx"><h3>🏅 Reconhecer e dar pontos extras</h3>
       <form data-t4form="rec" class="t4form"><label>Quem<select name="pessoa" required><option value="">Escolha</option>${pessoas.map((x) => `<option value="${x.id}">${esc(x.nome)}</option>`).join("")}</select></label>
         <label>Por quê (aparece para a pessoa${cmd ? " e no grupo, se divulgar" : ""})<textarea name="motivo" rows="2" required minlength="10" placeholder="Ex.: segurou sozinha o atendimento do sábado"></textarea></label>
@@ -515,6 +541,19 @@ async function t4click(d, b) {
   if (d.t4dc) { s.t4dc = d.t4dc; render(); return true; }
   if (d.t4rk) { s.t4rk = d.t4rk; render(); return true; }
   if (d.t4ex) { s.t4ex = d.t4ex; render(); return true; }
+  if (d.t4ilha) { s.t4ilha = d.t4ilha === "mapa" ? null : d.t4ilha; render(); return true; }
+  if (d.t4vok) { b.disabled = true; try { await chamar("alfy_viver_conferir", { p_post: +d.t4vok, p_ok: true }); aviso("🌴 Confirmado! O prêmio ficou pronto para a pessoa coletar."); s.ponte = await chamar("alfy_ponte").catch(() => s.ponte); render(); } catch (er) { b.disabled = false; falhou(er); } return true; }
+  if (d.t4viver) {
+    const m = (s.tes.missoes || []).find((x) => x.id === d.t4viver); if (!m) return true;
+    $("#camada").innerHTML = `<div class="veu" id="veu"><section class="folha" role="dialog" aria-modal="true" aria-label="Comprovar ${esc(m.nome)}">
+      <div class="cab"><h2>${m.icone} ${esc(m.nome)}</h2><button class="fechar" type="button" data-acao="fechar" aria-label="Fechar">${IC.x}</button></div>
+      <form data-t4form="viver" data-missao="${m.id}" class="t4form" style="padding:4px 2px 8px">
+        <label>Foto da experiência<input name="foto" type="file" accept="image/*" required></label>
+        <label>Conte como foi (vai junto no Nosso Barco)<textarea name="texto" rows="2" maxlength="400" placeholder="Ex.: que dia no Poção!"></textarea></label>
+        <small class="t4muted">${esc(m.descricao || "")} A foto vira postagem no Nosso Barco e o seu gerente confirma. Prêmio: ${esc(t4premio(m.premio, m.tesouros))}.</small>
+        <button type="submit" class="btn ouro9">Mandar</button></form></section></div>`;
+    return true;
+  }
   if (d.t4recarregar) { s.t4erro = false; await t4carregar(); render(); return true; }
   if (d.t4exde) { s.extrErro = false; s.extr = null; render(); return true; }
   if (d.t4cp) { s.t4cp = d.t4cp; render(); return true; }
@@ -639,7 +678,15 @@ document.addEventListener("submit", async (e) => {
   const fd = new FormData(f), num = (k) => Math.max(0, Math.floor(+fd.get(k) || 0)), btn = f.querySelector("[type=submit]");
   if (btn?.disabled) return; if (btn) btn.disabled = true;
   try {
-    if (f.dataset.t4form === "insta") {
+    if (f.dataset.t4form === "viver") {
+      const arq = f.querySelector("input[type=file]")?.files?.[0]; if (!arq) throw new Error("Escolha a foto.");
+      const foto = await window.cvReduzir(arq);
+      await chamar("alfy_viver_enviar", { p_missao: f.dataset.missao, p_texto: String(fd.get("texto") || "").trim(), p_foto: foto.split(",")[1], p_foto_tipo: "image/jpeg" });
+      fechar(); aviso("🌴 Enviado! Já está no Nosso Barco e o seu gerente vai confirmar."); s.cvFeed = null; await t4carregar(); render(); return;
+    } else if (f.dataset.t4form === "vrec") {
+      await chamar("alfy_viver_conferir", { p_post: +f.dataset.id, p_ok: false, p_motivo: String(fd.get("motivo") || "").trim() });
+      aviso("Comprovação não aceita. A pessoa vê o motivo e pode mandar de novo."); s.ponte = await chamar("alfy_ponte").catch(() => s.ponte); render(); return;
+    } else if (f.dataset.t4form === "insta") {
       const x = await chamar("alfy_instagram_salvar", { p_insta: String(fd.get("insta") || "") });
       fechar(); aviso(`📷 Instagram salvo: @${x.instagram}`); await t4carregar(); render(); return;
     } else if (f.dataset.t4form === "rec") {
@@ -688,6 +735,7 @@ document.addEventListener("change", async (e) => {
 });
 // 24/11: ao reabrir o app na Tesouros, carrega a sub-aba em que a pessoa estava
 window.t4AbrirSub = async (sub) => {
+  if (sub === "roda") { s.tsub = "ilha"; s.t4ilha = "roda"; }
   if (sub === "ranking") s.rank = await chamar("alfy_ranking").catch(() => s.rank);
   if (sub === "extrato") s.extr = await chamar("alfy_extrato").catch(() => s.extr);
   if (sub === "mercado" && s.t4mm === "cais") s.cais = await chamar("alfy_cais").catch(() => s.cais);

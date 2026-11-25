@@ -4,7 +4,7 @@
 /* global s, chamar, esc, aviso, falhou, render, renderSeguro, T4_JOIA, T4_ORDEM, t4n, t4j, t4dia, confirmaT4 */
 
 const CV_JOIAS = [["moeda", 20], ["moeda", 50], ["fogo", 1], ["gota", 1], ["raio", 1], ["broto", 1], ["diamante", 1]];
-const CV_TIPO = { apoio: "📣 Pedindo apoio", boa: "❤️ Homenagem", auto: "🏆 Conquista" };
+const CV_TIPO = { apoio: "📣 Pedindo apoio", boa: "❤️ Homenagem", auto: "🏆 Conquista", viver: "🌴 Viver" };
 s.cv = s.cv || { sub: "feed", filtro: "tudo", tipo: "post", fotos: {}, pedindo: {} };
 
 function cvIni(nome) { return String(nome || "?").split(/\s+/).filter(Boolean).slice(0, 2).map((x) => x[0]).join("").toUpperCase(); }
@@ -57,7 +57,7 @@ function cvPost(p) {
   return `<article class="cvpost">
     <header class="cvcab">${cvAv(p.autor)}<div>${cvLk(p.autor)}<small>${cvQuando(p.em)}</small></div>
       ${p.meu || s.tes?.eu?.papel === "comando" ? `<button type="button" class="cvmais" data-cvtirar="${p.id}" title="Tirar a postagem">Tirar</button>` : ""}</header>
-    ${CV_TIPO[p.tipo] ? `<span class="cvtag ${p.tipo}">${CV_TIPO[p.tipo]}${p.tipo === "boa" && p.reconhecido ? ` · ${cvLk(p.reconhecido)}` : ""}</span>` : ""}
+    ${CV_TIPO[p.tipo] ? `<span class="cvtag ${p.tipo}">${CV_TIPO[p.tipo]}${p.tipo === "boa" && p.reconhecido ? ` · ${cvLk(p.reconhecido)}` : ""}${p.tipo === "viver" && p.missao ? ` · ${p.missao.icone} ${esc(p.missao.nome)}${p.viver_estado === "ok" ? " ✓" : p.viver_estado === "conferir" ? " · aguardando o gerente" : ""}` : ""}</span>` : ""}
     ${cvFoto(p)}
     <p class="cvtxt">${esc(p.texto)}</p>
     ${m ? `<div class="cvmeta"><div class="cvbar"><i style="width:${Math.min(100, 100 * (+m.tem || 0) / m.qtd)}%"></i></div><small class="t4muted">${t4n(m.tem)} de ${t4n(m.qtd)} ${T4_JOIA[m.joia][0]} recebidos</small></div>` : ""}
@@ -82,11 +82,11 @@ function cvCompor() {
       <button type="submit" class="btn turq" style="margin-left:auto" ${t === "boa" && !(+s.tes?.saldo?.verde > 0) ? "disabled title=\"Você está sem 💚 mimo. Ganha 1 amanhã ao entrar.\"" : ""}>${t === "boa" ? "Homenagear (1 💚 mimo)" : "Postar"}</button></div></form></section>`;
 }
 function cvFeed() {
-  const f = s.cvFeed; if (!f) { cvCarregar().then(renderSeguro); return '<p class="t4muted">Carregando o Convés…</p>'; }
+  const f = s.cvFeed; if (!f) { cvCarregar().then(renderSeguro); return '<p class="t4muted">Carregando o Nosso Barco…</p>'; }
   const l = f.posts.filter((p) => s.cv.filtro === "tudo" || p.tipo === s.cv.filtro);
   const ofertas = (s.cais?.ofertas || []).filter((o) => !o.minha).slice(0, 4);
   return `<div class="cvg2"><div class="cvcol">${cvCompor()}
-      <div class="t4filtros">${[["tudo", "Tudo"], ["boa", "❤️ Homenagens"], ["apoio", "📣 Pedidos de apoio"], ["post", "📝 Postagens"]].map(([k, n]) => `<button type="button" class="chip" aria-pressed="${s.cv.filtro === k}" data-cvfiltro="${k}">${n}</button>`).join("")}</div>
+      <div class="t4filtros">${[["tudo", "Tudo"], ["boa", "❤️ Homenagens"], ["viver", "🌴 Viver"], ["apoio", "📣 Pedidos de apoio"], ["post", "📝 Postagens"]].map(([k, n]) => `<button type="button" class="chip" aria-pressed="${s.cv.filtro === k}" data-cvfiltro="${k}">${n}</button>`).join("")}</div>
       ${l.map(cvPost).join("") || '<p class="t4muted">Nada por aqui ainda. Faça a primeira postagem.</p>'}
       ${!f.fim && f.posts.length ? `<button type="button" class="btn" data-cvmais="1">Ver mais antigas</button>` : ""}</div>
     <aside class="cvcol cvlado"><section class="pl6sec t4cx"><h3>Como funciona</h3><div class="t4muted cvregras">
@@ -167,7 +167,7 @@ document.addEventListener("click", async (e) => {
       aviso(`💛 Você deu ${t4j(x.joia, x.qtd)} de presente.`); return render();
     }
     if (d.cvtirar) {
-      if (!confirmaT4("Tirar esta postagem do Convés?", b)) return;
+      if (!confirmaT4("Tirar esta postagem do Nosso Barco?", b)) return;
       await chamar("alfy_post_esconder", { p_post: +d.cvtirar });
       if (s.cvFeed) s.cvFeed.posts = s.cvFeed.posts.filter((p) => p.id !== +d.cvtirar); if (s.cvP?.posts) s.cvP.posts = s.cvP.posts.filter((p) => p.id !== +d.cvtirar);
       aviso("Postagem retirada."); return render();
@@ -187,7 +187,7 @@ document.addEventListener("submit", async (e) => {
       const t = s.cv.tipo, foto = s.cv.prev;
       await chamar("alfy_postar", { p_texto: String(fd.get("t") || "").trim(), p_tipo: t, p_foto: foto ? foto.split(",")[1] : null, p_foto_tipo: foto ? "image/jpeg" : null,
         p_meta_joia: t === "apoio" ? fd.get("mj") : null, p_meta_qtd: t === "apoio" ? +fd.get("mq") : null, p_reconhecido: t === "boa" ? fd.get("rec") || null : null });
-      s.cv.prev = null; s.cv.tipo = "post"; await cvCarregar(); aviso("📰 Postado no Convés."); render(); scrollTo(0, 0);
+      s.cv.prev = null; s.cv.tipo = "post"; await cvCarregar(); aviso("📰 Postado no Nosso Barco."); render(); scrollTo(0, 0);
     } else if (f.dataset.cvform === "com") {
       const x = await chamar("alfy_post_comentar", { p_post: +f.dataset.id, p_texto: String(fd.get("t") || "").trim() });
       cvTrocaPost(x.post); render();
@@ -195,4 +195,4 @@ document.addEventListener("submit", async (e) => {
   } catch (er) { falhou(er); }
   if (btn) btn.disabled = false;
 });
-window.t4conves = t4conves; window.cvCarregar = cvCarregar; window.cvAbrirPerfil = cvAbrirPerfil;
+window.t4conves = t4conves; window.cvFoto = cvFoto; window.cvReduzir = cvReduzir; window.cvCarregar = cvCarregar; window.cvAbrirPerfil = cvAbrirPerfil;
