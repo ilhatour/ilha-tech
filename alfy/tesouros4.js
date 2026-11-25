@@ -337,7 +337,7 @@ function t4mercado() {
   // 25/11 (Miguel): Mercado = 🏪 Loja da Ilha (prêmios) · ⚓ Doca de Comércio (o que a tripulação vende) · 💰 Vender (pôr as suas joias à venda)
   const m = s.t4mm === "cais" ? "vender" : s.t4mm || "doca", n = (s.cais?.ofertas || []).filter((o) => !o.minha).length;
   return `<div class="t4filtros t4mm"><button type="button" class="chip" aria-pressed="${m === "doca"}" data-t4mm="doca">⚓ Doca de Comércio${n ? ` <b class="t4bd2">${n}</b>` : ""}</button><button type="button" class="chip" aria-pressed="${m === "vender"}" data-t4mm="vender">💰 Vender</button><button type="button" class="chip" aria-pressed="${m === "loja"}" data-t4mm="loja">🏪 Loja da Ilha</button></div>`
-    + (m === "vender" ? t4cais(true) : m === "doca" ? (window.cvLoja ? window.cvLoja() : "") : (s.tes.loja_aberta ? "" : `<p class="t4aviso">🔒 A Loja da Ilha abre em breve. Os prêmios já estão aqui para você ir juntando. Enquanto isso, troque joias com a tripulação na ⚓ Doca de Comércio.</p>`) + t4loja());
+    + (m === "vender" ? t4cais(true) : m === "doca" ? (window.cvLoja ? window.cvLoja() : "") : (s.tes.loja_aberta ? "" : `<p class="t4aviso t4avloja"><span>🔒</span><span><b>A Loja da Ilha abre em breve.</b> Vá juntando: os prêmios já estão aqui. Enquanto isso, troque joias com a tripulação na <button type="button" class="t4lk" data-t4mm="doca">⚓&nbsp;Doca&nbsp;de&nbsp;Comércio</button>.</span></p>`) + t4loja());
 }
 const t4j = (k, n) => `${t4n(n)} ${T4_JOIA[k][0]}`;
 const t4dia = (d) => new Date(d).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", timeZone: "America/Sao_Paulo" });

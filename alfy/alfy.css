@@ -2307,3 +2307,6 @@ button.t4jogo{cursor:pointer}button.t4jogo:hover{border-color:var(--turq)}
 .t4placar i{display:block;height:7px;border-radius:5px;background:var(--ferro-3);overflow:hidden}.t4placar i b{display:block;height:100%;background:linear-gradient(90deg,#2BAFA6,#F2CE6B)}
 .t4placar em{font-style:normal;text-align:right;color:var(--aco-2)}
 .t4batbtn{width:100%;min-height:42px}
+.t4avloja{display:flex;gap:10px;align-items:flex-start;margin:4px 0 14px;line-height:1.5}
+.t4avloja .t4lk{white-space:nowrap}
+.t4mm{margin-bottom:12px}
