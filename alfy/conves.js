@@ -49,7 +49,7 @@ function cvCurtidas(p) {
 function cvPaleta(p) {
   const sd = s.tes?.saldo || {};
   return `<div class="cvpaleta" role="group" aria-label="Escolha a joia da curtida">${CV_JOIAS.map(([k, q]) => `<button type="button" data-cvcurtir="${p.id}" data-j="${k}" data-q="${q}" ${(+sd[k] || 0) < q ? "disabled" : ""}><span>${T4_JOIA[k][0]}</span><small>${q > 1 ? q : "1"}</small></button>`).join("")}</div>
-    <small class="t4muted">Uma curtida por postagem, com uma joia só. A joia sai da sua carteira e vai para ${p.tipo === "boa" ? "quem fez a boa ação (75%) e quem divulgou (25%)" : "quem postou"}.</small>`;
+    <small class="t4muted">Uma curtida por postagem, com uma joia só, que sai da sua carteira. ${p.tipo === "boa" && p.reconhecido ? `Homenagem: o presente se divide em 4 partes, 3 para ${esc(cvNome(p.reconhecido).split(" ")[0])} e 1 para ${esc(cvNome(p.autor).split(" ")[0])}, que homenageou (🪙 20 = 15 + 5; 🪙 50 = 38 + 12). Joia de uma unidade vai inteira para ${esc(cvNome(p.reconhecido).split(" ")[0])}.` : "Vai inteira para quem postou."}</small>`;
 }
 function cvPost(p) {
   const eu = s.tes?.eu?.id, m = p.meta, souRec = p.reconhecido === eu;
@@ -75,11 +75,11 @@ function cvCompor() {
     ${t === "boa" ? `<label class="cvlab">Quem você quer homenagear<select name="rec" required><option value="">Escolha</option>${gente.map((x) => `<option value="${x.id}">${esc(x.nome)}</option>`).join("")}</select></label>` : ""}
     <textarea name="t" maxlength="400" rows="3" required placeholder="${t === "apoio" ? "Conte para que você está juntando (ex.: girar a Roda do Leme)" : t === "boa" ? "Conte o que essa pessoa fez de bom" : "Conta para a tripulação o que rolou hoje"}"></textarea>
     ${t === "apoio" ? `<div class="cvlinha"><label class="cvlab">Quero juntar<input name="mq" type="number" min="1" value="2" required></label><label class="cvlab">de<select name="mj">${["fogo", "moeda", "gota", "raio", "broto", "diamante"].map((k) => `<option value="${k}">${T4_JOIA[k][0]} ${T4_JOIA[k][2]}</option>`).join("")}</select></label></div>` : ""}
-    ${t === "boa" ? `<small class="t4muted">Homenagear gasta 1 💚 (você tem ${t4n(s.tes?.saldo?.verde || 0)}; ganha 1 por dia ao entrar no ALFY). A pessoa recebe 1 ❤️, e cada curtida nesta postagem vai 75% para ela e 25% para você.</small>` : ""}
+    ${t === "boa" ? `<small class="t4muted">Homenagear gasta 1 💚 mimo (você tem ${t4n(s.tes?.saldo?.verde || 0)}; ganha 1 por dia ao entrar no ALFY) e dá 1 ❤️ carinho para a pessoa. Quem curtir a homenagem dá um presente que se divide em 4 partes: 3 para a pessoa homenageada e 1 para você. Ex.: curtida de 🪙 20 = 15 para ela e 5 para você.</small>` : ""}
     <div class="cvlinha">
       <label class="btn peq cvfotobtn">📷 ${s.cv.prev ? "Trocar foto" : "Foto"}<input type="file" accept="image/*" data-cvfoto hidden></label>
       ${s.cv.prev ? `<img class="cvprev" src="${s.cv.prev}" alt="Prévia"><button type="button" class="cvmais" data-cvsemfoto="1">Tirar foto</button>` : ""}
-      <button type="submit" class="btn turq" style="margin-left:auto" ${t === "boa" && !(+s.tes?.saldo?.verde > 0) ? "disabled title=\"Você está sem 💚. Volte amanhã.\"" : ""}>${t === "boa" ? "Homenagear (1 💚)" : "Postar"}</button></div></form></section>`;
+      <button type="submit" class="btn turq" style="margin-left:auto" ${t === "boa" && !(+s.tes?.saldo?.verde > 0) ? "disabled title=\"Você está sem 💚 mimo. Ganha 1 amanhã ao entrar.\"" : ""}>${t === "boa" ? "Homenagear (1 💚 mimo)" : "Postar"}</button></div></form></section>`;
 }
 function cvFeed() {
   const f = s.cvFeed; if (!f) { cvCarregar().then(renderSeguro); return '<p class="t4muted">Carregando o Convés…</p>'; }
@@ -93,8 +93,8 @@ function cvFeed() {
       <span>💛 <b>Curtir com joia</b>: escolha 🪙 20 ou 50, ou 1 🔥 💧 ⚡ 🌱, ou 1 💎. A joia vai para quem postou.</span>
       <span>Uma curtida e um comentário curto por postagem.</span>
       <span>📣 <b>Pedir apoio</b> mostra uma meta que enche com as curtidas.</span>
-      <span>❤️ <b>Homenagem</b> gasta 1 💚 (você ganha 1 por dia ao entrar, até 30 no mês). Quem é homenageado recebe 1 ❤️ e 75% das curtidas do post; 25% ficam com quem homenageou.</span>
-      <span>Comentário é livre: um por postagem. Presente não conta como coleta, mas tem ranking próprio: 🥇 Ranking › 💛 Curtidas e ❤️ Corações.</span></div></section>
+      <span>❤️ <b>Homenagem</b> gasta 1 💚 <b>mimo</b>. Você ganha 1 mimo por dia ao entrar no ALFY (até 30 no mês).</span><span>Quem é homenageado ganha 1 ❤️ <b>carinho</b>. Carinho não se gasta: mostra o quanto a tripulação gosta de você.</span><span><b>Curtiu uma homenagem? O presente se divide.</b> 3 de cada 4 partes vão para quem foi homenageado e 1 para quem homenageou. Ex.: 🪙 20 = 15 + 5. Joia de uma unidade (🔥 💧 ⚡ 🌱 💎) vai inteira para o homenageado.</span>
+      <span>Comentário é livre: um por postagem. Presente não conta como coleta, mas tem ranking próprio: 🥇 Ranking › 💛 Curtidas e ❤️ Carinhos.</span></div></section>
       <section class="pl6sec t4cx"><h3>🛒 Na lojinha agora</h3>${ofertas.map((o) => `<div class="cvloja1">${esc(o.vendedor)} vende <b>${t4j(o.moeda, o.qtd)}</b> por <b>${t4j(o.quer, o.preco)}</b></div>`).join("") || '<p class="t4muted" style="margin:0">Ninguém vendendo agora.</p>'}
         <button type="button" class="btn peq" style="margin-top:8px" data-cvsub="loja">Abrir a lojinha</button></section></aside></div>`;
 }
@@ -111,7 +111,7 @@ function cvPerfil() {
   return `<button type="button" class="cvvolta" data-cvsub="trip">← Tripulação</button>
     <section class="pl6sec t4cx"><div class="cvhero"><span class="cvavg">${p.foto ? `<img src="${p.foto}" alt="">` : esc(cvIni(p.nome))}<i>${p.patente?.ni || "🚣"}</i></span>
       <div><div class="cvhn">${esc(p.nome)} <span class="cvnvl">Nível ${p.nivel}</span></div><div class="t4muted">${p.patente?.ins || ""} ${esc(p.patente?.nome || "")}${(p.frentes || []).length ? " · " + esc(p.frentes.join(", ")) : ""}</div>${p.titulo ? `<span class="t4titulo">${esc(p.titulo)}</span>` : ""}</div></div>
-      <div class="cvnums"><div><b>${t4n(p.baus)}</b><small>🪎 baús conquistados</small></div><div><b>${p.rotas}</b><small>🗺️ rotas entregues</small></div><div><b>${t4n(p.coracoes)}</b><small>❤️ corações recebidos</small></div><div><b>${p.curtidas_n}</b><small>💛 curtidas recebidas</small></div></div></section>
+      <div class="cvnums"><div><b>${t4n(p.baus)}</b><small>🪎 baús conquistados</small></div><div><b>${p.rotas}</b><small>🗺️ rotas entregues</small></div><div><b>${t4n(p.coracoes)}</b><small>❤️ carinhos recebidos</small></div><div><b>${p.curtidas_n}</b><small>💛 curtidas recebidas</small></div></div></section>
     <div class="cvg2"><div class="cvcol"><h3 class="cvh">Postagens</h3>${(p.posts || []).map(cvPost).join("") || '<p class="t4muted">Ainda não postou nada.</p>'}</div>
       <aside class="cvcol"><section class="pl6sec t4cx"><h3>💛 Ganhou em curtidas</h3><div class="cvlikes">${T4_ORDEM.filter((k) => +rec[k]).map((k) => `<span class="cvlk">${T4_JOIA[k][0]} ${t4n(rec[k])}</span>`).join("") || '<span class="t4muted">Nada ainda.</span>'}</div></section>
         <section class="pl6sec t4cx"><h3>🏅 Conquistas</h3><div class="cvconqs">${conqs}</div></section></aside></div>`;

@@ -5,7 +5,7 @@
 // Usa os globais do alfy.js: s, token, chamar, esc, render, aviso, falhou, comando, vistaPlacar.
 /* global s, token, chamar, esc, render, aviso, falhou, comando, vistaPlacar, frenteCurta */
 "use strict";
-const T4_JOIA = { tesouro: ["🪎", "baú", "baús"], moeda: ["🪙", "moeda", "moedas"], fogo: ["🔥", "foguinho", "foguinhos"], gota: ["💧", "gotinha", "gotinhas"], raio: ["⚡", "ventinho", "ventinhos"], broto: ["🌱", "brotinho", "brotinhos"], diamante: ["💎", "diamante", "diamantes"], medalha: ["🎖️", "Medalha de Honra", "Medalhas de Honra"], verde: ["💚", "coração verde", "corações verdes"], vermelho: ["❤️", "coração recebido", "corações recebidos"] };
+const T4_JOIA = { tesouro: ["🪎", "baú", "baús"], moeda: ["🪙", "moeda", "moedas"], fogo: ["🔥", "foguinho", "foguinhos"], gota: ["💧", "gotinha", "gotinhas"], raio: ["⚡", "ventinho", "ventinhos"], broto: ["🌱", "brotinho", "brotinhos"], diamante: ["💎", "diamante", "diamantes"], medalha: ["🎖️", "Medalha de Honra", "Medalhas de Honra"], verde: ["💚", "mimo", "mimos"], vermelho: ["❤️", "carinho", "carinhos"] };
 const T4_ORDEM = ["tesouro", "moeda", "fogo", "gota", "raio", "broto", "diamante", "medalha", "verde", "vermelho"];
 const T4_ELEM = ["fogo", "gota", "raio", "broto"];
 const T4_BREVE = [];
@@ -252,7 +252,7 @@ function t4trilha() {
       ${x?.estado === "pronta" ? `<button type="button" class="btn ouro9 peq" data-t4coletar="${x.id}">Coletar</button>` : !ok ? `<small class="t4muted">faltam ${t4n(m[0] - g)}</small>` : ""}</div>`; }).join("")}</div></section>`;
 }
 // 🥇 Ranking (23/11, pedido do Miguel): baús, moedas, nível e cada joia, contando da temporada. Moedas e joias = o que a pessoa GANHOU (gastar não derruba).
-const T4_RK = [["nivel", "🎖️ Nível", (x) => x.xp, (x) => `Nível ${x.nivel} · ${t4n(x.xp)} XP`], ["coracoes", "❤️ Corações", (x) => +x.coracoes, (x) => `${t4n(x.coracoes)} ❤️ de homenagens`], ["curtidas_n", "💛 Curtidas", (x) => +x.curtidas_n, (x) => `${t4n(x.curtidas_n)} curtida${+x.curtidas_n === 1 ? "" : "s"} · ${t4n(x.curtidas_valor)} 🪙 em presentes`], ["coleta_mes", "💰 Coleta do mês", (x) => +x.coleta_mes, (x) => `${t4n(x.coleta_mes)} 🪙 coletadas`], ["coleta", "💰 Coleta da temporada", (x) => +x.coleta, (x) => `${t4n(x.coleta)} 🪙 coletadas`], ["baus", "🪎 Baús", (x) => +x.baus, (x) => `${t4n(x.baus)} 🪎 conquistados`],
+const T4_RK = [["nivel", "🎖️ Nível", (x) => x.xp, (x) => `Nível ${x.nivel} · ${t4n(x.xp)} XP`], ["coracoes", "❤️ Carinhos", (x) => +x.coracoes, (x) => `${t4n(x.coracoes)} ❤️ carinho${+x.coracoes === 1 ? "" : "s"}`], ["curtidas_n", "💛 Curtidas", (x) => +x.curtidas_n, (x) => `${t4n(x.curtidas_n)} curtida${+x.curtidas_n === 1 ? "" : "s"} · ${t4n(x.curtidas_valor)} 🪙 em presentes`], ["coleta_mes", "💰 Coleta do mês", (x) => +x.coleta_mes, (x) => `${t4n(x.coleta_mes)} 🪙 coletadas`], ["coleta", "💰 Coleta da temporada", (x) => +x.coleta, (x) => `${t4n(x.coleta)} 🪙 coletadas`], ["baus", "🪎 Baús", (x) => +x.baus, (x) => `${t4n(x.baus)} 🪎 conquistados`],
   ["moeda", "🪙 Moedas", (x) => +x.moeda, (x) => `${t4n(x.moeda)} 🪙 ganhas`], ["fogo", "🔥 Foguinho", (x) => +x.fogo, (x) => `${t4n(x.fogo)} 🔥`], ["gota", "💧 Gotinha", (x) => +x.gota, (x) => `${t4n(x.gota)} 💧`],
   ["raio", "⚡ Ventinho", (x) => +x.raio, (x) => `${t4n(x.raio)} ⚡`], ["broto", "🌱 Brotinho", (x) => +x.broto, (x) => `${t4n(x.broto)} 🌱`], ["diamante", "💎 Diamante", (x) => +x.diamante, (x) => `${t4n(x.diamante)} 💎`],
   ["medalha", "🎖️ Medalhas", (x) => +x.medalha, (x) => `${t4n(x.medalha)} medalha${+x.medalha === 1 ? "" : "s"} de honra`], ["missoes", "🎯 Missões", (x) => +x.missoes, (x) => `${t4n(x.missoes)} missões cumpridas`],
@@ -426,7 +426,7 @@ function t4ponte() {
 }
 
 // 📒 Extrato (23/11, pedido do Miguel): o que a pessoa coletou no mês e na temporada; gastar não apaga a coleta.
-const T4_GRUPO = { coracao: ["💚", "Corações"], rotas: ["🗺️", "Rotas entregues"], missoes: ["🎯", "Missões e conquistas"], atividade: ["🎁", "Baús de atividade"], trilha: ["🗺️", "Trilha e níveis da temporada"], baus: ["🪎", "Baús abertos"], roda: ["☸️", "Roda do Leme"], reconhecimento: ["🏅", "Reconhecimento"], mercado: ["🏪", "Mercado"], cais: ["⚓", "Cais"], ajuste: ["🛠️", "Ajuste"] };
+const T4_GRUPO = { coracao: ["💚", "Mimos e carinhos"], rotas: ["🗺️", "Rotas entregues"], missoes: ["🎯", "Missões e conquistas"], atividade: ["🎁", "Baús de atividade"], trilha: ["🗺️", "Trilha e níveis da temporada"], baus: ["🪎", "Baús abertos"], roda: ["☸️", "Roda do Leme"], reconhecimento: ["🏅", "Reconhecimento"], mercado: ["🏪", "Mercado"], cais: ["⚓", "Cais"], ajuste: ["🛠️", "Ajuste"] };
 function t4coletaResumo(c, quem) {
   const g = c.ganhou || {}, gs = c.gastou || {}, sd = quem ? (quem.saldo || {}) : null;
   const ks = T4_ORDEM.filter((k) => +g[k] || +gs[k] || (sd && +sd[k]));
