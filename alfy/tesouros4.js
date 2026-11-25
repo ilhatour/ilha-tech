@@ -244,10 +244,10 @@ function t4batalhas() {
         <div class="t4bolas">${(x.gente || []).map(t4bola).join("")}</div>
         ${x.estado === "andamento" ? `<div class="t4placar">${(x.gente || []).map((g) => `<div><span>${esc(g.nome.split(" ")[0])}${g.id === eu ? " (você)" : ""}</span><i><b style="width:${Math.min(100, 100 * (+g.qtd || 0) / tp.alvo)}%"></b></i><em>${t4n(g.qtd || 0)}/${tp.alvo} ${tp.icone}</em></div>`).join("")}</div>` : ""}
         ${minha && x.estado === "aberta" ? `<button type="button" class="btn peq" data-t4batsair="${x.id}">Sair e pegar de volta</button>` : ""}</div>`; };
-    return `<article class="t4bat"><div class="t4bath"><span class="t4batic">${tp.icone}</span><div><b>${esc(tp.nome)}</b><small>Quem ganhar primeiro ${tp.alvo} ${tp.alvo > 1 ? T4_JOIA[tp.moeda][2] : T4_JOIA[tp.moeda][1]} ${tp.icone} depois da largada</small></div></div>
+    return `<article class="t4bat"><div class="t4bath"><span class="t4batic">${tp.icone}</span><div><b>${esc(tp.nome)}</b><small>${tp.moeda === "viver" ? `Quem conhecer primeiro ${tp.alvo} lugares (missões 🌴 Viver validadas) depois da largada` : `Quem ganhar primeiro ${tp.alvo} ${tp.alvo > 1 ? T4_JOIA[tp.moeda][2] : T4_JOIA[tp.moeda][1]} ${tp.icone} depois da largada`}</small></div></div>
       <div class="t4batp">Campeão leva o prêmio acumulado: ${t4premio(ent)} de cada um que entrar${Object.keys(tp.extra || {}).length ? ` + <b>${t4premio(tp.extra)}</b> extra` : ""} + ${cfg.xp} ✨ XP. Sala cheia (${cfg.max}) = <b>${t4premio(Object.fromEntries(Object.entries(ent).map(([k, v]) => [k, cfg.max * +v])))}</b>${Object.keys(tp.extra || {}).length ? " + o extra" : ""}.</div>
       ${salas.map(sala).join("") || '<p class="t4muted" style="margin:0">Nenhuma sala aberta. Entre e abra a primeira.</p>'}
-      ${estou ? "" : `<button type="button" class="btn ouro9 t4batbtn" data-t4batentrar="${tp.id}" ${falta.length || b.minhas >= cfg.por_pessoa ? "disabled" : ""}>${b.minhas >= cfg.por_pessoa ? `Você já está em ${cfg.por_pessoa} batalhas` : falta.length ? `Faltam ${falta.join(" + ")}` : `Entrar · ${t4premio(ent)}`}</button>`}</article>`; };
+      ${estou ? "" : `<button type="button" class="btn ouro9 t4batbtn" data-t4batentrar="${tp.id}" ${falta.length || b.minhas >= cfg.por_pessoa ? "disabled" : ""}>${b.minhas >= cfg.por_pessoa ? `Você já está em ${cfg.por_pessoa} batalhas` : `Entrar · ${t4premio(ent)}${falta.length ? ` (faltam ${falta.join(" + ")})` : ""}`}</button>`}</article>`; };
   const fim = (b.salas || []).filter((x) => x.estado === "encerrada" && x.vencedor).slice(0, 5);
   const nome = (id) => (b.salas || []).flatMap((x) => x.gente || []).find((g) => g.id === id)?.nome || "Alguém";
   return `<p class="t4mdica">⚔️ Corridas entre a tripulação. Para entrar: <b>${t4premio(ent)}</b> (vai tudo para o prêmio acumulado). A sala precisa de ${cfg.min} a ${cfg.max} pessoas; quando chega a ${cfg.min}, ainda dá ${cfg.janela_horas} h para mais gente entrar e a corrida começa. Vale só o que você <b>ganhar</b> depois da largada (missões, baús, Roda, conquistas); compra na Doca e presente não contam. Você está em <b>${b.minhas} de ${cfg.por_pessoa}</b> batalhas.</p>
@@ -647,7 +647,7 @@ async function t4click(d, b) {
     $("#camada").innerHTML = `<div class="veu" id="veu"><section class="folha" role="dialog" aria-modal="true" aria-label="Comprovar ${esc(m.nome)}">
       <div class="cab"><h2>${m.icone} ${esc(m.nome)}</h2><button class="fechar" type="button" data-acao="fechar" aria-label="Fechar">${IC.x}</button></div>
       <form data-t4form="viver" data-missao="${m.id}" class="t4form" style="padding:4px 2px 8px">
-        <label>Foto da experiência<input name="foto" type="file" accept="image/*" required></label>
+        <label>Foto da experiência (tirada hoje, no lugar)<input name="foto" type="file" accept="image/*" required></label>
         <label>Conte como foi (vai junto no Nosso Barco)<textarea name="texto" rows="2" maxlength="400" placeholder="Ex.: que dia no Poção!"></textarea></label>
         <small class="t4muted">${esc(m.descricao || "")} A foto vira postagem no Nosso Barco e a tripulação valida (5 valeu). Prêmio: ${esc(t4premio(m.premio, m.tesouros))}.</small>
         <button type="submit" class="btn ouro9">Mandar</button></form></section></div>`;
@@ -779,8 +779,10 @@ document.addEventListener("submit", async (e) => {
   try {
     if (f.dataset.t4form === "viver") {
       const arq = f.querySelector("input[type=file]")?.files?.[0]; if (!arq) throw new Error("Escolha a foto.");
+      const quando = await window.cvFotoData(arq);   // 25/11: só vale foto do dia (data gravada dentro da foto)
+      if (!quando || Date.now() - quando.getTime() > 24 * 3600e3) throw new Error("Só vale foto tirada hoje. Tire a foto na hora, no lugar, e mande.");
       const foto = await window.cvReduzir(arq);
-      await chamar("alfy_viver_enviar", { p_missao: f.dataset.missao, p_texto: String(fd.get("texto") || "").trim(), p_foto: foto.split(",")[1], p_foto_tipo: "image/jpeg" });
+      await chamar("alfy_viver_enviar", { p_missao: f.dataset.missao, p_texto: String(fd.get("texto") || "").trim(), p_foto: foto.split(",")[1], p_foto_tipo: "image/jpeg", p_foto_em: quando.toISOString() });
       fechar(); aviso("🌴 Enviado! Está no Nosso Barco: com 5 \"valeu\" da tripulação o prêmio fica pronto."); s.cvFeed = null; await t4carregar(); render(); return;
     } else if (f.dataset.t4form === "vrec") {
       await chamar("alfy_viver_conferir", { p_post: +f.dataset.id, p_ok: false, p_motivo: String(fd.get("motivo") || "").trim() });

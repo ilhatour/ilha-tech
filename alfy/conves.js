@@ -57,7 +57,7 @@ function cvPost(p) {
   return `<article class="cvpost">
     <header class="cvcab">${cvAv(p.autor)}<div>${cvLk(p.autor)}<small>${cvQuando(p.em)}</small></div>
       ${p.meu || s.tes?.eu?.papel === "comando" ? `<button type="button" class="cvmais" data-cvtirar="${p.id}" title="Tirar a postagem">Tirar</button>` : ""}</header>
-    ${CV_TIPO[p.tipo] ? `<span class="cvtag ${p.tipo}">${CV_TIPO[p.tipo]}${p.tipo === "boa" && p.reconhecido ? ` · ${cvLk(p.reconhecido)}` : ""}${p.tipo === "viver" && p.missao ? ` · ${p.missao.icone} ${esc(p.missao.nome)}${p.viver_estado === "ok" ? " ✓ confirmada" : p.viver_estado === "recusada" ? " · não aceita" : ""}` : ""}</span>` : ""}
+    ${CV_TIPO[p.tipo] ? `<span class="cvtag ${p.tipo}">${CV_TIPO[p.tipo]}${p.tipo === "boa" && p.reconhecido ? ` · ${cvLk(p.reconhecido)}` : ""}${p.tipo === "viver" && p.missao ? ` · ${p.missao.icone} ${esc(p.missao.nome)}${p.foto_em ? ` · 📸 tirada ${new Date(p.foto_em).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" })}` : ""}${p.viver_estado === "ok" ? " ✓ confirmada" : p.viver_estado === "recusada" ? " · não aceita" : ""}` : ""}</span>` : ""}
     ${cvFoto(p)}
     <p class="cvtxt">${esc(p.texto)}</p>
     ${m ? `<div class="cvmeta"><div class="cvbar"><i style="width:${Math.min(100, 100 * (+m.tem || 0) / m.qtd)}%"></i></div><small class="t4muted">${t4n(m.tem)} de ${t4n(m.qtd)} ${T4_JOIA[m.joia][0]} recebidos</small></div>` : ""}
@@ -211,4 +211,28 @@ document.addEventListener("submit", async (e) => {
   } catch (er) { falhou(er); }
   if (btn) btn.disabled = false;
 });
+// 📸 25/11: data em que a foto foi TIRADA (EXIF DateTimeOriginal). Sem EXIF, aceita só se o arquivo acabou de ser criado (foto tirada agora pelo app).
+async function cvFotoData(arq) {
+  try {
+    const v = new DataView(await arq.slice(0, 256 * 1024).arrayBuffer());
+    if (v.getUint16(0) === 0xFFD8) {
+      let o = 2;
+      while (o + 4 < v.byteLength) {
+        const mk = v.getUint16(o), tam = v.getUint16(o + 2);
+        if (mk === 0xFFE1 && v.getUint32(o + 4) === 0x45786966) {
+          const t0 = o + 10, le = v.getUint16(t0) === 0x4949, u16 = (x) => v.getUint16(x, le), u32 = (x) => v.getUint32(x, le);
+          const ler = (ifd, tag) => { const n = u16(t0 + ifd); for (let i = 0; i < n; i++) { const e = t0 + ifd + 2 + i * 12; if (u16(e) === tag) return e; } return null; };
+          const ex = ler(u32(t0 + 4), 0x8769), ifd = ex ? u32(ex + 8) : null;
+          const ent = (ifd != null && ler(ifd, 0x9003)) || ler(u32(t0 + 4), 0x0132);
+          if (ent) { let s = ""; const off = u32(ent + 8); for (let i = 0; i < 19; i++) s += String.fromCharCode(v.getUint8(t0 + off + i));
+            const m = s.match(/(\d{4}):(\d{2}):(\d{2}) (\d{2}):(\d{2}):(\d{2})/); if (m) return new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]); }
+          break;
+        }
+        if ((mk & 0xFF00) !== 0xFF00) break; o += 2 + tam;
+      }
+    }
+  } catch (_) { /* sem EXIF */ }
+  return arq.lastModified && Date.now() - arq.lastModified < 15 * 60e3 ? new Date(arq.lastModified) : null;
+}
+window.cvFotoData = cvFotoData;
 window.t4conves = t4conves; window.cvLoja = cvLoja; window.cvFoto = cvFoto; window.cvReduzir = cvReduzir; window.cvCarregar = cvCarregar; window.cvAbrirPerfil = cvAbrirPerfil;
