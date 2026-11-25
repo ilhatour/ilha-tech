@@ -106,10 +106,23 @@ function t4topo(np) {
     <div class="t4joias t4joias8">${["tesouro", "moeda", "medalha", "verde", "vermelho", "fogo", "gota", "raio", "broto", "diamante"].map((k) => `<div class="t4joia ${T4_BREVE.includes(k) ? "breve" : ""}" title="${T4_JOIA[k][2]}${T4_BREVE.includes(k) ? " · em breve" : ""}"><span>${T4_JOIA[k][0]}</span><b>${T4_BREVE.includes(k) ? "—" : t4n(t.saldo[k])}</b><small>${k === "tesouro" ? "baús do tesouro" : k === "medalha" ? "medalhas" : T4_JOIA[k][2]}</small></div>`).join("")}</div>
   </section>`;
 }
+// 📈 25/11 (Miguel): quanto a pessoa captou de cada joia, dia a dia, no mês
+function t4grafColeta() {
+  const g = s.painelCol; if (!g) { if (!s.painelColPed) { s.painelColPed = true; chamar("alfy_painel_coleta").then((x) => { s.painelCol = x; s.painelColPed = false; renderSeguro(); }).catch(() => { s.painelColPed = false; }); } return '<section class="pl6sec t4cx t4gc"><h3>📈 O que você captou no mês</h3><p class="t4muted">Carregando…</p></section>'; }
+  const dias = []; for (let d = new Date(g.ini + "T12:00:00"); d <= new Date(g.hoje + "T12:00:00"); d.setDate(d.getDate() + 1)) dias.push(d.toISOString().slice(0, 10));
+  const tot = {}; Object.values(g.dias || {}).forEach((o) => Object.entries(o).forEach(([k, v]) => { tot[k] = (tot[k] || 0) + +v; }));
+  const ks = ["moeda", "tesouro", "fogo", "gota", "raio", "broto", "diamante", "verde", "vermelho", "medalha"].filter((k) => tot[k]);
+  const k = ks.includes(s.t4gk) ? s.t4gk : ks[0] || "moeda", vals = dias.map((d) => +((g.dias[d] || {})[k] || 0)), mx = Math.max(1, ...vals);
+  const mes = new Date(g.hoje + "T12:00:00").toLocaleDateString("pt-BR", { month: "long" });
+  return `<section class="pl6sec t4cx t4gc"><h3>📈 O que você captou em ${mes}</h3>
+    <div class="t4filtros">${ks.map((x) => `<button type="button" class="chip" aria-pressed="${x === k}" data-t4gk="${x}">${T4_JOIA[x][0]} ${t4n(tot[x])}</button>`).join("") || '<span class="t4muted">Nada captado ainda neste mês.</span>'}</div>
+    ${ks.length ? `<div class="t4gcb" role="img" aria-label="${T4_JOIA[k][2]} por dia">${dias.map((d, i) => `<div title="${d.slice(8, 10)}/${d.slice(5, 7)}: ${t4n(vals[i])} ${T4_JOIA[k][0]}"><b>${vals[i] ? t4n(vals[i]) : ""}</b><i style="height:${vals[i] ? Math.max(4, Math.round(100 * vals[i] / mx)) : 0}%"></i><small>${d.slice(8, 10)}</small></div>`).join("")}</div>
+    <small class="t4muted">Conta tudo que entrou: missões, conquistas, baús abertos, Roda, rotas entregues (🪎), curtidas e carinhos recebidos. Troca no Cais e Mercado não entram.</small>` : ""}</section>`;
+}
 function t4inicio() {
   const t = s.tes, nv = t4nivel().nivel;
   const frentes = (t.frentes || []).map((f) => { let n = 1; T4_FRENTE_NIV.forEach((x, i) => { if (f.score >= x) n = i + 1; }); const prox = T4_FRENTE_NIV[n]; return { ...f, n, prox }; });
-  return `<div class="t4g2">
+  return `${t4grafColeta()}<div class="t4g2" style="margin-top:14px">
     <section class="pl6sec t4cx"><h3>Suas frentes</h3><p class="t4muted" style="margin:0 0 10px">Cada rota entregue numa frente soma o score dela. O nível de cada frente vai de 1 a 10.</p>
       ${frentes.map((f) => `<div class="t4fr"><div class="t4frl"><b>${esc(t4frente(f.frente))}</b><span>Nív. ${f.n}</span></div><div class="t4frb"><i style="width:${f.prox ? Math.min(100, 100 * f.score / f.prox) : 100}%"></i></div><small class="t4muted">score ${t4n(f.score)} · ${f.rotas} ${f.rotas === 1 ? "rota" : "rotas"}${f.prox ? ` · faltam ${t4n(f.prox - f.score)} para o nível ${f.n + 1}` : " · nível máximo"}</small></div>`).join("") || '<p class="t4muted">Ainda sem rota entregue com frente.</p>'}</section>
     <section class="pl6sec t4cx"><h3>Patentes da Marinha</h3><p class="t4muted" style="margin:0 0 8px">Cada nível do passe da temporada é uma patente; todo mundo começa Recruta e a patente zera junto com a temporada. Cada missão mostra o XP dela no cartão (✨). Fora das missões: rota entregue 3, ação no app 1 (até 5 por dia) e comentário 1 por rota (até 5 por dia), somando no máximo 30 por dia. O baú também pode soltar ✨ XP. O ✦ verde é ponto de atividade do dia, não é XP.</p>
@@ -536,7 +549,7 @@ function t4lastro() {
 /* ---------- ações ---------- */
 function t4ganhou(pr) { const txt = t4premio(pr); return txt === "sem prêmio" ? "" : txt; }
 async function t4click(d, b) {
-  if (d.tsub) { s.tsub = d.tsub; if (d.tsub === "ilha") { s.t4ilha = null; s.exped = await chamar("alfy_expedicao").catch(() => s.exped); } s.t4saiu = ""; s.t4ult = null; s.t4lote = null; if (d.tsub === "ranking") s.rank = await chamar("alfy_ranking").catch(() => s.rank); if (d.tsub === "conves" && window.cvCarregar) { if (s.cv) s.cv.sub = s.cv.sub === "perfil" ? "trip" : s.cv.sub; await window.cvCarregar(); } if (d.tsub === "extrato") { s.extr = await chamar("alfy_extrato", { p_pessoa: s.extr?.pessoa?.id || null }).catch(() => s.extr); if (["comando", "gerente"].includes(s.tes?.eu?.papel) && !s.rank) s.rank = await chamar("alfy_ranking").catch(() => null); } if (d.tsub === "ponte") { s.ponte = await chamar("alfy_ponte").catch(() => s.ponte); if (s.tes?.eu?.papel === "comando") { s.lastro = await chamar("alfy_lastro", { p_pessoa: s.lastro?.pessoa?.id || null }).catch(() => s.lastro); s.capt = await chamar("alfy_captacao").catch(() => s.capt); } } render(); return true; }
+  if (d.tsub) { s.tsub = d.tsub; if (d.tsub === "inicio") s.painelCol = await chamar("alfy_painel_coleta").catch(() => s.painelCol); if (d.tsub === "ilha") { s.t4ilha = null; s.exped = await chamar("alfy_expedicao").catch(() => s.exped); } s.t4saiu = ""; s.t4ult = null; s.t4lote = null; if (d.tsub === "ranking") s.rank = await chamar("alfy_ranking").catch(() => s.rank); if (d.tsub === "conves" && window.cvCarregar) { if (s.cv) s.cv.sub = s.cv.sub === "perfil" ? "trip" : s.cv.sub; await window.cvCarregar(); } if (d.tsub === "extrato") { s.extr = await chamar("alfy_extrato", { p_pessoa: s.extr?.pessoa?.id || null }).catch(() => s.extr); if (["comando", "gerente"].includes(s.tes?.eu?.papel) && !s.rank) s.rank = await chamar("alfy_ranking").catch(() => null); } if (d.tsub === "ponte") { s.ponte = await chamar("alfy_ponte").catch(() => s.ponte); if (s.tes?.eu?.papel === "comando") { s.lastro = await chamar("alfy_lastro", { p_pessoa: s.lastro?.pessoa?.id || null }).catch(() => s.lastro); s.capt = await chamar("alfy_captacao").catch(() => s.capt); } } render(); return true; }
   if (d.t4fc) { s.t4fc = d.t4fc; render(); return true; }
   if (d.t4mc) { s.t4mc = d.t4mc; render(); return true; }
   if (d.t4mm) { s.t4mm = d.t4mm; if (d.t4mm === "cais") s.cais = await chamar("alfy_cais").catch(() => s.cais); render(); return true; }
@@ -565,6 +578,7 @@ async function t4click(d, b) {
   if (d.t4dc) { s.t4dc = d.t4dc; render(); return true; }
   if (d.t4rk) { s.t4rk = d.t4rk; render(); return true; }
   if (d.t4ex) { s.t4ex = d.t4ex; render(); return true; }
+  if (d.t4gk) { s.t4gk = d.t4gk; render(); return true; }
   if (d.t4ilha) { s.t4ilha = d.t4ilha === "mapa" ? null : d.t4ilha; if (d.t4ilha === "exped" || d.t4ilha === "mapa") s.exped = await chamar("alfy_expedicao").catch(() => s.exped); render(); return true; }
   if (d.t4exavancar) {
     const p = (s.exped?.paradas || [])[s.exped?.minha || 0]; if (!p) return true;

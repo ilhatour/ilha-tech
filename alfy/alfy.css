@@ -2286,3 +2286,8 @@ button.t4jogo{cursor:pointer}button.t4jogo:hover{border-color:var(--turq)}
 .t4cqh .t4tag{white-space:nowrap}
 .t4cqp .t4slots{justify-content:flex-start;margin:0}
 .t4cqbtn{width:100%;min-height:40px}
+/* 25/11 📈 gráfico de captação no Meu Painel */
+.t4gcb{display:flex;align-items:flex-end;gap:6px;height:170px;margin:12px 0 8px;overflow-x:auto;padding-bottom:2px}
+.t4gcb>div{flex:1 0 26px;max-width:56px;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:3px}
+.t4gcb i{display:block;width:72%;border-radius:5px 5px 0 0;background:linear-gradient(180deg,#F2CE6B,#B8913A)}
+.t4gcb b{font-size:11.5px;color:var(--aco-2);font-variant-numeric:tabular-nums}.t4gcb small{font-size:11px;color:var(--aco)}
