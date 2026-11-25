@@ -2331,7 +2331,7 @@ function render() {
     if (comando() && (semRobo || semIa || semWa)) c.insertAdjacentHTML("afterbegin", `<div class="alerta-ia">${semRobo ? `💻 O robô do Mac está sem sinal desde ${quandoFoi(r.visto_em)}: os pedidos ao ALFY ficam na fila até ele voltar.` : semIa ? `🐙 A IA do ALFY está desligada: ${esc(r.ia_msg || "")} Os pedidos que falharam voltam sozinhos quando ligar.` : `📱 A leitura do WhatsApp do Mac falhou ${r.wa_falhas || 3} vezes seguidas${r.wa_em ? ` (última leitura boa ${quandoFoi(r.wa_em)})` : ""}. O robô já reiniciou e tenta de novo a cada 90 s. Se continuar: o WhatsApp do Mac está aberto? Apareceu janela pedindo permissão?`}</div>`); }
   if (s.aba === "rotas" && s.vista === "kanban") ligarKanban();
   if (s.aba === "agenda") ligarAgendaKanban();
-  try { localStorage.setItem("alfy-vista", JSON.stringify({ vista: s.vista, agrupar: s.agrupar, v28: true })); } catch (_) { /* privado */ }
+  try { localStorage.setItem("alfy-vista", JSON.stringify({ vista: s.vista, agrupar: s.agrupar, v28: true, aba: s.aba, tsub: s.tsub, cvsub: s.cv?.sub === "perfil" ? "trip" : s.cv?.sub, t4mm: s.t4mm })); } catch (_) { /* privado */ }
 }
 // não redesenha o que a pessoa está digitando: espera ela sair do campo
 function renderSeguro() {
@@ -2547,7 +2547,7 @@ document.addEventListener("click", async (e) => {
   try {
     if (window.t4Click && await window.t4Click(d, b)) return;   // 🪎 Rotas do Tesouro v4 (tesouros4.js)
     if (b.id === "eu-av-cel") { s.aba = "eu"; render(); return; }
-    if (d.aba) { s.aba = d.aba; s.pauta = null; s.reuniao = null; if (d.aba === "agenda") { render(); await carregarAgenda(); } if (d.aba === "equipe") { s.aprovado = null; if ((s.naveBusca || "").trim()) s.naveRes = await chamar("alfy_nave_buscar", { p_q: s.naveBusca }).catch(() => null); s.fichas = await chamar("alfy_fichas"); if (comando()) s.equipe = await chamar("alfy_equipe"); } if (d.aba === "feed") { if (feedVivo()) await carregarPosts(); else FEED = await chamar("alfy_feed", { p_limite: 150 }); } if (d.aba === "zap") await carregarZap(); if (d.aba === "placar") await carregarPlacar(); if (d.aba === "rotinas") await carregarRotinas(); if (d.aba === "rotas" && s.vista === "rotinas") await carregarRotinas(); if (d.aba === "comandos" && s.cmd === "perguntar" && !s.chatGeral) s.chatGeral = await chamar("alfy_ia_conversa", { p_escopo: "geral" }); render(); scrollTo(0, 0); return; }
+    if (d.aba) { s.aba = d.aba; s.pauta = null; s.reuniao = null; await carregarAba(d.aba); render(); scrollTo(0, 0); return; }
     if (d.vista) { s.vista = d.vista; if (d.vista === "rar") await rrCarregar(); if (d.vista === "rotinas") await carregarRotinas(); render(); return; }
     if (d.rrordem) { s.rr.ordem = d.rrordem; s.rr.foco = null; rrSalvar(); render(); return; }
     if (d.rrformato) { s.rr.formato = d.rrformato; rrSalvar(); render(); return; }
@@ -2931,13 +2931,25 @@ async function entrar(k) {
     if (!m) { erro.textContent = "Código não reconhecido. Confira o seu link pessoal."; token = null; return; }
     guardar(k); M = m; versao = m.versao;
     $("#tela-entrada").hidden = true; $("#tela-painel").hidden = false; $("#barra-baixo").hidden = false;
-    try { const g = JSON.parse(localStorage.getItem("alfy-vista") || "{}"); if (g.vista) s.vista = g.vista; if (g.agrupar && g.v28) s.agrupar = g.agrupar; else if (!comando()) s.agrupar = "prioridade"; } catch (_) { /* privado */ }
+    let volta = null;
+    try { const g = JSON.parse(localStorage.getItem("alfy-vista") || "{}"); if (g.vista) s.vista = g.vista; if (g.agrupar && g.v28) s.agrupar = g.agrupar; else if (!comando()) s.agrupar = "prioridade";
+      volta = g; } catch (_) { /* privado */ }
     rrLer(); await contaLer(); if (comando() && s.rr.lote) await rrCarregar(); if (comando()) await carregarZap();
+    // 24/11 (Miguel): ao atualizar a página, volta para onde a pessoa estava (aba, sub-aba dos Tesouros e parte do Convés)
+    if (["agenda", "comandos", "equipe", "eu", "feed", "pautas", "placar", "rotinas", "zap"].includes(volta?.aba)) {
+      s.aba = volta.aba; if (volta.tsub) s.tsub = volta.tsub; if (volta.t4mm) s.t4mm = volta.t4mm; if (volta.cvsub && s.cv) s.cv.sub = volta.cvsub; else if (volta.cvsub) s.cv = { sub: volta.cvsub, filtro: "tudo", tipo: "post", fotos: {}, pedindo: {} };
+      render(); await carregarAba(s.aba);
+      if (s.aba === "placar" && window.t4AbrirSub) await window.t4AbrirSub(s.tsub);
+    }
     render();
     FEED = await chamar("alfy_feed", { p_limite: 150 }).catch(() => null);
     if (comando()) { s.robo = await chamar("alfy_robo").catch(() => null); await carregarPosts(); casca(); }
     vigiar();
   } catch (e) { erro.textContent = e.message; token = null; }
+}
+// 24/11: carga de cada aba num lugar só (clique e reabertura do app usam a mesma)
+async function carregarAba(a) {
+  try { if (a === "agenda") { render(); await carregarAgenda(); } if (a === "equipe") { s.aprovado = null; if ((s.naveBusca || "").trim()) s.naveRes = await chamar("alfy_nave_buscar", { p_q: s.naveBusca }).catch(() => null); s.fichas = await chamar("alfy_fichas"); if (comando()) s.equipe = await chamar("alfy_equipe"); } if (a === "feed") { if (feedVivo()) await carregarPosts(); else FEED = await chamar("alfy_feed", { p_limite: 150 }); } if (a === "zap") await carregarZap(); if (a === "placar") await carregarPlacar(); if (a === "rotinas") await carregarRotinas(); if (a === "rotas" && s.vista === "rotinas") await carregarRotinas(); if (a === "comandos" && s.cmd === "perguntar" && !s.chatGeral) s.chatGeral = await chamar("alfy_ia_conversa", { p_escopo: "geral" });  } catch (e) { falhou(e); }
 }
 let vigia = null;
 function vigiar() {

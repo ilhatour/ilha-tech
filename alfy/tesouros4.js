@@ -84,9 +84,9 @@ function vistaTesouros() {
   if (!t4ok()) return s.t4erro ? '<section class="pl6sec t4cx"><h3>🪎 Rotas do Tesouro</h3><p class="t4muted">O jogo demorou para responder. <button type="button" class="btn ouro9 peq" data-t4recarregar="1">Tentar de novo</button></p></section>' : vistaPlacar();
   const t = s.tes, sub = s.tsub || "inicio", mand = ["comando", "gerente"].includes(t.eu.papel);
   const prontos = (t.ganhos || []).filter((g) => g.estado === "pronta");
-  const abas = [["inicio", "⚓ Início"], ["desafios", "🎯 Missões"], ["conquistas", "🏅 Conquistas"], ["trilha", "🗺️ Trilha"], ["baus", "🪎 Abrir Baús"], ["roda", "☸️ Roda do Leme"], ["mercado", "🏪 Mercado"], ["extrato", "📒 Extrato"], ["ranking", "🥇 Ranking"], ["bau", "🏆 Baú da Tripulação"]].concat(mand ? [["ponte", "🎛️ Ponte"]] : []);
+  const abas = [["inicio", "⚓ Início"], ["conves", "🛳️ Convés"], ["desafios", "🎯 Missões"], ["conquistas", "🏅 Conquistas"], ["trilha", "🗺️ Trilha"], ["baus", "🪎 Abrir Baús"], ["roda", "☸️ Roda do Leme"], ["mercado", "🏪 Mercado"], ["extrato", "📒 Extrato"], ["ranking", "🥇 Ranking"], ["bau", "🏆 Baú da Tripulação"]].concat(mand ? [["ponte", "🎛️ Ponte"]] : []);
   const conta = { desafios: prontos.filter((g) => !g.missao.startsWith("c_") && !["trilha", "passe", "temporada"].includes(g.missao)).length, conquistas: prontos.filter((g) => g.missao.startsWith("c_")).length, trilha: prontos.filter((g) => ["trilha", "temporada"].includes(g.missao)).length, ponte: mand ? (s.ponte?.pedidos || []).length : 0 };
-  const V = { inicio: t4inicio, desafios: t4desafios, conquistas: t4conquistas, trilha: t4trilha, mercado: t4mercado, extrato: t4extrato, ranking: t4ranking, baus: t4baus, roda: t4roda, bau: () => vistaPlacar(), ponte: t4ponte }[sub] || t4inicio;
+  const V = { inicio: t4inicio, conves: () => (window.t4conves ? window.t4conves() : ""), desafios: t4desafios, conquistas: t4conquistas, trilha: t4trilha, mercado: t4mercado, extrato: t4extrato, ranking: t4ranking, baus: t4baus, roda: t4roda, bau: () => vistaPlacar(), ponte: t4ponte }[sub] || t4inicio;
   return `<div class="t4">${t4topo(prontos.length)}
     <nav class="t4abas" aria-label="Rotas do Tesouro">${abas.map(([k, n]) => `<button type="button" class="t4aba" aria-pressed="${sub === k}" data-tsub="${k}"><span>${n}</span>${conta[k] ? `<b class="t4bd">${conta[k] > 99 ? "99+" : conta[k]}</b>` : ""}</button>`).join("")}</nav>
     ${t.lancado !== "todos" && t.eu.papel === "comando" ? `<p class="t4aviso">🔒 Só você está vendo. A equipe continua na tela antiga até você tocar em <b>Lançar para a equipe</b>, na Ponte.</p>` : ""}
@@ -252,7 +252,7 @@ function t4trilha() {
       ${x?.estado === "pronta" ? `<button type="button" class="btn ouro9 peq" data-t4coletar="${x.id}">Coletar</button>` : !ok ? `<small class="t4muted">faltam ${t4n(m[0] - g)}</small>` : ""}</div>`; }).join("")}</div></section>`;
 }
 // 🥇 Ranking (23/11, pedido do Miguel): baús, moedas, nível e cada joia, contando da temporada. Moedas e joias = o que a pessoa GANHOU (gastar não derruba).
-const T4_RK = [["nivel", "🎖️ Nível", (x) => x.xp, (x) => `Nível ${x.nivel} · ${t4n(x.xp)} XP`], ["coleta_mes", "💰 Coleta do mês", (x) => +x.coleta_mes, (x) => `${t4n(x.coleta_mes)} 🪙 coletadas`], ["coleta", "💰 Coleta da temporada", (x) => +x.coleta, (x) => `${t4n(x.coleta)} 🪙 coletadas`], ["baus", "🪎 Baús", (x) => +x.baus, (x) => `${t4n(x.baus)} 🪎 conquistados`],
+const T4_RK = [["nivel", "🎖️ Nível", (x) => x.xp, (x) => `Nível ${x.nivel} · ${t4n(x.xp)} XP`], ["curtidas_n", "💛 Curtidas", (x) => +x.curtidas_n, (x) => `${t4n(x.curtidas_n)} curtida${+x.curtidas_n === 1 ? "" : "s"} · ${t4n(x.curtidas_valor)} 🪙 em presentes`], ["coleta_mes", "💰 Coleta do mês", (x) => +x.coleta_mes, (x) => `${t4n(x.coleta_mes)} 🪙 coletadas`], ["coleta", "💰 Coleta da temporada", (x) => +x.coleta, (x) => `${t4n(x.coleta)} 🪙 coletadas`], ["baus", "🪎 Baús", (x) => +x.baus, (x) => `${t4n(x.baus)} 🪎 conquistados`],
   ["moeda", "🪙 Moedas", (x) => +x.moeda, (x) => `${t4n(x.moeda)} 🪙 ganhas`], ["fogo", "🔥 Foguinho", (x) => +x.fogo, (x) => `${t4n(x.fogo)} 🔥`], ["gota", "💧 Gotinha", (x) => +x.gota, (x) => `${t4n(x.gota)} 💧`],
   ["raio", "⚡ Ventinho", (x) => +x.raio, (x) => `${t4n(x.raio)} ⚡`], ["broto", "🌱 Brotinho", (x) => +x.broto, (x) => `${t4n(x.broto)} 🌱`], ["diamante", "💎 Diamante", (x) => +x.diamante, (x) => `${t4n(x.diamante)} 💎`],
   ["medalha", "🎖️ Medalhas", (x) => +x.medalha, (x) => `${t4n(x.medalha)} medalha${+x.medalha === 1 ? "" : "s"} de honra`], ["missoes", "🎯 Missões", (x) => +x.missoes, (x) => `${t4n(x.missoes)} missões cumpridas`],
@@ -264,7 +264,7 @@ function t4ranking() {
   const max = Math.max(1, ...com.map(val)), md = ["🥇", "🥈", "🥉"];
   let pos = 0, ant = null;
   const linhas = com.map((x, i) => { if (val(x) !== ant) { pos = i + 1; ant = val(x); } const eu = x.id === r.eu, pa = x.patente || {};
-    return `<div class="rk7 ${pos <= 3 ? "md" + pos : ""} ${eu ? "t4rkeu" : ""}"><span class="rk6p t4rkpos">${pos <= 3 ? md[pos - 1] : pos + "º"}</span><span class="rk7b"><span class="rk7l"><b>${esc(x.nome)}${eu ? " · você" : ""}</b><small>${pa.ins || ""} ${esc(pa.nome || "")}${x.titulo ? " · " + esc(x.titulo) : ""}</small></span><i class="rk7bar"><i style="width:${Math.max(3, Math.round(100 * val(x) / max))}%"></i></i></span><span class="rk6n">${txt(x)}</span></div>`; }).join("");
+    return `<div class="rk7 ${pos <= 3 ? "md" + pos : ""} ${eu ? "t4rkeu" : ""}"><span class="rk6p t4rkpos">${pos <= 3 ? md[pos - 1] : pos + "º"}</span><span class="rk7b"><span class="rk7l"><b><button type="button" class="cvnm" data-cvperfil="${x.id}">${esc(x.nome)}</button>${eu ? " · você" : ""}</b><small>${pa.ins || ""} ${esc(pa.nome || "")}${x.titulo ? " · " + esc(x.titulo) : ""}</small></span><i class="rk7bar"><i style="width:${Math.max(3, Math.round(100 * val(x) / max))}%"></i></i></span><span class="rk6n">${txt(x)}</span></div>`; }).join("");
   return `<div class="t4filtros">${T4_RK.map(([c, n]) => `<button type="button" class="chip" aria-pressed="${k === c}" data-t4rk="${c}">${n}</button>`).join("")}</div>
     <section class="pl6sec t4cx"><h3>${rot} · ${esc(r.temporada || "temporada")}</h3>
       ${linhas || '<p class="t4muted">Ninguém pontuou aqui ainda nesta temporada. O primeiro a chegar fica no topo.</p>'}
@@ -285,11 +285,11 @@ function t4cais() {
     return `<div class="t4tr t4tr2" role="row"><span class="t4item"><span class="t4ic" aria-hidden="true">${T4_JOIA[o.moeda][0]}</span><span><b>${o.minha ? "Você está" : esc(o.vendedor) + " está"} vendendo ${t4j(o.moeda, o.qtd)} por ${t4j(o.quer, o.preco)}</b><small>${esc(o.codigo)} · sai do Cais em ${t4dia(o.vence_em)}</small></span></span>
       <span>${o.minha ? `<button type="button" class="btn peq" data-t4retirar="${o.id}">Retirar</button>` : c.congelado ? `<button type="button" class="btn peq" disabled>Pausado</button>` : f ? `<button type="button" class="btn peq" disabled>Faltam ${t4j(o.quer, o.preco - (+sd[o.quer] || 0))}</button>` : `<button type="button" class="btn ouro9 peq" data-t4caiscomprar="${o.id}">Comprar</button>`}</span></div>`; };
   const opt = T4_ORDEM.filter((k) => +c.vendavel[k] > 0);
-  return `<p class="t4muted" style="margin:0 0 10px">Trocas entre a tripulação, só com joias do jogo. Quem compra paga o preço, ${cfg.taxa_pct}% dele some do jogo (taxa do Cais) e o resto vai para quem vendeu. O que entrou nos últimos ${cfg.carencia_dias} dias fica em carência antes de poder ser vendido.</p>
+  return `<p class="t4muted" style="margin:0 0 10px">Trocas entre a tripulação, só com joias do jogo. Quem compra paga o preço, ${cfg.taxa_pct}% dele some do jogo (taxa do Cais) e o resto vai para quem vendeu. ${+cfg.carencia_dias ? `O que entrou nos últimos ${cfg.carencia_dias} dias fica em carência antes de poder ser vendido.` : ""}</p>
     <div class="t4tabela" role="table">${outras.map(linha).join("") || '<p class="t4muted" style="padding:10px 12px;margin:0">Ninguém está vendendo agora.</p>'}</div>
     <div class="t4g2" style="margin-top:14px">
       <section class="pl6sec t4cx"><h3>Pôr à venda</h3>
-        ${c.congelado ? '<p class="t4muted">Suas trocas estão pausadas pelo comando.</p>' : !opt.length ? '<p class="t4muted">Você ainda não tem joia fora da carência para vender.</p>' : `<form data-t4form="cais" class="t4form">
+        ${c.congelado ? '<p class="t4muted">Suas trocas estão pausadas pelo comando.</p>' : !opt.length ? '<p class="t4muted">Você ainda não tem joia para vender.</p>' : `<form data-t4form="cais" class="t4form">
           <label>Vender<select name="moeda">${opt.map((k) => `<option value="${k}">${T4_JOIA[k][0]} ${T4_JOIA[k][2]} (até ${t4n(c.vendavel[k])})</option>`).join("")}</select></label>
           <label>Quantidade<input name="qtd" type="number" min="1" step="1" value="1" required></label>
           <label>Quero receber em<select name="quer">${["moeda", "tesouro", "fogo", "gota", "raio", "broto"].map((k) => `<option value="${k}">${T4_JOIA[k][0]} ${T4_JOIA[k][2]}</option>`).join("")}</select></label>
@@ -486,7 +486,7 @@ function t4lastro() {
 /* ---------- ações ---------- */
 function t4ganhou(pr) { const txt = t4premio(pr); return txt === "sem prêmio" ? "" : txt; }
 async function t4click(d, b) {
-  if (d.tsub) { s.tsub = d.tsub; s.t4saiu = ""; s.t4ult = null; s.t4lote = null; if (d.tsub === "ranking") s.rank = await chamar("alfy_ranking").catch(() => s.rank); if (d.tsub === "extrato") { s.extr = await chamar("alfy_extrato", { p_pessoa: s.extr?.pessoa?.id || null }).catch(() => s.extr); if (["comando", "gerente"].includes(s.tes?.eu?.papel) && !s.rank) s.rank = await chamar("alfy_ranking").catch(() => null); } if (d.tsub === "ponte") { s.ponte = await chamar("alfy_ponte").catch(() => s.ponte); if (s.tes?.eu?.papel === "comando") { s.lastro = await chamar("alfy_lastro", { p_pessoa: s.lastro?.pessoa?.id || null }).catch(() => s.lastro); s.capt = await chamar("alfy_captacao").catch(() => s.capt); } } render(); return true; }
+  if (d.tsub) { s.tsub = d.tsub; s.t4saiu = ""; s.t4ult = null; s.t4lote = null; if (d.tsub === "ranking") s.rank = await chamar("alfy_ranking").catch(() => s.rank); if (d.tsub === "conves" && window.cvCarregar) { if (s.cv) s.cv.sub = s.cv.sub === "perfil" ? "trip" : s.cv.sub; await window.cvCarregar(); } if (d.tsub === "extrato") { s.extr = await chamar("alfy_extrato", { p_pessoa: s.extr?.pessoa?.id || null }).catch(() => s.extr); if (["comando", "gerente"].includes(s.tes?.eu?.papel) && !s.rank) s.rank = await chamar("alfy_ranking").catch(() => null); } if (d.tsub === "ponte") { s.ponte = await chamar("alfy_ponte").catch(() => s.ponte); if (s.tes?.eu?.papel === "comando") { s.lastro = await chamar("alfy_lastro", { p_pessoa: s.lastro?.pessoa?.id || null }).catch(() => s.lastro); s.capt = await chamar("alfy_captacao").catch(() => s.capt); } } render(); return true; }
   if (d.t4fc) { s.t4fc = d.t4fc; render(); return true; }
   if (d.t4mc) { s.t4mc = d.t4mc; render(); return true; }
   if (d.t4mm) { s.t4mm = d.t4mm; if (d.t4mm === "cais") s.cais = await chamar("alfy_cais").catch(() => s.cais); render(); return true; }
@@ -686,4 +686,12 @@ document.addEventListener("change", async (e) => {
   try { await chamar("alfy_pessoa_clt", { p_pessoa: c.dataset.t4clt, p_clt: c.checked }); aviso(c.checked ? "✓ Marcado como CLT." : "Desmarcado: não é CLT."); s.ponte = await chamar("alfy_ponte").catch(() => s.ponte); }
   catch (er) { c.checked = !c.checked; falhou(er); }
 });
+// 24/11: ao reabrir o app na Tesouros, carrega a sub-aba em que a pessoa estava
+window.t4AbrirSub = async (sub) => {
+  if (sub === "ranking") s.rank = await chamar("alfy_ranking").catch(() => s.rank);
+  if (sub === "extrato") s.extr = await chamar("alfy_extrato").catch(() => s.extr);
+  if (sub === "mercado" && s.t4mm === "cais") s.cais = await chamar("alfy_cais").catch(() => s.cais);
+  if (sub === "conves" && window.cvCarregar) await window.cvCarregar();
+  if (sub === "ponte" && ["comando", "gerente"].includes(s.tes?.eu?.papel)) { s.ponte = await chamar("alfy_ponte").catch(() => s.ponte); if (s.tes?.eu?.papel === "comando") { s.lastro = await chamar("alfy_lastro", { p_pessoa: null }).catch(() => s.lastro); s.capt = await chamar("alfy_captacao").catch(() => s.capt); } }
+};
 window.t4Click = t4click; window.t4Carregar = t4carregar; window.vistaTesouros = vistaTesouros;
