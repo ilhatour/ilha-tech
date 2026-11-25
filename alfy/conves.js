@@ -81,7 +81,7 @@ function cvCompor() {
     <div class="cvlinha">
       <label class="btn peq cvfotobtn">📷 ${s.cv.prev ? "Trocar foto" : "Foto"}<input type="file" accept="image/*" data-cvfoto hidden></label>
       ${s.cv.prev ? `<img class="cvprev" src="${s.cv.prev}" alt="Prévia"><button type="button" class="cvmais" data-cvsemfoto="1">Tirar foto</button>` : ""}
-      <button type="submit" class="btn turq" style="margin-left:auto" ${t === "boa" && !(+s.tes?.saldo?.verde > 0) ? "disabled title=\"Você está sem 💚 mimo. Ganha 1 amanhã ao entrar.\"" : ""}>${t === "boa" ? "Homenagear (1 💚 mimo)" : "Postar"}</button></div></form></section>`;
+      <button type="submit" class="btn turq" style="margin-left:auto" ${t === "boa" && !(+s.tes?.saldo?.verde > 0) ? "disabled title=\"Você está sem 💚 mimo. Ganha 1 amanhã ao entrar.\"" : ""}>${t === "boa" ? "Homenagear (1 💚 + 20 🪙)" : "Postar (20 🪙)"}</button></div></form></section>`;
 }
 function cvFeed() {
   const f = s.cvFeed; if (!f) { cvCarregar().then(renderSeguro); return '<p class="t4muted">Carregando o Nosso Barco…</p>'; }
@@ -96,7 +96,7 @@ function cvFeed() {
       <span>Uma curtida e um comentário curto por postagem.</span>
       <span>📣 <b>Pedir apoio</b> mostra uma meta que enche com as curtidas.</span>
       <span>❤️ <b>Homenagem</b> gasta 1 💚 <b>mimo</b>. Você ganha 1 mimo por dia ao entrar no ALFY (até 30 no mês).</span><span>Quem é homenageado ganha 1 ❤️ <b>carinho</b>. Carinho não se gasta: mostra o quanto a tripulação gosta de você.</span><span><b>Curtiu uma homenagem? O presente se divide.</b> 3 de cada 4 partes vão para quem foi homenageado e 1 para quem homenageou. Ex.: 🪙 20 = 15 + 5. Joia de uma unidade (🔥 💧 ⚡ 🌱 💎) vai inteira para o homenageado.</span>
-      <span>Comentário é livre: um por postagem. Presente não conta como coleta, mas tem ranking próprio: 🥇 Ranking › 💛 Curtidas e ❤️ Carinhos.</span></div></section>
+      <span>Postar custa 20 🪙, que somem do jogo (segura a inflação das moedas). Comprovar o Viver é grátis.</span><span>Comentário é livre: um por postagem. Presente não conta como coleta, mas tem ranking próprio: 🥇 Ranking › 💛 Curtidas e ❤️ Carinhos.</span></div></section>
       <section class="pl6sec t4cx"><h3>⚓ Na Doca de Comércio</h3>${ofertas.map((o) => `<div class="cvloja1">${esc(o.vendedor)} vende <b>${t4j(o.moeda, o.qtd)}</b> por <b>${t4j(o.quer, o.preco)}</b></div>`).join("") || '<p class="t4muted" style="margin:0">Ninguém vendendo agora.</p>'}
         <button type="button" class="btn peq" style="margin-top:8px" data-tsub="mercado" data-cvdoca="1">Ir à Doca</button></section></aside></div>`;
 }
