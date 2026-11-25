@@ -103,7 +103,7 @@ function t4topo(np) {
       <div class="t4pat">${pa.ins} ${esc(pa.nome)} · ${esc(pa.navio)}</div>
       <div class="t4xp ${s.t4subiu ? "subiu" : ""}" aria-hidden="true"><i style="width:${pct}%"></i>${s.t4xpGanho && Date.now() - (s.t4xpEm || 0) < 1500 ? `<b class="t4xpg">+${s.t4xpGanho} XP</b>` : ""}</div>
       <small class="t4muted">${nv.prox != null ? `${nv.xp.toLocaleString("pt-BR")} XP na temporada · faltam ${faltam.toLocaleString("pt-BR")} para o nível ${nv.nivel + 1}` : "nível máximo da temporada"} · ${t4n(t.baus?.conquistados)} 🪎 conquistados</small></div>
-    <div class="t4joias t4joias8">${T4_ORDEM.map((k) => `<div class="t4joia ${T4_BREVE.includes(k) ? "breve" : ""}" title="${T4_JOIA[k][2]}${T4_BREVE.includes(k) ? " · em breve" : ""}"><span>${T4_JOIA[k][0]}</span><b>${T4_BREVE.includes(k) ? "—" : t4n(t.saldo[k])}</b><small>${k === "tesouro" ? "baús guardados" : k === "medalha" ? "medalhas" : T4_JOIA[k][2]}</small></div>`).join("")}</div>
+    <div class="t4joias t4joias8">${["tesouro", "moeda", "medalha", "verde", "vermelho", "fogo", "gota", "raio", "broto", "diamante"].map((k) => `<div class="t4joia ${T4_BREVE.includes(k) ? "breve" : ""}" title="${T4_JOIA[k][2]}${T4_BREVE.includes(k) ? " · em breve" : ""}"><span>${T4_JOIA[k][0]}</span><b>${T4_BREVE.includes(k) ? "—" : t4n(t.saldo[k])}</b><small>${k === "tesouro" ? "baús do tesouro" : k === "medalha" ? "medalhas" : T4_JOIA[k][2]}</small></div>`).join("")}</div>
   </section>`;
 }
 function t4inicio() {
@@ -349,7 +349,7 @@ function t4baus() {
       <div class="t4tri">${btn(1)}${btn(10)}${btn(20)}</div>
       ${lote ? `<div class="t4lote">${lote.map((x, i) => `<span class="t4lc r${t4rar(x.premio, x.nome)}" style="animation-delay:${i * 90}ms"><i>${t4ico(x.sorteado?.gratis ? { gratis: 1 } : x.premio)}</i><small>${x.sorteado?.gratis ? "+1" : x.premio.moeda || Object.values(x.premio).find((v) => typeof v === "number") || ""}</small></span>`).join("")}</div>
         <p class="t4lotet">Total: <b>${esc(t4premio(lote.reduce((o, x) => { Object.entries(x.premio || {}).forEach(([k, v]) => { if (typeof v === "number" && k !== "gratis") o[k] = (o[k] || 0) + v; }); return o; }, {})))}</b>${lote.some((x) => x.sorteado?.gratis) ? ` · ${lote.filter((x) => x.sorteado?.gratis).length} nova rodada` : ""}</p>` : ""}
-      <div class="t4bauinfo"><span><b>${t4n(g)}</b> 🪎 guardados</span>${ab < g ? `<span>${t4n(g - ab)} de rotas de hoje abrem amanhã</span>` : ""}</div>
+      <div class="t4bauinfo"><span><b>${t4n(g)}</b> 🪎 baús do tesouro</span>${ab < g ? `<span>${t4n(g - ab)} de rotas de hoje abrem amanhã</span>` : ""}</div>
       ${!lote && (s.t4hist || []).length ? `<div class="t4hist" aria-label="Últimos prêmios">${s.t4hist.map((x) => `<span class="t4hi r${t4rar(x.premio, x.nome)}" title="${esc(t4rarNome(x))}">${t4ico(x.premio)}${x.premio.moeda ? `<small>${x.premio.moeda}</small>` : ""}</span>`).join("")}</div>` : ""}
       <small class="t4muted">Abrir não mexe nos baús conquistados: sua patente e sua parte no prêmio da tripulação continuam iguais.</small></section>
     <section class="pl6sec t4cx"><h3>O que pode vir de 1 baú</h3><p class="t4muted" style="margin:0 0 8px">🔁 Nova rodada = abre outro baú na hora, de graça.</p>${t4tabelaPremios(a.tabela || [])}
