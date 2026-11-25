@@ -2280,3 +2280,9 @@ button.t4jogo{cursor:pointer}button.t4jogo:hover{border-color:var(--turq)}
 .t4exmapa .t4exl{display:flex;justify-content:flex-start}
 .t4exmapa .t4exb{align-self:flex-start;width:auto}
 .t4exbar>i{display:block!important;height:10px!important;border-radius:6px}.t4exmapa>li{border-top:0!important}
+/* 25/11 cartão de conquista: nome e nível em cima, prêmio em quadradinhos, botão curto */
+.t4conq .t4ct{display:flex;flex-direction:column;gap:6px;min-width:0}
+.t4cqh{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.t4cqh b{font-size:15.5px}
+.t4cqh .t4tag{white-space:nowrap}
+.t4cqp .t4slots{justify-content:flex-start;margin:0}
+.t4cqbtn{width:100%;min-height:40px}

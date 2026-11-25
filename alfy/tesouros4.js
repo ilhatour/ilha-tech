@@ -218,7 +218,7 @@ function t4desafios() {
       <div class="t4mlista">${lista.map((x) => x.h).join("") || '<p class="t4muted">Nada aqui.</p>'}</div>
       <p class="t4muted" style="margin:10px 2px 0">${cat === "viver" ? "Cada experiência vale uma vez na temporada." : "O sistema confere sozinho, na hora."}${cat === "campanha" ? " Super missão vale 💎, no máximo 1 por pessoa por semestre." : ""}</p></div></div>`;
 }
-const T4_ROM = ["I", "II", "III", "IV", "V"];
+const T4_ROM = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"];
 function t4conquistas() {
   const t = s.tes, f = s.t4fc || "todas";
   const lista = (t.missoes || []).filter((m) => m.cat === "conquista").map((m) => {
@@ -235,8 +235,9 @@ function t4conquistas() {
     ${cats.map((c) => { const l = vis.filter((x) => x.m.categoria === c); return l.length ? `<section class="pl6sec t4cx"><h3>${esc(c)}${l.some((x) => x.prontos.length) ? ` <b class="t4bd">${l.filter((x) => x.prontos.length).length} pronta${l.filter((x) => x.prontos.length).length > 1 ? "s" : ""}</b>` : ""}</h3><div class="t4conqs">${l.map((x) => {
       const nivCol = x.prontos.length ? x.coletados : Math.min(x.feitos, x.niveis.length - 1), pr = x.premios[nivCol] || {};
       return `<article class="t4conq ${x.prontos.length ? "pronta" : ""} ${x.st === "nao" ? "apagada" : ""}"><span class="t4ic" aria-hidden="true">${x.m.icone}</span>
-        <div class="t4ct"><div><b class="t4rec">+${t4premio(pr)}</b> <span class="t4tag">${x.feitos ? "Nív. " + T4_ROM[x.feitos - 1] : "Nív. 0"}</span></div><b>${esc(x.m.nome)}</b><small>${x.prox != null ? `Nível ${T4_ROM[x.feitos]}: ${x.prox} ${esc(x.m.descricao)}` : `Todos os níveis: ${esc(x.m.descricao)}`}</small>
-        ${x.prontos.length ? `<button type="button" class="btn ouro9 peq" data-t4coletar="${x.prontos.map((g) => g.id).join(",")}">Coletar +${t4premio(x.prontos.reduce((a, g) => { Object.entries(g.premio || {}).forEach(([k, v]) => { a[k] = (a[k] || 0) + +v; }); return a; }, {}))}</button>`
+        <div class="t4ct"><div class="t4cqh"><b>${esc(x.m.nome)}</b><span class="t4tag">${x.feitos ? "Nív. " + T4_ROM[x.feitos - 1] : "Nív. 0"} de ${T4_ROM[x.niveis.length - 1]}</span></div><small>${x.prox != null ? `Próximo, nível ${T4_ROM[x.feitos]}: ${x.prox} · ${esc(x.m.descricao)}` : `Todos os níveis: ${esc(x.m.descricao)}`}</small>
+        <div class="t4cqp">${t4slots(x.prontos.length ? x.prontos.reduce((a, g) => { Object.entries(g.premio || {}).forEach(([k, v]) => { a[k] = (a[k] || 0) + +v; }); return a; }, {}) : pr, 0)}</div>
+        ${x.prontos.length ? `<button type="button" class="btn ouro9 t4cqbtn" data-t4coletar="${x.prontos.map((g) => g.id).join(",")}">Coletar${x.prontos.length > 1 ? ` ${x.prontos.length} níveis` : ""}</button>`
           : `<div class="t4pb"><span><i style="width:${x.prox ? Math.min(100, 100 * x.at / x.prox) : 100}%"></i></span><small>${x.at}/${x.prox ?? x.niveis[x.niveis.length - 1]}</small></div>`}</div></article>`; }).join("")}</div></section>` : ""; }).join("") || '<p class="t4muted">Nenhuma conquista aqui.</p>'}`;
 }
 function t4temporada() {
